@@ -1,0 +1,66 @@
+.rfq-container {
+  display: flex;
+  gap: 20px; /* Space between tabs and form */
+}
+
+.rfq-tabs {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px; /* Tab column width */
+  gap: 8px; /* Space between tabs */
+}
+
+.rfq-tab {
+  padding: 12px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  background-color: #28a745; /* Green base color */
+  color: #fff; /* Text white */
+  font-weight: 500;
+  transition: background-color 0.3s, color 0.3s;
+  display: inline-block; /* Height based on label */
+  width: auto; /* Only as wide as text */
+}
+
+.rfq-tab:hover {
+  background-color: #0d6efd; /* Blue hover color */
+  color: #fff;
+}
+
+.rfq-tab.active {
+  background-color: #ffc107; /* Active tab color */
+  color: #000;
+  font-weight: bold;
+}
+
+.rfq-content {
+  flex: 1;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+}
+
+/* Form labels */
+.form-label {
+  font-weight: 500;
+  color: #000;
+  margin-bottom: 5px;
+}
+
+/* Input fields */
+.form-control, textarea.form-control {
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  padding: 8px 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Input focus effect */
+.form-control:focus, textarea.form-control:focus {
+  border-color: #0d6efd;
+  outline: none;
+  box-shadow: 0 0 3px #0d6efd;
+}
