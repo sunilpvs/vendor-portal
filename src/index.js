@@ -5,6 +5,8 @@ import "./index.css";
 import App from "./App";
 import {AppContextProvider} from "./context/AppContext";
 
+
+
 const rootElement = document.getElementById("root");
 const root = createRoot(rootElement);
 
