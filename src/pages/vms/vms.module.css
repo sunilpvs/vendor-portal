@@ -757,4 +757,7 @@ select {
   color: #666;
   cursor: not-allowed;
 }
-
+.MuiModal-root {
+  margin-left: 240px !important;
+  position: fixed !important;
+}
