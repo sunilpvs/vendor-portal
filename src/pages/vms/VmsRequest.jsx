@@ -56,6 +56,13 @@ const VmsRequest = () => {
         fetchAndSetReferenceId();
     }, []);
 
+    // CIN input handler: uppercase, strip non-alphanumeric, limit to 21 chars
+const handleCinChange = (e) => {
+  const raw = e.target.value || "";
+  const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 21);
+  setCompanyInfo(prev => ({ ...prev, cin_number: cleaned }));
+};
+
 
     const getCountries = async () => {
         try {
@@ -507,6 +514,15 @@ const VmsRequest = () => {
 
 
     const handleSubmitCompanyInfo = async (e) => {
+
+          // If CIN exists, ensure it's exactly 21 alphanumeric chars
+  if (companyInfo.cin_number) {
+    if (!/^[A-Z0-9]{21}$/.test(companyInfo.cin_number)) {
+      toast.error("CIN must be exactly 21 alphanumeric characters (A–Z, 0–9).");
+      return;
+    }
+  }
+
 
         try {
             // Send companyInfo state as payload
@@ -1505,15 +1521,19 @@ const VmsRequest = () => {
                                                     Company Identification Number (CIN)
                                                     <span className={styles.requiredSymbol}>*</span>
                                                 </label>
-                                                <input
-                                                    type="text"
-                                                    name="cin_number"
-                                                    value={companyInfo.cin_number || ""}
-                                                    onChange={handleCompanyInfoChange}
-                                                    className={styles.fieldInput}
-                                                    required
-                                                    readOnly={isReadOnly}
-                                                />
+                                               <input
+  type="text"
+  name="cin_number"
+  value={companyInfo.cin_number || ""}
+  onChange={handleCinChange}
+  className={styles.fieldInput}
+  required
+  readOnly={isReadOnly}
+  maxLength={21}
+  pattern="[A-Za-z0-9]{21}"
+  title="CIN must be 21 alphanumeric characters (A-Z, 0-9)"
+  style={{ textTransform: "uppercase" }}
+/>
                                             </div>
 
                                             {/* TAN field hidden for Section 8 */}
@@ -1533,20 +1553,6 @@ const VmsRequest = () => {
                                                 </div>
                                             )}
 
-                                            {/* Registration Number — optional for Section 8 */}
-                                            {companyInfo.business_entity_type !== "Section 8 Company" && (
-                                                <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>Company Registration Number</label>
-                                                    <input
-                                                        type="text"
-                                                        name="reg_number"
-                                                        value={companyInfo.reg_number || ""}
-                                                        onChange={handleCompanyInfoChange}
-                                                        className={styles.fieldInput}
-                                                        readOnly={isReadOnly}
-                                                    />
-                                                </div>
-                                            )}
                                         </>
                                     )}
 
