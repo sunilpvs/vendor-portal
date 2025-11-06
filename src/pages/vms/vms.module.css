@@ -761,3 +761,255 @@ select {
   margin-left: 240px !important;
   position: fixed !important;
 }
+.note {
+  font-size: 15px;
+  color: #000;
+  margin-bottom: 18px;
+  margin-top:-15px;
+  font-weight:bold;
+
+}
+.fileName {
+  display: inline-block;
+  margin-top: 6px;
+  color: #007bff;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.checkboxRow {
+  margin: 12px 0;
+  font-weight: 700;
+  font-size:18px;
+}
+
+.declarationText {
+  margin-left: 24px;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.declarationBox {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+
+.popupOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.popupContainer {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 80%;
+  max-width: 900px;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.3s ease;
+  color: #222; /* ✅ Force dark text */
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.popupContainer * {
+  color: #222 !important; /* ✅ Ensures white text from global styles doesn't override */
+}
+
+.popupTitle {
+  text-align: center;
+  margin-bottom: 16px;
+  color: #1d3557 !important;
+}
+
+/* Overlay background */
+.popupOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Popup container */
+.popupContainer {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 28px 32px;
+  width: 80%;
+  max-width: 900px;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.3s ease;
+  color: #222;
+  font-family: "Segoe UI", Arial, sans-serif;
+  line-height: 1.6;
+}
+
+/* Ensure white background and black text always */
+.popupContainer * {
+  color: #222 !important;
+}
+
+/* Title */
+.popupTitle {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #1d3557 !important;
+  margin-bottom: 10px;
+}
+
+/* Scrollable content area */
+.popupScroll {
+  overflow-y: auto;
+  max-height: 65vh;
+  padding-right: 10px;
+}
+
+/* Section headings */
+.popupScroll h3 {
+  font-size: 18px;
+  margin: 14px 0 6px 0;
+color: #ff0000 !important;
+  font-weight: 600;
+  margin-bottom: 20px;
+  margin-top: 20px;
+}
+
+.popupScroll h4 {
+  font-size: 18px;
+  margin: 10px 0 4px 0;
+  color: #ff0000 !important;
+  font-weight: 500;
+    margin-bottom: 20px;
+  margin-top: 20px;
+}
+
+/* Lists */
+.popupScroll ul {
+  margin-left: 20px;
+  margin-top: 4px;
+  margin-bottom: 6px;
+  line-height: 1.6;
+  font-size: 16px;
+  padding-left: 6px;
+}
+
+.popupScroll li {
+  margin-bottom: 3px;
+}
+
+/* Footer (checkbox + button) */
+.instructionsFooter {
+  margin-top: 12px;
+  border-top: 1px solid #eee;
+  padding-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Checkbox text larger + aligned */
+.instructionsFooter label {
+  font-size: 18px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.2;
+}
+
+.instructionsFooter input[type="checkbox"] {
+  transform: scale(1.3);
+  accent-color: #007bff;
+  cursor: pointer;
+}
+
+/* Proceed button */
+.proceedButton {
+  background: #007bff;
+  color: #fff !important;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.proceedButton:hover {
+  background: #005dc0;
+}
+
+.proceedButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  color: #666 !important;
+}
+
+/* Scrollbar styling */
+.popupScroll::-webkit-scrollbar {
+  width: 6px;
+}
+.popupScroll::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+/* Smooth fade animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.popupContainer {
+  background: #fff; /* ✅ ensures text contrast */
+}
+
+.popupScroll::-webkit-scrollbar {
+  width: 6px;
+}
+.popupScroll::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+.uppercaseInput {
+  text-transform: uppercase;
+}
+
+.lowercaseInput {
+  text-transform: lowercase;
+}
+
+
+
+

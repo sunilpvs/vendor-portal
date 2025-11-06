@@ -57,11 +57,11 @@ const VmsRequest = () => {
     }, []);
 
     // CIN input handler: uppercase, strip non-alphanumeric, limit to 21 chars
-const handleCinChange = (e) => {
-  const raw = e.target.value || "";
-  const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 21);
-  setCompanyInfo(prev => ({ ...prev, cin_number: cleaned }));
-};
+    const handleCinChange = (e) => {
+        const raw = e.target.value || "";
+        const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 21);
+        setCompanyInfo(prev => ({ ...prev, cin_number: cleaned }));
+    };
 
 
     const getCountries = async () => {
@@ -115,10 +115,11 @@ const handleCinChange = (e) => {
     const gsForm_addGoods = () => {
         if (goods.length < 5) setGoods([...goods, ""]);
     };
-
+    // 🧾 GOODS input change
     const gsForm_changeGoods = (index, value) => {
+        const cleaned = value.replace(/[^A-Za-z0-9\s]/g, "").toUpperCase(); // only A-Z, 0-9, space
         const updated = [...goods];
-        updated[index] = value;
+        updated[index] = cleaned;
         setGoods(updated);
     };
 
@@ -133,9 +134,11 @@ const handleCinChange = (e) => {
         if (services.length < 5) setServices([...services, ""]);
     };
 
+    // 🧾 SERVICES input change
     const gsForm_changeService = (index, value) => {
+        const cleaned = value.replace(/[^A-Za-z0-9\s]/g, "").toUpperCase(); // only A-Z, 0-9, space
         const updated = [...services];
-        updated[index] = value;
+        updated[index] = cleaned;
         setServices(updated);
     };
 
@@ -151,13 +154,15 @@ const handleCinChange = (e) => {
             setGoodsAndServices([...goodsAndServices, { goods: "", services: "" }]);
     };
 
+    // 🧾 GOODS & SERVICES combined input change
     const gsForm_changeGoodsServices = (index, field, value) => {
+        const cleaned = value.replace(/[^A-Za-z0-9\s]/g, "").toUpperCase(); // only A-Z, 0-9, space
         setGoodsAndServices((prev) => {
             const updated = [...prev];
             if (!updated[index]) {
                 updated[index] = { goods: "", services: "" };
             }
-            updated[index][field] = value;
+            updated[index][field] = cleaned;
             return updated;
         });
     };
@@ -235,6 +240,7 @@ const handleCinChange = (e) => {
             ...prevDocs,
             [key]: {
                 file,
+                fileName: file.name,
                 url: URL.createObjectURL(file),
             },
         }));
@@ -345,7 +351,7 @@ const handleCinChange = (e) => {
     const handleIncomeChange = (e) => {
         const { name, value } = e.target;
 
-        // existing numeric guard for turnover etc...
+        // 🧾 Turnover fields — only digits allowed
         if (name.startsWith("turnover")) {
             if (value === "" || /^[0-9]*$/.test(value)) {
                 setFormData((prev) => ({ ...prev, [name]: value }));
@@ -353,11 +359,31 @@ const handleCinChange = (e) => {
             return;
         }
 
-        // normal set
+        // 🧾 ITR Acknowledgment Number — uppercase alphanumeric only
+        if (name.startsWith("ackNo")) {
+            const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+            setFormData((prev) => ({ ...prev, [name]: cleaned }));
+            return;
+        }
+
+        // 🌐 Dropdown fields (Yes/No, Year, Month, Day) — keep as selected
+        if (
+            name.startsWith("itrStatus") ||
+            name.startsWith("itrYear") ||
+            name.startsWith("itrMonth") ||
+            name.startsWith("itrDay")
+        ) {
+            setFormData((prev) => ({ ...prev, [name]: value }));
+        } else {
+            // Default — just set value as-is
+            setFormData((prev) => ({ ...prev, [name]: value }));
+        }
+
+        // 🧮 Keep your existing day validation logic
         setFormData((prev) => {
             const updated = { ...prev, [name]: value };
 
-            // handle itrDay validation when month/year changes for itr fields
+            // Handle ITR day validation when month/year changes
             const itrMonthMatch = name.match(/^itrMonth(\d+)$/);
             const itrYearMatch = name.match(/^itrYear(\d+)$/);
 
@@ -378,6 +404,7 @@ const handleCinChange = (e) => {
             return updated;
         });
     };
+
 
     // ✅ Get dynamic financial year options
     const getFilteredYears = (field) => {
@@ -515,13 +542,13 @@ const handleCinChange = (e) => {
 
     const handleSubmitCompanyInfo = async (e) => {
 
-          // If CIN exists, ensure it's exactly 21 alphanumeric chars
-  if (companyInfo.cin_number) {
-    if (!/^[A-Z0-9]{21}$/.test(companyInfo.cin_number)) {
-      toast.error("CIN must be exactly 21 alphanumeric characters (A–Z, 0–9).");
-      return;
-    }
-  }
+        // If CIN exists, ensure it's exactly 21 alphanumeric chars
+        if (companyInfo.cin_number) {
+            if (!/^[A-Z0-9]{21}$/.test(companyInfo.cin_number)) {
+                toast.error("CIN must be exactly 21 alphanumeric characters (A–Z, 0–9).");
+                return;
+            }
+        }
 
 
         try {
@@ -587,11 +614,61 @@ const handleCinChange = (e) => {
 
     const handleCompanyInfoChange = (e) => {
         const { name, value } = e.target;
+        let cleaned = value;
+
+        // Name fields — only letters and spaces, uppercase
+        const nameFields = [
+            "full_registered_name",
+            "trading_name",
+            "contact_person_name",
+            "accounts_person_name",
+        ];
+
+        if (nameFields.includes(name)) {
+            // remove anything that's not A-Z or space, then uppercase
+            cleaned = value.replace(/[^A-Za-z\s]/g, "").toUpperCase();
+        }
+        // CIN — uppercase alphanumeric, max 21 chars
+        else if (name === "cin_number") {
+            cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 21);
+        }
+        // TAN / PAN / GST / REG / UDYAM — uppercase alphanumeric
+        else if (["tan_number", "pan_number", "gst_vat_number", "reg_number", "udyam_registration_number"].includes(name)) {
+            cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        }
+        // Addresses — keep as typed
+        else if (["registered_address", "business_address", "bank_address"].includes(name)) {
+            cleaned = value;
+        }
+        // Emails — lowercase
+        else if (name.includes("email")) {
+            cleaned = value.toLowerCase();
+        }
+        // Phones — digits only
+        else if (["telephone", "contact_person_mobile", "accounts_person_contact_no"].includes(name)) {
+            cleaned = value.replace(/[^0-9]/g, "");
+        }
+        // Dropdowns / other allowed fields — keep
+        else if ([
+            "business_entity_type",
+            "country_of_incorporation",
+            "state",
+            "contact_person_title",
+            "accounts_person_title",
+        ].includes(name)) {
+            cleaned = value;
+        }
+        // default fallback — uppercase
+        else {
+            cleaned = value.toUpperCase();
+        }
+
         setCompanyInfo((prev) => ({
             ...prev,
-            [name]: value,
+            [name]: cleaned,
         }));
-        // Auto-fill code when country changes
+
+        // keep country autofill logic intact
         if (name === "country_of_incorporation") {
             const selectedCountry = countries.find((c) => c.id == value);
             if (selectedCountry) {
@@ -599,6 +676,7 @@ const handleCinChange = (e) => {
             }
         }
     };
+
 
     // STEP 2: MSME details
     const [msmeInfo, setMsmeInfo] = useState({
@@ -631,9 +709,26 @@ const handleCinChange = (e) => {
 
     const handleMsmeChange = (e) => {
         const { name, value } = e.target;
+        let cleaned = value;
+
+        // 🧾 Udyam Registration Number → uppercase alphanumeric only
+        if (name === "udyam_registration_number") {
+            cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        }
+
+        // 🏷 Category (Micro / Small / Medium) or Dropdown → keep value as-is
+        else if (["category", "registered_under_msme"].includes(name)) {
+            cleaned = value;
+        }
+
+        // Default → uppercase
+        else {
+            cleaned = value.toUpperCase();
+        }
+
         setMsmeInfo((prev) => ({
             ...prev,
-            [name]: value,
+            [name]: cleaned,
         }));
     };
 
@@ -913,7 +1008,7 @@ const handleCinChange = (e) => {
 
 
     const handleGstFieldChange = (index, field, value) => {
-        setgstFormData(prevData => {
+        setgstFormData((prevData) => {
             const updated = [...prevData];
 
             // ensure row exists
@@ -921,16 +1016,32 @@ const handleCinChange = (e) => {
                 updated[index] = { state: "", gstNumber: "", regDay: "", regMonth: "", regYear: "" };
             }
 
-            // set the field
-            updated[index][field] = value;
+            let cleaned = value;
 
-            // if month/year changed, validate day
+            // 🔠 GST Number — uppercase alphanumeric only (no length limit)
+            if (field === "gstNumber") {
+                cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+            }
+
+            // 📅 Dropdowns (state, regDay, regMonth, regYear) — keep value as-is
+            else if (["state", "regDay", "regMonth", "regYear"].includes(field)) {
+                cleaned = value;
+            }
+
+            // Default — uppercase (for any text field)
+            else {
+                cleaned = value.toUpperCase();
+            }
+
+            // set the field
+            updated[index][field] = cleaned;
+
+            // 📆 validate day when month/year changes
             if (field === "regMonth" || field === "regYear") {
                 const maxDays = getDaysInMonth(updated[index].regMonth, updated[index].regYear);
                 const currDay = Number(updated[index].regDay);
                 if (updated[index].regDay && (isNaN(currDay) || currDay > maxDays)) {
-                    // reset invalid day to empty so user must reselect valid day
-                    updated[index].regDay = "";
+                    updated[index].regDay = ""; // reset invalid day
                 }
             }
 
@@ -939,12 +1050,26 @@ const handleCinChange = (e) => {
     };
     const handleGoodsServicesChange = (e, section) => {
         const { name, value } = e.target;
+        let cleaned = value;
 
-        if (section === 'goodsServices') {
-            setGoodsServices(prev => ({ ...prev, [name]: value }));
+        // 🧾 Allow only letters, numbers, and spaces → uppercase
+        if (name === "others") {
+            cleaned = value.replace(/[^A-Za-z\s]/g, "").toUpperCase(); // letters + spaces only
+        }
+        // Dropdowns → keep as selected
+        else if (["type_of_counterparty", "type"].includes(name)) {
+            cleaned = value;
+        }
+        // Default → uppercase, block special chars
+        else {
+            cleaned = value.replace(/[^A-Za-z0-9\s]/g, "").toUpperCase();
+        }
+
+        if (section === "goodsServices") {
+            setGoodsServices((prev) => ({ ...prev, [name]: cleaned }));
 
             // ✅ When user selects "Goods and Services", initialize 5 empty rows
-            if (name === "type" && value === "Goods and Services") {
+            if (name === "type" && cleaned === "Goods and Services") {
                 if (goodsAndServices.length === 0) {
                     setGoodsAndServices([
                         { goods: "", services: "" },
@@ -957,7 +1082,7 @@ const handleCinChange = (e) => {
             }
 
             // ✅ When user switches away from "Goods and Services", clear the list
-            if (name === "type" && value !== "Goods and Services") {
+            if (name === "type" && cleaned !== "Goods and Services") {
                 setGoodsAndServices([]);
             }
         }
@@ -1033,11 +1158,51 @@ const handleCinChange = (e) => {
 
     const handleBankDetailsChange = (e) => {
         const { name, value } = e.target;
+        let cleaned = value;
+
+        // 🏦 Account Holder / Beneficiary / Bank / Branch — only letters + spaces, uppercase
+        if (["account_holder_name", "beneficiary_name", "bank_name", "branch_name"].includes(name)) {
+            cleaned = value.replace(/[^A-Za-z\s]/g, "").toUpperCase();
+        }
+
+        // 💳 Account Number — digits only
+        else if (name === "account_number") {
+            cleaned = value.replace(/[^0-9]/g, "");
+        }
+
+        // 🔠 IFSC / SWIFT Codes — uppercase alphanumeric (no limit)
+        else if (["ifscCode", "swiftCode"].includes(name)) {
+            cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        }
+
+        // 🏠 Bank Address — keep as typed (case-sensitive)
+        else if (name === "bank_address") {
+            cleaned = value;
+        }
+
+        // 🌍 Country — only letters and spaces (uppercase)
+        else if (name === "country") {
+            cleaned = value.replace(/[^A-Za-z\s]/g, "").toUpperCase();
+        }
+
+        // 🧾 Dropdown fields (Transaction type, third party, etc.) — keep as selected
+        else if (
+            ["transactionType", "involves_third_party", "subcontractor_in_sanctioned_country"].includes(name)
+        ) {
+            cleaned = value;
+        }
+
+        // 🧠 Default fallback — uppercase text
+        else {
+            cleaned = value.toUpperCase();
+        }
+
         setBankInfo((prev) => ({
             ...prev,
-            [name]: value,
+            [name]: cleaned,
         }));
     };
+
 
 
     const handleSaveBankDetails = async () => {
@@ -1419,15 +1584,67 @@ const handleCinChange = (e) => {
     );
 
     useEffect(() => {
-  if (currentPage === 5) { // assuming step 6 is index 5 (0-based)
-    setDeclarationInfo(prev => ({
-      ...prev,
-      name: companyInfo.contact_person_name || prev.name,
-      organization: companyInfo.trading_name || companyInfo.full_registered_name || prev.organization,
-      designation: companyInfo.designation || prev.designation,
-    }));
-  }
-}, [currentPage, companyInfo]);
+        if (currentPage === 5) { // assuming step 6 is index 5 (0-based)
+            setDeclarationInfo(prev => ({
+                ...prev,
+                name: companyInfo.contact_person_name || prev.name,
+                organization: companyInfo.trading_name || companyInfo.full_registered_name || prev.organization,
+                designation: companyInfo.designation || prev.designation,
+            }));
+        }
+    }, [currentPage, companyInfo]);
+
+    // ✅ Checkboxes for Declaration & Privacy
+    const [agreeDeclaration, setAgreeDeclaration] = useState(false);
+    const [agreePrivacy, setAgreePrivacy] = useState(false);
+
+    // ✅ Auto-filled info for both
+    const [declarationDetails, setDeclarationDetails] = useState({
+        name: "",
+        organization: "",
+        designation: "",
+        place: "",
+        date: new Date().toISOString().split("T")[0],
+        sign: null,
+        stamp: null,
+    });
+
+    const handleCheckbox = (type, checked) => {
+        if (type === "declaration") setAgreeDeclaration(checked);
+        if (type === "privacy") setAgreePrivacy(checked);
+
+        // Auto-fill when any is checked
+        if (checked) {
+            setDeclarationDetails((prev) => ({
+                ...prev,
+                name: companyInfo?.contact_person || companyInfo?.contact_name || "",
+                organization: companyInfo?.company_name || companyInfo?.entityName || "",
+                designation: companyInfo?.designation || companyInfo?.designation || "",
+                place: companyInfo?.city || "",
+                date: new Date().toISOString().split("T")[0],
+            }));
+        }
+
+        // Reset when both are unchecked
+        if (!checked && !agreeDeclaration && !agreePrivacy) {
+            setDeclarationDetails({
+                name: "",
+                organization: "",
+                designation: "",
+                place: "",
+                date: new Date().toISOString().split("T")[0],
+                sign: null,
+                stamp: null,
+            });
+        }
+    };
+
+    // Popup control
+    const [showInstructions, setShowInstructions] = useState(true);
+    const [agreeInstructions, setAgreeInstructions] = useState(false);
+
+
+
 
 
 
@@ -1476,14 +1693,19 @@ const handleCinChange = (e) => {
                                             type="text"
                                             name="full_registered_name"
                                             value={companyInfo.full_registered_name}
-                                            className={styles.fieldInput}
+                                            className={`${styles.fieldInput} ${styles.uppercaseInput}`}
                                             onChange={(e) =>
-                                                setCompanyInfo({ ...companyInfo, full_registered_name: e.target.value })
+                                                setCompanyInfo({
+                                                    ...companyInfo,
+                                                    full_registered_name: e.target.value
+                                                        .replace(/[^A-Za-z\s]/g, "")  // ✅ only letters + spaces
+                                                        .replace(/\s+/g, " ")         // ✅ collapse multiple spaces
+                                                        .toUpperCase()                // ✅ convert to uppercase
+                                                        .trim(),                      // ✅ remove extra space at start/end
+                                                })
                                             }
                                             required
-
                                             readOnly={isReadOnly}
-
                                         />
                                     </div>
 
@@ -1521,19 +1743,19 @@ const handleCinChange = (e) => {
                                                     Company Identification Number (CIN)
                                                     <span className={styles.requiredSymbol}>*</span>
                                                 </label>
-                                               <input
-  type="text"
-  name="cin_number"
-  value={companyInfo.cin_number || ""}
-  onChange={handleCinChange}
-  className={styles.fieldInput}
-  required
-  readOnly={isReadOnly}
-  maxLength={21}
-  pattern="[A-Za-z0-9]{21}"
-  title="CIN must be 21 alphanumeric characters (A-Z, 0-9)"
-  style={{ textTransform: "uppercase" }}
-/>
+                                                <input
+                                                    type="text"
+                                                    name="cin_number"
+                                                    value={companyInfo.cin_number || ""}
+                                                    onChange={handleCinChange}
+                                                    className={styles.fieldInput}
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                    maxLength={21}
+                                                    pattern="[A-Za-z0-9]{21}"
+                                                    title="CIN must be 21 alphanumeric characters (A-Z, 0-9)"
+                                                    style={{ textTransform: "uppercase" }}
+                                                />
                                             </div>
 
                                             {/* TAN field hidden for Section 8 */}
@@ -1549,6 +1771,7 @@ const handleCinChange = (e) => {
                                                         className={styles.fieldInput}
                                                         required
                                                         readOnly={isReadOnly}
+
                                                     />
                                                 </div>
                                             )}
@@ -1677,18 +1900,59 @@ const handleCinChange = (e) => {
                                     </div>
 
                                     <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Contact Person Name
-                                            <span className={styles.requiredSymbol}>*</span>
+                                        <label className={styles.fieldLabel}>
+                                            Contact Person<span className={styles.requiredSymbol}>*</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            name="contact_person_name"
-                                            value={companyInfo.contact_person_name || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
+
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                width: "65%",
+                                                border: "1px solid #ccc",
+                                                borderRadius: "6px",
+                                                overflow: "hidden",
+                                            }}
+                                        >
+                                            <select
+                                                name="contact_person_title"
+                                                value={companyInfo.contact_person_title || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                style={{
+                                                    border: "none",
+                                                    outline: "none",
+                                                    padding: "8px 10px",
+                                                    width: "80px",
+                                                    background: "transparent",
+                                                    borderRight: "1px solid #ccc",
+                                                    cursor: "pointer",
+                                                }}
+                                                required
+                                                readOnly={isReadOnly}
+                                            >
+
+                                                <option value="Mr">Mr</option>
+                                                <option value="Mrs">Mrs</option>
+                                                <option value="Ms">Ms</option>
+                                            </select>
+
+                                            <input
+                                                type="text"
+                                                name="contact_person_name"
+                                                value={companyInfo.contact_person_name || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                placeholder="Enter Contact Person Name"
+                                                style={{
+                                                    border: "none",
+                                                    outline: "none",
+                                                    flex: 1,
+                                                    padding: "8px 10px",
+                                                    background: "transparent",
+                                                }}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
                                     </div>
 
                                     <div className={styles.fieldRow}>
@@ -1737,18 +2001,59 @@ const handleCinChange = (e) => {
                                     </div>
 
                                     <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Accounts Person Name
-                                            <span className={styles.requiredSymbol}>*</span>
+                                        <label className={styles.fieldLabel}>
+                                            Account Person<span className={styles.requiredSymbol}>*</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            name="accounts_person_name"
-                                            value={companyInfo.accounts_person_name || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
+
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                width: "65%",
+                                                border: "1px solid #ccc",
+                                                borderRadius: "6px",
+                                                overflow: "hidden",
+                                            }}
+                                        >
+                                            <select
+                                                name="account_person_title"
+                                                value={companyInfo.account_person_title || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                style={{
+                                                    border: "none",
+                                                    outline: "none",
+                                                    padding: "8px 10px",
+                                                    width: "80px",
+                                                    background: "transparent",
+                                                    borderRight: "1px solid #ccc",
+                                                    cursor: "pointer",
+                                                }}
+                                                required
+                                                readOnly={isReadOnly}
+                                            >
+
+                                                <option value="Mr">Mr</option>
+                                                <option value="Mrs">Mrs</option>
+                                                <option value="Ms">Ms</option>
+                                            </select>
+
+                                            <input
+                                                type="text"
+                                                name="account_person_name"
+                                                value={companyInfo.account_person_name || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                placeholder="Enter Account Person Name"
+                                                style={{
+                                                    border: "none",
+                                                    outline: "none",
+                                                    flex: 1,
+                                                    padding: "8px 10px",
+                                                    background: "transparent",
+                                                }}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
                                     </div>
 
                                     <div className={styles.fieldRow}>
@@ -2297,98 +2602,109 @@ const handleCinChange = (e) => {
                                                 )}
 
 
-                                            {/* Filed Date */}
-                                            <tr>
-                                                <td>
-                                                    ITR Filed Date
-                                                    <span className={styles.requiredSymbol}>*</span>
-                                                </td>
-
-                                                {[1, 2, 3].map((i) => {
-                                                    // Get Financial Year string (like "2024-2025")
-                                                    const fy = formData[`fy${i}`];
-                                                    // Extract the second part (ending year) as base year
-                                                    const endYear = fy ? parseInt(fy.split("-")[1]) : new Date().getFullYear();
-
-                                                    // Generate last 5 years based on FY end year
-                                                    const itrYears = Array.from({ length: 5 }, (_, idx) => endYear - idx);
-
-                                                    return (
-                                                        <td key={i}>
-                                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                                {/* Year dropdown (Dynamic 5-year range based on FY) */}
-                                                                <select
-                                                                    className={styles.fieldInput}
-                                                                    value={formData[`itrYear${i}`] || ""}
-                                                                    onChange={(e) =>
-                                                                        handleIncomeChange({
-                                                                            target: { name: `itrYear${i}`, value: e.target.value },
-                                                                        })
-                                                                    }
-                                                                    required
-                                                                    disabled={isReadOnly}
-                                                                    style={{ width: "75px", textAlign: "center" }}
-                                                                >
-                                                                    <option value="">YYYY</option>
-                                                                    {itrYears.map((year) => (
-                                                                        <option key={year} value={year}>
-                                                                            {year}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-
-                                                                {/* Month dropdown */}
-                                                                <select
-                                                                    className={styles.fieldInput}
-                                                                    value={formData[`itrMonth${i}`] || ""}
-                                                                    onChange={(e) =>
-                                                                        handleIncomeChange({
-                                                                            target: { name: `itrMonth${i}`, value: e.target.value },
-                                                                        })
-                                                                    }
-                                                                    required
-                                                                    disabled={isReadOnly}
-                                                                    style={{ width: "65px", textAlign: "center" }}
-                                                                >
-                                                                    <option value="">MM</option>
-                                                                    {[
-                                                                        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug",
-                                                                        "Sep",
-                                                                        "Oct",
-                                                                        "Nov",
-                                                                        "Dec",
-                                                                    ].map((month, index) => (
-                                                                        <option key={month} value={String(index + 1).padStart(2, "0")}>
-                                                                            {month}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                                {/* Day dropdown */}
-                                                                <select
-                                                                    className={styles.fieldInput}
-                                                                    value={formData[`itrDay${i}`] || ""}
-                                                                    onChange={(e) =>
-                                                                        handleIncomeChange({
-                                                                            target: { name: `itrDay${i}`, value: e.target.value },
-                                                                        })
 
 
-                                                                    }
-                                                                    style={{ width: "65px", textAlign: "center" }}
-                                                                >
-                                                                    <option value="">DD</option>
-                                                                    {Array.from({ length: getDaysInMonth(formData[`itrMonth${i}`], formData[`itrYear${i}`]) }, (_, d) => (
-                                                                        <option key={d + 1} value={String(d + 1).padStart(2, '0')}>{String(d + 1).padStart(2, '0')}</option>
-                                                                    ))}
-                                                                </select>
-
-
-
-                                                            </div>
+                                            {/* ITR Filed Date (visible only if any ITR status = "Yes") */}
+                                            {["itrStatus1", "itrStatus2", "itrStatus3"].some(
+                                                (key) => formData[key] === "Yes"
+                                            ) && (
+                                                    <tr>
+                                                        <td>
+                                                            ITR Filed Date
+                                                            <span className={styles.requiredSymbol}>*</span>
                                                         </td>
-                                                    );
-                                                })}
-                                            </tr>
+
+                                                        {[1, 2, 3].map((i) => {
+                                                            // Get Financial Year string (like "2024-2025")
+                                                            const fy = formData[`fy${i}`];
+                                                            const endYear = fy ? parseInt(fy.split("-")[1]) : new Date().getFullYear();
+
+                                                            // Generate last 5 years based on FY end year
+                                                            const itrYears = Array.from({ length: 5 }, (_, idx) => endYear - idx);
+
+                                                            return (
+                                                                <td key={i}>
+                                                                    {formData[`itrStatus${i}`] === "Yes" ? (
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                                            {/* Year dropdown */}
+                                                                            <select
+                                                                                className={styles.fieldInput}
+                                                                                value={formData[`itrYear${i}`] || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleIncomeChange({
+                                                                                        target: { name: `itrYear${i}`, value: e.target.value },
+                                                                                    })
+                                                                                }
+                                                                                required
+                                                                                disabled={isReadOnly}
+                                                                                style={{ width: "75px", textAlign: "center" }}
+                                                                            >
+                                                                                <option value="">YYYY</option>
+                                                                                {itrYears.map((year) => (
+                                                                                    <option key={year} value={year}>
+                                                                                        {year}
+                                                                                    </option>
+                                                                                ))}
+                                                                            </select>
+
+                                                                            {/* Month dropdown */}
+                                                                            <select
+                                                                                className={styles.fieldInput}
+                                                                                value={formData[`itrMonth${i}`] || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleIncomeChange({
+                                                                                        target: { name: `itrMonth${i}`, value: e.target.value },
+                                                                                    })
+                                                                                }
+                                                                                required
+                                                                                disabled={isReadOnly}
+                                                                                style={{ width: "65px", textAlign: "center" }}
+                                                                            >
+                                                                                <option value="">MM</option>
+                                                                                {[
+                                                                                    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                                                                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+                                                                                ].map((month, index) => (
+                                                                                    <option
+                                                                                        key={month}
+                                                                                        value={String(index + 1).padStart(2, "0")}
+                                                                                    >
+                                                                                        {month}
+                                                                                    </option>
+                                                                                ))}
+                                                                            </select>
+
+                                                                            {/* Day dropdown */}
+                                                                            <select
+                                                                                className={styles.fieldInput}
+                                                                                value={formData[`itrDay${i}`] || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleIncomeChange({
+                                                                                        target: { name: `itrDay${i}`, value: e.target.value },
+                                                                                    })
+                                                                                }
+                                                                                style={{ width: "65px", textAlign: "center" }}
+                                                                            >
+                                                                                <option value="">DD</option>
+                                                                                {Array.from(
+                                                                                    { length: getDaysInMonth(formData[`itrMonth${i}`], formData[`itrYear${i}`]) },
+                                                                                    (_, d) => (
+                                                                                        <option key={d + 1} value={String(d + 1).padStart(2, "0")}>
+                                                                                            {String(d + 1).padStart(2, "0")}
+                                                                                        </option>
+                                                                                    )
+                                                                                )}
+                                                                            </select>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div style={{ height: "30px" }}></div> // keeps table alignment neat
+                                                                    )}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                )}
+
 
 
                                         </tbody>
@@ -2454,14 +2770,18 @@ const handleCinChange = (e) => {
                                             Transaction Type <span className={styles.requiredSymbol}>*</span>
                                         </label>
                                         <select
-                                            value={transactionType}
-                                            onChange={handleTransactionChange}
+                                            name="transactionType"
+                                            value={bankInfo.transactionType || ""}
+                                            onChange={(e) =>
+                                                setBankInfo((prev) => ({ ...prev, transactionType: e.target.value }))
+                                            }
                                             className={styles.fieldInput}
                                             required
                                         >
-                                            <option value="">-- Select Type --</option>
+                                            <option value="">Select Transaction Type</option>
                                             <option value="Domestic">Domestic</option>
                                             <option value="International">International</option>
+                                            <option value="Domestic and International">Domestic and International</option>
                                         </select>
                                     </div>
 
@@ -2480,7 +2800,7 @@ const handleCinChange = (e) => {
                                         />
                                     </div>
 
-                                    
+
 
                                     <div className={styles.fieldRow}>
                                         <label className={styles.fieldLabel}>Account Number
@@ -2497,40 +2817,79 @@ const handleCinChange = (e) => {
                                         />
                                     </div>
 
-                                    {/* IFSC Code (visible only for Domestic) */}
-                                    {transactionType === "Domestic" && (
+                                    {bankInfo.transactionType === "Domestic" && (
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>
-                                                IFSC Code <span className={styles.requiredSymbol}>*</span>
-                                            </label>
+                                            <label className={styles.fieldLabel}>IFSC Code</label>
                                             <input
                                                 type="text"
                                                 name="ifscCode"
-                                                value={ifscCode}
-                                                onChange={(e) => setIfscCode(e.target.value)}
+                                                value={bankInfo.ifscCode || ""}
+                                                onChange={(e) =>
+                                                    setBankInfo((prev) => ({
+                                                        ...prev,
+                                                        ifscCode: e.target.value.toUpperCase(), // 🔠 force uppercase
+                                                    }))
+                                                }
+                                                maxLength={11}
                                                 className={styles.fieldInput}
-                                                placeholder="Enter IFSC Code"
-                                                required
                                             />
                                         </div>
                                     )}
 
-                                    {/* SWIFT Code (visible only for International) */}
-                                    {transactionType === "International" && (
+                                    {bankInfo.transactionType === "International" && (
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>
-                                                SWIFT Code <span className={styles.requiredSymbol}>*</span>
-                                            </label>
+                                            <label className={styles.fieldLabel}>SWIFT Code</label>
                                             <input
                                                 type="text"
                                                 name="swiftCode"
-                                                value={swiftCode}
-                                                onChange={(e) => setSwiftCode(e.target.value)}
+                                                value={bankInfo.swiftCode || ""}
+                                                onChange={(e) =>
+                                                    setBankInfo((prev) => ({
+                                                        ...prev,
+                                                        swiftCode: e.target.value.toUpperCase(), // 🔠 force uppercase
+                                                    }))
+                                                }
+                                                maxLength={11}
                                                 className={styles.fieldInput}
-                                                placeholder="Enter SWIFT Code"
-                                                required
                                             />
                                         </div>
+                                    )}
+
+                                    {bankInfo.transactionType === "Domestic and International" && (
+                                        <>
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>IFSC Code</label>
+                                                <input
+                                                    type="text"
+                                                    name="ifscCode"
+                                                    value={bankInfo.ifscCode || ""}
+                                                    onChange={(e) =>
+                                                        setBankInfo((prev) => ({
+                                                            ...prev,
+                                                            ifscCode: e.target.value.toUpperCase(),
+                                                        }))
+                                                    }
+
+                                                    className={styles.fieldInput}
+                                                />
+                                            </div>
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>SWIFT Code</label>
+                                                <input
+                                                    type="text"
+                                                    name="swiftCode"
+                                                    value={bankInfo.swiftCode || ""}
+                                                    onChange={(e) =>
+                                                        setBankInfo((prev) => ({
+                                                            ...prev,
+                                                            swiftCode: e.target.value.toUpperCase(),
+                                                        }))
+                                                    }
+
+                                                    className={styles.fieldInput}
+                                                />
+                                            </div>
+                                        </>
                                     )}
 
                                     <div className={styles.fieldRow}>
@@ -2597,6 +2956,9 @@ const handleCinChange = (e) => {
                             {currentPage === 4 && (
                                 <div className={styles.page}>
                                     <h3>Documents to be enclosed</h3>
+                                    <p className={styles.note}>
+                                        Please verify and upload documents in JPG, JPEG, PNG, or PDF format. The maximum file size allowed is 5 MB.
+                                    </p>
 
                                     {/* PAN */}
                                     <div className={styles.fieldRow}>
@@ -2609,6 +2971,12 @@ const handleCinChange = (e) => {
                                             required
                                             readOnly={isReadOnly}
                                         />
+
+                                        {/* ✅ Show uploaded file name */}
+                                        {documents.pan?.fileName && (
+                                            <span className={styles.fileName}>📄 {documents.pan.fileName}</span>
+                                        )}
+
 
                                         {documents.pan?.url && (
                                             <a
@@ -2625,6 +2993,8 @@ const handleCinChange = (e) => {
                                         )}
                                     </div>
 
+
+
                                     {/* GSTIN */}
                                     <div className={styles.fieldRow}>
                                         <label className={styles.fieldLabel}>GSTIN <span className={styles.requiredSymbol}>*</span></label>
@@ -2636,6 +3006,10 @@ const handleCinChange = (e) => {
                                             required
                                             readOnly={isReadOnly}
                                         />
+
+                                        {documents.gstin?.fileName && (
+                                            <span className={styles.fileName}>📄 {documents.gstin.fileName}</span>
+                                        )}
 
                                         {documents.gstin?.url && (
                                             <a
@@ -2666,6 +3040,11 @@ const handleCinChange = (e) => {
                                             readOnly={isReadOnly}
                                         />
 
+                                        {documents.msme?.fileName && (
+                                            <span className={styles.fileName}>📄 {documents.msme.fileName}</span>
+                                        )}
+
+
                                         {documents.msme?.url && (
                                             <a
                                                 href={documents.msme.url.startsWith("blob:")
@@ -2695,6 +3074,10 @@ const handleCinChange = (e) => {
                                             readOnly={isReadOnly}
                                         />
 
+                                        {documents.cheque?.fileName && (
+                                            <span className={styles.fileName}>📄 {documents.cheque.fileName}</span>
+                                        )}
+
                                         {documents.cheque?.url && (
                                             <a
                                                 href={documents.cheque.url.startsWith("blob:")
@@ -2722,6 +3105,10 @@ const handleCinChange = (e) => {
                                             required
                                             readOnly={isReadOnly}
                                         />
+
+                                        {documents.tan?.fileName && (
+                                            <span className={styles.fileName}>📄 {documents.tan.fileName}</span>
+                                        )}
 
                                         {documents.tan?.url && (
                                             <a
@@ -2751,6 +3138,10 @@ const handleCinChange = (e) => {
                                             readOnly={isReadOnly}
                                         />
 
+                                        {documents.incorporation?.fileName && (
+                                            <span className={styles.fileName}>📄 {documents.incorporation.fileName}</span>
+                                        )}
+
                                         {documents.incorporation?.url && (
                                             <a
                                                 href={documents.incorporation.url.startsWith("blob:")
@@ -2779,6 +3170,11 @@ const handleCinChange = (e) => {
                                             readOnly={isReadOnly}
                                         />
 
+                                        {documents.tds?.fileName && (
+                                            <span className={styles.fileName}>📄 {documents.tds.fileName}</span>
+                                        )}
+
+
                                         {documents.tds?.url && (
                                             <a
                                                 href={documents.tds.url.startsWith("blob:")
@@ -2799,134 +3195,198 @@ const handleCinChange = (e) => {
                             {/* STEP 6: Declaration & Confidentiality */}
                             {currentPage === 5 && (
                                 <div className={styles.page}>
-                                    <h3>Declaration</h3>
-                                    <p className={styles.paragraph}>
-                                        I/We <span className={styles.requiredSymbol}>*</span>{" "}
-                                        <input
-  type="text"
-  name="name"
-  value={declarationInfo.name || ""}
-  readOnly
-/>
-                                        
-                                        of <span className={styles.requiredSymbol}>*</span>{" "}
-                                       <input
-  type="text"
-  name="organization"
-  value={declarationInfo.organization || ""}
-  readOnly
-/>{" "}
-                                        designated as <span className={styles.requiredSymbol}>*</span>{" "}
-                                    <input
-  type="text"
-  name="designation"
-  value={declarationInfo.designation || ""}
-  readOnly
-/>{" "}
-                                        declare the information provided in this document is true and accurate in
-                                        all respects and that we have performed such procedures and inquiries as
-                                        necessary to verify the answers; and
-                                    </p>
+                                    <h3>Declaration and Acknowledgement</h3>
 
-                                    <h3>Confidentiality and Data Privacy</h3>
-                                    <p className={styles.paragraph}>
-                                        I/We <span className={styles.requiredSymbol}>*</span>{" "}
-                                        <input
-  type="text"
-  name="name"
-  value={declarationInfo.name || ""}
-  readOnly
-/>{" "}
-                                        of <span className={styles.requiredSymbol}>*</span>{" "}
-                                     
-<input
-  type="text"
-  name="organization"
-  value={declarationInfo.organization || ""}
-  readOnly
-/>
-{" "}
-                                        designated as <span className={styles.requiredSymbol}>*</span>{" "}
-                                       <input
-  type="text"
-  name="designation"
-  value={declarationInfo.designation || ""}
-  readOnly
-/>{" "}
-                                        acknowledge that the contents of this document and of any of the documents
-                                        enclosed hereto may be shared, used, and stored by ABGT and its affiliates
-                                        worldwide in connection with the administration of the parties'
-                                        relationship or as otherwise required by applicable laws or regulations.
-                                    </p>
-
-                                 
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Signature <span className={styles.requiredSymbol}>*</span>
+                                    {/* ✅ Declaration Checkbox */}
+                                    <div className={styles.checkboxRow}>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                checked={agreeDeclaration}
+                                                onChange={(e) => handleCheckbox("declaration", e.target.checked)}
+                                            />{" "}
+                                            Declaration
                                         </label>
-                                        <input
-                                            type="file"
-                                            accept=".png,.jpg,.jpeg"
-                                            className={styles.fieldInput}
-                                            onChange={(e) => {
-                                                const file = e.target.files[0];
-                                                if (file && validateSignatureFile(file)) {
-                                                    setSignature({
-                                                        file,
-                                                        url: URL.createObjectURL(file),
-                                                    });
-                                                } else {
-                                                    e.target.value = ""; // clear invalid file
-                                                }
-                                            }}
-                                            required
-                                        />
-
-                                        {/* Preview or link to view uploaded signature */}
-                                        {signature?.url && (
-                                            <a
-                                                href={signature.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.viewButton}
-                                            >
-                                                View
-                                            </a>
-                                        )}
                                     </div>
 
+                                    {agreeDeclaration && (
+                                        <p className={styles.declarationText}>
+                                            I/We <strong>{declarationDetails.name || "________"}</strong> of{" "}
+                                            <strong>{declarationDetails.organization || "________"}</strong> designated as{" "}
+                                            <strong>{declarationDetails.designation || "________"}</strong> declare that
+                                            the information provided in this document is true and accurate in all respects
+                                            and that we have performed such procedures and inquiries as necessary to verify
+                                            the answers.
+                                        </p>
+                                    )}
 
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Date <span className={styles.requiredSymbol}>*</span>
+                                    {/* ✅ Confidentiality Checkbox */}
+                                    <div className={styles.checkboxRow}>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                checked={agreePrivacy}
+                                                onChange={(e) => handleCheckbox("privacy", e.target.checked)}
+                                            />{" "}
+                                            Confidentiality and Data Privacy
                                         </label>
-                                        <input
-                                            type="date"
-                                            name="declarationDate"
-                                            value={declarationDate}
-                                            readOnly // ✅ Prevents manual change
-                                            className={styles.fieldInput}
-                                        />
                                     </div>
 
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Place
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input type="text"
-                                            className={styles.fieldInput}
-                                            value={declarationInfo.place}
-                                            onChange={handleDeclarationChange}
-                                            placeholder="Place"
-                                            name="place"
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
+                                    {agreePrivacy && (
+                                        <p className={styles.declarationText}>
+                                            I/We <strong>{declarationDetails.name || "________"}</strong> of{" "}
+                                            <strong>{declarationDetails.organization || "________"}</strong> designated as{" "}
+                                            <strong>{declarationDetails.designation || "________"}</strong> acknowledge that
+                                            the contents of this document and any enclosures may be shared only for the
+                                            purposes of evaluation and shall be kept confidential in accordance with
+                                            applicable data privacy regulations.
+                                        </p>
+                                    )}
 
+                                    {/* ✅ Common Fields visible when both boxes are ticked */}
+                                    {agreeDeclaration && agreePrivacy && (
+                                        <div className={styles.declarationBox}>
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>Place</label>
+                                                <input
+                                                    type="text"
+                                                    value={declarationDetails.place}
+                                                    onChange={(e) =>
+                                                        setDeclarationDetails((prev) => ({
+                                                            ...prev,
+                                                            place: e.target.value
+                                                                .replace(/[^A-Za-z\s]/g, "") // ✅ only letters + spaces
+                                                                .replace(/\s+/g, " ")         // ✅ collapse multiple spaces
+                                                                .toUpperCase()                // ✅ convert to uppercase
+                                                                .trim(),                      // ✅ trim extra spaces
+                                                        }))
+                                                    }
+                                                    className={styles.fieldInput}
+                                                    readOnly={isReadOnly}
+                                                />
+                                            </div>
+
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={declarationDetails.date}
+                                                    readOnly
+                                                    className={styles.fieldInput}
+                                                />
+                                            </div>
+
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>
+                                                    Signature<br></br>
+                                                    (JPG, JPEG, PNG — white background only, max 1 MB)
+                                                </label>
+                                                <input
+                                                    type="file"
+                                                    accept=".jpg,.jpeg,.png"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files[0];
+                                                        if (!file) return;
+
+                                                        const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+                                                        if (!validTypes.includes(file.type)) {
+                                                            alert("❌ Please upload a valid image file (JPG, JPEG, or PNG).");
+                                                            e.target.value = "";
+                                                            return;
+                                                        }
+
+                                                        if (file.size > 1024 * 1024) {
+                                                            alert("❌ File size exceeds 1 MB. Please upload a smaller image.");
+                                                            e.target.value = "";
+                                                            return;
+                                                        }
+
+                                                        // ✅ Check for white background
+                                                        const reader = new FileReader();
+                                                        reader.onload = (ev) => {
+                                                            const img = new Image();
+                                                            img.onload = () => {
+                                                                const canvas = document.createElement("canvas");
+                                                                const ctx = canvas.getContext("2d");
+                                                                canvas.width = img.width;
+                                                                canvas.height = img.height;
+                                                                ctx.drawImage(img, 0, 0);
+
+                                                                const borderPixels = [];
+                                                                // Take pixels from corners and borders
+                                                                const positions = [
+                                                                    [0, 0],
+                                                                    [img.width - 1, 0],
+                                                                    [0, img.height - 1],
+                                                                    [img.width - 1, img.height - 1],
+                                                                    [Math.floor(img.width / 2), 0],
+                                                                    [0, Math.floor(img.height / 2)],
+                                                                    [img.width - 1, Math.floor(img.height / 2)],
+                                                                    [Math.floor(img.width / 2), img.height - 1],
+                                                                ];
+
+                                                                positions.forEach(([x, y]) => {
+                                                                    const pixel = ctx.getImageData(x, y, 1, 1).data;
+                                                                    borderPixels.push(pixel);
+                                                                });
+
+                                                                // Check if all border pixels are white (or nearly white)
+                                                                const allWhite = borderPixels.every(
+                                                                    ([r, g, b]) => r > 240 && g > 240 && b > 240
+                                                                );
+
+                                                                if (!allWhite) {
+                                                                    alert("❌ Please upload a signature with a plain white background.");
+                                                                    e.target.value = "";
+                                                                    return;
+                                                                }
+
+                                                                // ✅ Passed validation
+                                                                setDeclarationDetails((prev) => ({
+                                                                    ...prev,
+                                                                    sign: { file, url: URL.createObjectURL(file) },
+                                                                }));
+                                                            };
+                                                            img.src = ev.target.result;
+                                                        };
+                                                        reader.readAsDataURL(file);
+                                                    }}
+                                                    className={styles.fieldInput}
+                                                />
+
+                                                {declarationDetails.sign?.file?.name && (
+                                                    <span className={styles.fileName}>
+                                                        📄 {declarationDetails.sign.file.name}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>Company Stamp </label>
+                                                <input
+                                                    type="file"
+                                                    accept=".png,.jpg,.jpeg"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files[0];
+                                                        if (file && file.size <= 1024 * 1024) {
+                                                            setDeclarationDetails((prev) => ({
+                                                                ...prev,
+                                                                stamp: { file, url: URL.createObjectURL(file) },
+                                                            }));
+                                                        } else {
+                                                            alert("❌ Stamp must be PNG/JPG and below 1 MB.");
+                                                        }
+                                                    }}
+                                                    className={styles.fieldInput}
+                                                />
+                                                {declarationDetails.stamp?.file?.name && (
+                                                    <span className={styles.fileName}>📄 {declarationDetails.stamp.file.name}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
+
                             )}
                             {/* 🔹 Dynamic Comments Section (for all steps) */}
                             <div className="mt-4">
@@ -2944,7 +3404,7 @@ const handleCinChange = (e) => {
                                         gap: "6px",
                                     }}
                                 >
-                                    <span style={{ flexShrink: 0, fontWeight: 500 }}>Comments for</span>
+                                    <span style={{ flexShrink: 0, fontWeight: 500 }}>Comments By</span>
                                     <span style={{ fontWeight: 500 }}>{stepLabels[currentPage]}</span>
                                 </label>
 
@@ -2960,9 +3420,9 @@ const handleCinChange = (e) => {
                                     <thead style={{ backgroundColor: "#eee" }}>
                                         <tr>
                                             <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "center", color: "#000" }}>S.No</th>
-                                            <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Comment</th>
-                                            <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Name</th>
                                             <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Date</th>
+                                            <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Comment</th>
+                                            <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Comment By</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -2996,118 +3456,118 @@ const handleCinChange = (e) => {
                                     </tbody>
                                 </table>
 
-                          <div
-  className={styles.btnGroup}
-  style={{
-    display: "flex",
-    justifyContent: currentPage === 0 ? "flex-end" : "space-between",
-    marginTop: "20px",
-  }}
->
-  {/* 🔹 Previous button (hidden on first step) */}
-  {currentPage > 0 && (
-    <button
-      type="button"
-      onClick={prevPage}
-      style={{
-        backgroundColor: "#6c757d",
-        color: "white",
-        border: "none",
-        borderRadius: "6px",
-        padding: "8px 16px",
-        cursor: "pointer",
-        fontSize: "14px",
-      }}
-    >
-      Previous
-    </button>
-  )}
+                                <div
+                                    className={styles.btnGroup}
+                                    style={{
+                                        display: "flex",
+                                        justifyContent: currentPage === 0 ? "flex-end" : "space-between",
+                                        marginTop: "20px",
+                                    }}
+                                >
+                                    {/* 🔹 Previous button (hidden on first step) */}
+                                    {currentPage > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={prevPage}
+                                            style={{
+                                                backgroundColor: "#6c757d",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                padding: "8px 16px",
+                                                cursor: "pointer",
+                                                fontSize: "14px",
+                                            }}
+                                        >
+                                            Previous
+                                        </button>
+                                    )}
 
-  {/* 🔹 Right-side buttons */}
-  {rfqStatus !== 8 ? (
-    <>
-      {/* If NOT the last step */}
-      {currentPage < totalSteps - 1 ? (
-        <button
-          type="button"
-          onClick={() => {
-            switch (currentPage) {
-              case 0:
-                handleSubmitCompanyInfo();
-                break;
-              case 1:
-                handleSaveMsmeInfo();
-                break;
-              case 2:
-                handleSaveGstForm();
-                break;
-              case 3:
-                handleSaveBankDetails();
-                break;
-              case 4:
-                handleSaveDocuments();
-                break;
-              default:
-                nextPage();
-            }
-          }}
-          style={{
-            backgroundColor: "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            padding: "8px 16px",
-            cursor: "pointer",
-            fontSize: "14px",
-          }}
-        >
-          Save and Continue
-        </button>
-      ) : (
-        /* 🔹 On last step → show Final Submit */
-        <button
-          type="button"
-          onClick={handleOpenModal} // 👈 Opens final review popup
-          style={{
-            backgroundColor: "#28a745",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            padding: "10px 22px",
-            cursor: "pointer",
-            fontSize: "15px",
-            fontWeight: "600",
-          }}
-        >
-          Final Submit
-        </button>
-      )}
-    </>
-  ) : (
-    /* 🔹 Read-only mode (for rfqStatus = 8) */
-    currentPage < totalSteps - 1 && (
-      <button
-        type="button"
-        onClick={nextPage}
-        style={{
-          backgroundColor: "#6c757d",
-          color: "white",
-          border: "none",
-          borderRadius: "6px",
-          padding: "8px 16px",
-          cursor: "pointer",
-          fontSize: "14px",
-        }}
-      >
-        Next
-      </button>
-    )
-  )}
-</div>
+                                    {/* 🔹 Right-side buttons */}
+                                    {rfqStatus !== 8 ? (
+                                        <>
+                                            {/* If NOT the last step */}
+                                            {currentPage < totalSteps - 1 ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        switch (currentPage) {
+                                                            case 0:
+                                                                handleSubmitCompanyInfo();
+                                                                break;
+                                                            case 1:
+                                                                handleSaveMsmeInfo();
+                                                                break;
+                                                            case 2:
+                                                                handleSaveGstForm();
+                                                                break;
+                                                            case 3:
+                                                                handleSaveBankDetails();
+                                                                break;
+                                                            case 4:
+                                                                handleSaveDocuments();
+                                                                break;
+                                                            default:
+                                                                nextPage();
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        backgroundColor: "#007bff",
+                                                        color: "white",
+                                                        border: "none",
+                                                        borderRadius: "6px",
+                                                        padding: "8px 16px",
+                                                        cursor: "pointer",
+                                                        fontSize: "14px",
+                                                    }}
+                                                >
+                                                    Save and Continue
+                                                </button>
+                                            ) : (
+                                                /* 🔹 On last step → show Final Submit */
+                                                <button
+                                                    type="button"
+                                                    onClick={handleOpenModal} // 👈 Opens final review popup
+                                                    style={{
+                                                        backgroundColor: "#28a745",
+                                                        color: "white",
+                                                        border: "none",
+                                                        borderRadius: "6px",
+                                                        padding: "10px 22px",
+                                                        cursor: "pointer",
+                                                        fontSize: "15px",
+                                                        fontWeight: "600",
+                                                    }}
+                                                >
+                                                    Review All
+                                                </button>
+                                            )}
+                                        </>
+                                    ) : (
+                                        /* 🔹 Read-only mode (for rfqStatus = 8) */
+                                        currentPage < totalSteps - 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={nextPage}
+                                                style={{
+                                                    backgroundColor: "#6c757d",
+                                                    color: "white",
+                                                    border: "none",
+                                                    borderRadius: "6px",
+                                                    padding: "8px 16px",
+                                                    cursor: "pointer",
+                                                    fontSize: "14px",
+                                                }}
+                                            >
+                                                Next
+                                            </button>
+                                        )
+                                    )}
+                                </div>
 
                             </div>
 
-                       
+
 
                             <Modal
                                 open={openConfirmModal}
@@ -3153,7 +3613,12 @@ const handleCinChange = (e) => {
                                             color: "#0d47a1",
                                         }}
                                     >
-                                        🧾 Review All Details Before Final Submission
+                                        🧾 Review All Details Before Final Submission —{" "}
+                                        {new Date().toLocaleDateString("en-GB", {
+                                            day: "2-digit",
+                                            month: "long",
+                                            year: "numeric",
+                                        })}
                                     </h2>
 
                                     {/* --- Step Sections --- */}
@@ -3299,7 +3764,7 @@ const handleCinChange = (e) => {
                                                 fontSize: "15px",
                                             }}
                                         >
-                                            Cancel
+                                            Go Back
                                         </Button>
                                     </Box>
                                 </Box>
@@ -3313,7 +3778,142 @@ const handleCinChange = (e) => {
 
 
                         </form>
-                        
+
+                        {/* ✅ Instructions Popup */}
+                        {showInstructions && (
+                            <div className={styles.popupOverlay}>
+                                <div className={styles.popupContainer}>
+                                    <h2 className={styles.popupTitle}>Instructions to Fill the Vendor Registration Form</h2>
+
+                                    <div className={styles.popupScroll}>
+                                        <h3>📘 <span style={{ color: "#1d3557" }}>General Guidelines</span></h3>
+                                        <ul>
+                                            <li>👉 <strong>Read all instructions carefully</strong> before starting the form.</li>
+                                            <li>Ensure all required <strong>documents and information</strong> are ready before you begin.</li>
+                                            <li>Fields marked with <span style={{ color: "red" }}>*</span> are <strong>mandatory</strong>.</li>
+                                            <li>Upload only <strong>JPG, JPEG, PNG, or PDF</strong> formats.</li>
+                                            <li>Maximum file size: <strong style={{ color: "#e63946" }}>5 MB</strong> for documents, and <strong style={{ color: "#e63946" }}>1 MB</strong> for signature/stamp.</li>
+                                            <li>Use <strong>UPPERCASE letters</strong> for all codes like GSTIN, CIN, IFSC, and SWIFT.</li>
+                                            <li>Double-check your entries before submitting — <strong>incorrect data may delay approval.</strong></li>
+                                            <li>Signature must be on a <strong style={{ color: "#457b9d" }}>white background</strong> only.</li>
+                                            <li>💻 Use a <strong>laptop or desktop</strong> for the best experience.</li>
+                                        </ul>
+
+                                        <h3>🧭 <span style={{ color: "#1d3557" }}>Step-by-Step Instructions</span></h3>
+
+                                        <h4>🔹 Step 1: Business Entity Details</h4>
+                                        <ul>
+                                            <li>Select your <strong>Business Type</strong> (Proprietorship, Partnership, Private Limited, LLP, NGO, etc.).</li>
+                                            <li>Enter the <strong>Registration Number</strong> as per your entity type (e.g., CIN for companies, NGO Reg. No for NGOs).</li>
+                                            <li>Provide complete <strong>Company Information</strong> – name, PAN, address, and contact details.</li>
+                                            <li>Ensure your organization name matches your <strong>official registration documents.</strong></li>
+                                        </ul>
+
+                                        <h4>🔹 Step 2: MSME / UDYAM Details</h4>
+                                        <ul>
+                                            <li>Enter your <strong>MSME or UDYAM Registration Number</strong> if applicable.</li>
+                                            <li>Upload the valid MSME/UDYAM certificate in the supported format.</li>
+                                            <li>If not applicable, select or mention <strong>“Not Registered / Not Applicable.”</strong></li>
+                                        </ul>
+
+                                        <h4>🔹 Step 3: GST Information</h4>
+                                        <ul>
+                                            <li>Enter valid <strong>GSTIN</strong> as per your business registration.</li>
+                                            <li>Upload the <strong>GST Certificate</strong> clearly showing GST number and business name.</li>
+                                            <li>Provide your <strong>ITR Filed Date</strong> and <strong>Acknowledgement Number.</strong></li>
+                                            <li>Select the relevant <strong>Financial Year</strong> from the dropdown (last 5 years available).</li>
+                                            <li>Ensure your GST & ITR details are <strong>accurate and consistent</strong> with official records.</li>
+                                        </ul>
+
+                                        <h4>🔹 Step 4: Bank Details</h4>
+                                        <ul>
+                                            <li>Select <strong>Transaction Type:</strong> Domestic / International / Both.</li>
+                                            <li>For Domestic → provide <strong>IFSC Code</strong>.</li>
+                                            <li>For International → provide <strong>SWIFT Code</strong>.</li>
+                                            <li>Enter accurate <strong>Account Name, Number, Bank Name,</strong> and <strong>Branch.</strong></li>
+                                            <li>Upload a clear <strong>Cancelled Cheque Leaf</strong> (showing account details clearly).</li>
+                                        </ul>
+
+                                        <h4>🔹 Step 5: Documents and Attachments</h4>
+                                        <ul>
+                                            <li>Upload all required documents in <strong>JPG, JPEG, PNG, or PDF</strong> format.</li>
+                                            <li>Each file must be under <strong style={{ color: "#e63946" }}>5 MB</strong>.</li>
+                                            <li>Ensure the document names and scanned details are <strong>clearly visible and readable.</strong></li>
+                                            <li>Mandatory uploads include:
+                                                <ul>
+                                                    <li>PAN Card</li>
+                                                    <li>GST Certificate</li>
+                                                    <li>MSME / UDYAM Certificate (if applicable)</li>
+                                                    <li>TAN</li>
+                                                    <li>Certificate of Incorporation / Firm Registration</li>
+                                                    <li>TDS Declaration (if applicable)</li>
+                                                    <li>Cancelled Cheque Leaf</li>
+                                                </ul>
+                                            </li>
+                                            <li>Once uploaded, the <strong>file name will appear automatically</strong> for confirmation.</li>
+                                        </ul>
+
+                                        <h4>🔹 Step 6: Declaration and Confidentiality</h4>
+                                        <ul>
+                                            <li>Carefully read both:
+                                                <ul>
+                                                    <li>✅ <strong>Declaration</strong></li>
+                                                    <li>✅ <strong>Confidentiality & Data Privacy Agreement</strong></li>
+                                                </ul>
+                                            </li>
+                                            <li>Tick both checkboxes to confirm your acceptance.</li>
+                                            <li>Once checked, the following fields will appear automatically:
+                                                <ul>
+                                                    <li><strong>Place</strong></li>
+                                                    <li><strong>Date</strong> (auto-filled with current date)</li>
+                                                    <li><strong>Signature</strong> (upload on white background only)</li>
+                                                    <li><strong>Company Stamp</strong></li>
+                                                </ul>
+                                            </li>
+                                            <li>Signature and Stamp files must be:
+                                                <ul>
+                                                    <li>In <strong>JPG / JPEG / PNG</strong> format only</li>
+                                                    <li>Under <strong>1 MB</strong> each</li>
+                                                    <li>With <strong>white or plain background</strong> (no colors or shadows)</li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+
+                                        <h3>🟢 <span style={{ color: "#1d3557" }}>Before You Submit</span></h3>
+                                        <ul>
+                                            <li>Review all six steps carefully in the <strong>final confirmation popup</strong> before submission.</li>
+                                            <li>Ensure all uploads, names, and numbers are <strong>correct and match your documents.</strong></li>
+                                            <li>Incomplete or incorrect details may result in <strong style={{ color: "#e63946" }}>rejection</strong> or delays in approval.</li>
+                                            <li>Once satisfied, click <strong style={{ color: "#007bff" }}>Submit</strong> to complete your registration process.</li>
+                                        </ul>
+                                    </div>
+
+                                    {/* Checkbox and Buttons */}
+                                    <div className={styles.instructionsFooter}>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                checked={agreeInstructions}
+                                                onChange={(e) => setAgreeInstructions(e.target.checked)}
+                                            />{" "}
+                                            I have read and understood the instructions.
+                                        </label>
+
+                                        <div className={styles.popupButtonRow}>
+                                            <button
+                                                className={styles.proceedButton}
+                                                disabled={!agreeInstructions}
+                                                onClick={() => setShowInstructions(false)}
+                                            >
+                                                Proceed to Form
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+
                     </div>
                 </div>
             </div>
