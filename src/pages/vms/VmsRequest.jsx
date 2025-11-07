@@ -19,6 +19,8 @@ import { useParams } from "react-router-dom";
 import { getReferenceId, getRfqStatus, submitRfq } from "../../services/vms/referenceIdService";
 import { toast } from "react-hot-toast";
 import { getStateCombo } from "../../services/admin/stateService";
+import InstructionsStep from "./Components/InstructionsPopup";
+import { FiBookOpen } from "react-icons/fi";
 
 
 const VmsRequest = () => {
@@ -36,7 +38,17 @@ const VmsRequest = () => {
     const [showConfirmPopup, setShowConfirmPopup] = useState(false);
 
     const [currentPage, setCurrentPage] = useState(0);
+    const [showInstructions, setShowInstructions] = useState(false);
+    const [firstTime, setFirstTime] = useState(false);
+
     const totalSteps = 6;
+
+    const handleInstructionsClick = () => {
+        const hasAgreed = localStorage.getItem("hasAgreedInstructions");
+        setFirstTime(!hasAgreed); // true = first time
+        setShowInstructions(true);
+    };
+
 
 
 
@@ -98,6 +110,7 @@ const VmsRequest = () => {
 
 
     const stepLabels = [
+        "Instructions",
         "Business Entity Details",
         "MSME Details",
         "GST Information",
@@ -106,6 +119,16 @@ const VmsRequest = () => {
         "Declaration and Acknowledgement",
     ];
 
+    const [hasAgreed, setHasAgreed] = useState(
+        localStorage.getItem("hasAgreedInstructions") === "true"
+    );
+
+
+    const handleProceedToForm = () => {
+        localStorage.setItem("hasAgreedInstructions", "true");
+        setHasAgreed(true);
+        setCurrentPage(1);
+    };
 
     const [goods, setGoods] = useState([]);
     const [services, setServices] = useState([]);
@@ -117,7 +140,9 @@ const VmsRequest = () => {
     };
     // 🧾 GOODS input change
     const gsForm_changeGoods = (index, value) => {
-        const cleaned = value.replace(/[^A-Za-z0-9\s]/g, "").toUpperCase(); // only A-Z, 0-9, space
+        // ✅ allow letters, numbers, space, comma, dot, dash, slash
+        const cleaned = value.replace(/[^A-Za-z0-9,.\-\/\s]/g, "").toUpperCase();
+
         const updated = [...goods];
         updated[index] = cleaned;
         setGoods(updated);
@@ -136,7 +161,7 @@ const VmsRequest = () => {
 
     // 🧾 SERVICES input change
     const gsForm_changeService = (index, value) => {
-        const cleaned = value.replace(/[^A-Za-z0-9\s]/g, "").toUpperCase(); // only A-Z, 0-9, space
+        const cleaned = value.replace(/[^A-Za-z0-9,.\-\/\s]/g, "").toUpperCase();
         const updated = [...services];
         updated[index] = cleaned;
         setServices(updated);
@@ -156,7 +181,7 @@ const VmsRequest = () => {
 
     // 🧾 GOODS & SERVICES combined input change
     const gsForm_changeGoodsServices = (index, field, value) => {
-        const cleaned = value.replace(/[^A-Za-z0-9\s]/g, "").toUpperCase(); // only A-Z, 0-9, space
+        const cleaned = value.replace(/[^A-Za-z0-9,.\-\/\s]/g, "").toUpperCase();
         setGoodsAndServices((prev) => {
             const updated = [...prev];
             if (!updated[index]) {
@@ -351,9 +376,9 @@ const VmsRequest = () => {
     const handleIncomeChange = (e) => {
         const { name, value } = e.target;
 
-        // 🧾 Turnover fields — only digits allowed
+        // 🧾 Turnover fields — allow digits + one decimal point (float values)
         if (name.startsWith("turnover")) {
-            if (value === "" || /^[0-9]*$/.test(value)) {
+            if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
                 setFormData((prev) => ({ ...prev, [name]: value }));
             }
             return;
@@ -404,6 +429,7 @@ const VmsRequest = () => {
             return updated;
         });
     };
+
 
 
     // ✅ Get dynamic financial year options
@@ -1639,9 +1665,7 @@ const VmsRequest = () => {
         }
     };
 
-    // Popup control
-    const [showInstructions, setShowInstructions] = useState(true);
-    const [agreeInstructions, setAgreeInstructions] = useState(false);
+
 
 
 
@@ -1649,6 +1673,8 @@ const VmsRequest = () => {
 
 
     return (
+
+
         <Box m="50px">
             <Header
                 title="Customer / Vendor Registration"
@@ -1661,1202 +1687,1233 @@ const VmsRequest = () => {
 
             <div className={styles.container}>
                 <div className={styles.vmsWrapper}>
-                    {/* Sidebar */}
-                    <div className={styles.verticalTabs}>
-                        {stepLabels.map((label, index) => (
-                            <div
-                                key={index}
-                                className={`${styles.tab} ${currentPage === index ? styles.activeTab : ""
-                                    } ${currentPage > index ? styles.completedTab : ""}`}
-                                onClick={() => setCurrentPage(index)}
-                            >
-                                <div className={styles.tabIcon}>{index + 1}</div>
-                                <div className={styles.tabLabel}>{label}</div>
-                            </div>
-                        ))}
-                    </div>
+                    {/* ✅ Instructions Popup */}
+
+
+
+   {/* Sidebar Tabs */}
+<div className={styles.verticalTabs}>
+  {stepLabels.map((label, index) => (
+    <div
+      key={index}
+      className={`${styles.tab} 
+        ${currentPage === index ? styles.activeTab : ""} 
+        ${currentPage > index ? styles.completedTab : ""} 
+        ${index === 0 ? styles.instructionsTab : ""}`} // ✅ Only for the first (Instructions)
+      onClick={() => setCurrentPage(index)}
+    >
+      <div className={styles.tabIcon}>
+        {index === 0 ? (
+          <div className={styles.infoIconWrapper}>
+            <FiBookOpen size={16} strokeWidth={2.2} />
+          </div>
+        ) : (
+          index
+        )}
+      </div>
+      <div className={styles.tabLabel}>{label}</div>
+    </div>
+  ))}
+</div>
+
 
                     {/* Form content */}
                     <div className={styles.formOuter}>
+
                         <form>
-                            {/* Step 1: Company Info */}
-                            {currentPage === 0 && (
 
-                                <div className={styles.page}>
-                                    <h3>Business Entity Details </h3>
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Full Registered Name (as per PAN)
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="full_registered_name"
-                                            value={companyInfo.full_registered_name}
-                                            className={`${styles.fieldInput} ${styles.uppercaseInput}`}
-                                            onChange={(e) =>
-                                                setCompanyInfo({
-                                                    ...companyInfo,
-                                                    full_registered_name: e.target.value
-                                                        .replace(/[^A-Za-z\s]/g, "")  // ✅ only letters + spaces
-                                                        .replace(/\s+/g, " ")         // ✅ collapse multiple spaces
-                                                        .toUpperCase()                // ✅ convert to uppercase
-                                                        .trim(),                      // ✅ remove extra space at start/end
-                                                })
-                                            }
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
+                            <>
 
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Nature of Business Entity
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            name="business_entity_type"
-                                            value={companyInfo.business_entity_type}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            disabled={isReadOnly}
+                                {currentPage === 0 && (
+                                    <InstructionsStep hasAgreed={hasAgreed} onProceed={handleProceedToForm} />
+                                )}
 
-                                        >
-                                            <option value="">-- Select Business Entity Type --</option>
-                                            <option value="Sole Proprietorship">Sole Proprietorship</option>
-                                            <option value="Partnership">Partnership</option>
-                                            <option value="Limited Liability Partnership">Limited Liability Partnership</option>
-                                            <option value="Private Limited Companies">Private Limited Companies</option>
-                                            <option value="Public Limited Companies">Public Limited Companies</option>
-                                            <option value="One-Person Companies">One-Person Companies</option>
-                                            <option value="Section 8 Company">Section 8 Company</option>
-                                            <option value="Joint-Venture Company">Joint-Venture Company</option>
-                                            <option value="Non-Government Organization(NGO)">Non-Government Organization (NGO)</option>
-                                        </select>
-                                    </div>
 
-                                    {(showFullCompanyFields || companyInfo.business_entity_type === "Section 8 Company") && (
-                                        <>
-                                            {/* CIN visible for Section 8 too */}
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>
-                                                    Company Identification Number (CIN)
-                                                    <span className={styles.requiredSymbol}>*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="cin_number"
-                                                    value={companyInfo.cin_number || ""}
-                                                    onChange={handleCinChange}
-                                                    className={styles.fieldInput}
-                                                    required
-                                                    readOnly={isReadOnly}
-                                                    maxLength={21}
-                                                    pattern="[A-Za-z0-9]{21}"
-                                                    title="CIN must be 21 alphanumeric characters (A-Z, 0-9)"
-                                                    style={{ textTransform: "uppercase" }}
-                                                />
-                                            </div>
+                                {/* Step 1: Company Info */}
+                                {currentPage === 1 && hasAgreed && (
 
-                                            {/* TAN field hidden for Section 8 */}
-                                            {companyInfo.business_entity_type !== "Section 8 Company" && (
-                                                <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>TAN Number
-                                                        <span className={styles.requiredSymbol}>*</span></label>
-                                                    <input
-                                                        type="text"
-                                                        name="tan_number"
-                                                        value={companyInfo.tan_number || ""}
-                                                        onChange={handleCompanyInfoChange}
-                                                        className={styles.fieldInput}
-                                                        required
-                                                        readOnly={isReadOnly}
-
-                                                    />
-                                                </div>
-                                            )}
-
-                                        </>
-                                    )}
-
-                                    {/* For simpler entities: Registration Number only */}
-                                    {showBasicRegistrationField && (
+                                    <div className={styles.page}>
+                                        <h3>Business Entity Details </h3>
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
-                                                Registration Number (as per incorporation certificate)
+                                                Full Registered Name (as per PAN)
                                                 <span className={styles.requiredSymbol}>*</span>
                                             </label>
                                             <input
                                                 type="text"
-                                                name="reg_number"
-                                                value={companyInfo.reg_number || ""}
+                                                name="full_registered_name"
+                                                value={companyInfo.full_registered_name}
+                                                className={`${styles.fieldInput} ${styles.uppercaseInput}`}
+                                                onChange={(e) => {
+                                                    let input = e.target.value;
+
+                                                    // ✅ allow letters + spaces while typing
+                                                    // but don't immediately collapse or trim (to let typing feel natural)
+                                                    if (/^[A-Za-z\s]*$/.test(input)) {
+                                                        setCompanyInfo({
+                                                            ...companyInfo,
+                                                            full_registered_name: input.toUpperCase(),
+                                                        });
+                                                    }
+                                                }}
+                                                onBlur={(e) => {
+                                                    // ✅ when user leaves the field, clean it up finally
+                                                    setCompanyInfo((prev) => ({
+                                                        ...prev,
+                                                        full_registered_name: prev.full_registered_name
+                                                            ?.replace(/\s+/g, " ") // collapse multiple spaces
+                                                            .trim()                // remove start/end spaces
+                                                            .toUpperCase(),        // ensure uppercase
+                                                    }));
+                                                }}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Nature of Business Entity
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                name="business_entity_type"
+                                                value={companyInfo.business_entity_type}
                                                 onChange={handleCompanyInfoChange}
                                                 className={styles.fieldInput}
                                                 required
-                                                readOnly={isReadOnly}
-                                            />
-                                        </div>
-                                    )}
+                                                disabled={isReadOnly}
 
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Trading Name
-                                            <span className={styles.requiredSymbol}>*</span></label>
-                                        <input
-                                            type="text"
-                                            name="trading_name"
-                                            value={companyInfo.trading_name || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
-
-
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Country of Incorporation
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            name="country_of_incorporation"
-                                            value={companyInfo.country_of_incorporation || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            disabled={isReadOnly}
-                                        >
-                                            <option value="">-- Select Country --</option>
-                                            {countries.map((country) => (
-                                                <option key={country.id} value={country.id}>
-                                                    {country.country}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>State
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            name="state"
-                                            value={companyInfo.state || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            disabled={isReadOnly}
-                                        >
-                                            <option value="">-- Select State --</option>
-                                            {states.map((state) => (
-                                                <option key={state.id} value={state.id}>
-                                                    {state.state}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Telephone Number
-                                            <span className={styles.requiredSymbol}>*</span></label>
-                                        <input
-                                            type="text"
-                                            name="telephone"
-                                            value={countryCode ? `${countryCode} ${companyInfo.telephone}` : companyInfo.telephone}
-                                            onChange={(e) => {
-                                                const val = e.target.value.replace(countryCode, "").trim();
-                                                setCompanyInfo({ ...companyInfo, telephone: val });
-                                            }}
-                                            className={styles.fieldInput}
-                                        />
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Registered Address
-                                            <span className={styles.requiredSymbol}>*</span></label>
-                                        <input
-                                            type="text"
-                                            name="registered_address"
-                                            value={companyInfo.registered_address || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Business Address (if different)
-                                            <span className={styles.requiredSymbol}>*</span></label>
-                                        <input
-                                            type="text"
-                                            name="business_address"
-                                            value={companyInfo.business_address || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Contact Person<span className={styles.requiredSymbol}>*</span>
-                                        </label>
-
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                width: "65%",
-                                                border: "1px solid #ccc",
-                                                borderRadius: "6px",
-                                                overflow: "hidden",
-                                            }}
-                                        >
-                                            <select
-                                                name="contact_person_title"
-                                                value={companyInfo.contact_person_title || ""}
-                                                onChange={handleCompanyInfoChange}
-                                                style={{
-                                                    border: "none",
-                                                    outline: "none",
-                                                    padding: "8px 10px",
-                                                    width: "80px",
-                                                    background: "transparent",
-                                                    borderRight: "1px solid #ccc",
-                                                    cursor: "pointer",
-                                                }}
-                                                required
-                                                readOnly={isReadOnly}
                                             >
-
-                                                <option value="Mr">Mr</option>
-                                                <option value="Mrs">Mrs</option>
-                                                <option value="Ms">Ms</option>
+                                                <option value="">-- Select Business Entity Type --</option>
+                                                <option value="Sole Proprietorship">Sole Proprietorship</option>
+                                                <option value="Partnership">Partnership</option>
+                                                <option value="Limited Liability Partnership">Limited Liability Partnership</option>
+                                                <option value="Private Limited Companies">Private Limited Companies</option>
+                                                <option value="Public Limited Companies">Public Limited Companies</option>
+                                                <option value="One-Person Companies">One-Person Companies</option>
+                                                <option value="Section 8 Company">Section 8 Company</option>
+                                                <option value="Joint-Venture Company">Joint-Venture Company</option>
+                                                <option value="Non-Government Organization(NGO)">Non-Government Organization (NGO)</option>
                                             </select>
-
-                                            <input
-                                                type="text"
-                                                name="contact_person_name"
-                                                value={companyInfo.contact_person_name || ""}
-                                                onChange={handleCompanyInfoChange}
-                                                placeholder="Enter Contact Person Name"
-                                                style={{
-                                                    border: "none",
-                                                    outline: "none",
-                                                    flex: 1,
-                                                    padding: "8px 10px",
-                                                    background: "transparent",
-                                                }}
-                                                required
-                                                readOnly={isReadOnly}
-                                            />
                                         </div>
-                                    </div>
 
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Contact Person Phone Number
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="contact_person_mobile"
-                                            value={companyInfo.contact_person_mobile || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
+                                        {(showFullCompanyFields || companyInfo.business_entity_type === "Section 8 Company") && (
+                                            <>
+                                                {/* CIN visible for Section 8 too */}
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>
+                                                        Company Identification Number (CIN)
+                                                        <span className={styles.requiredSymbol}>*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name="cin_number"
+                                                        value={companyInfo.cin_number || ""}
+                                                        onChange={handleCinChange}
+                                                        className={styles.fieldInput}
+                                                        required
+                                                        readOnly={isReadOnly}
+                                                        maxLength={21}
+                                                        pattern="[A-Za-z0-9]{21}"
+                                                        title="CIN must be 21 alphanumeric characters (A-Z, 0-9)"
+                                                        style={{ textTransform: "uppercase" }}
+                                                    />
+                                                </div>
 
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Contact Person Email ID
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="email"
-                                            name="contact_person_email"
-                                            value={companyInfo.contact_person_email || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
+                                                {/* TAN field hidden for Section 8 */}
+                                                {companyInfo.business_entity_type !== "Section 8 Company" && (
+                                                    <div className={styles.fieldRow}>
+                                                        <label className={styles.fieldLabel}>TAN Number
+                                                            <span className={styles.requiredSymbol}>*</span></label>
+                                                        <input
+                                                            type="text"
+                                                            name="tan_number"
+                                                            value={companyInfo.tan_number || ""}
+                                                            onChange={handleCompanyInfoChange}
+                                                            className={styles.fieldInput}
+                                                            required
+                                                            readOnly={isReadOnly}
 
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Website
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="website"
-                                            value={companyInfo.website || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
+                                                        />
+                                                    </div>
+                                                )}
 
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Account Person<span className={styles.requiredSymbol}>*</span>
-                                        </label>
-
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                width: "65%",
-                                                border: "1px solid #ccc",
-                                                borderRadius: "6px",
-                                                overflow: "hidden",
-                                            }}
-                                        >
-                                            <select
-                                                name="account_person_title"
-                                                value={companyInfo.account_person_title || ""}
-                                                onChange={handleCompanyInfoChange}
-                                                style={{
-                                                    border: "none",
-                                                    outline: "none",
-                                                    padding: "8px 10px",
-                                                    width: "80px",
-                                                    background: "transparent",
-                                                    borderRight: "1px solid #ccc",
-                                                    cursor: "pointer",
-                                                }}
-                                                required
-                                                readOnly={isReadOnly}
-                                            >
-
-                                                <option value="Mr">Mr</option>
-                                                <option value="Mrs">Mrs</option>
-                                                <option value="Ms">Ms</option>
-                                            </select>
-
-                                            <input
-                                                type="text"
-                                                name="account_person_name"
-                                                value={companyInfo.account_person_name || ""}
-                                                onChange={handleCompanyInfoChange}
-                                                placeholder="Enter Account Person Name"
-                                                style={{
-                                                    border: "none",
-                                                    outline: "none",
-                                                    flex: 1,
-                                                    padding: "8px 10px",
-                                                    background: "transparent",
-                                                }}
-                                                required
-                                                readOnly={isReadOnly}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Accounts Person Contact Number
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="accounts_person_contact_no"
-                                            value={companyInfo.accounts_person_contact_no || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Accounts Person Email ID
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="email"
-                                            name="accounts_person_email"
-                                            value={companyInfo.accounts_person_email || ""}
-                                            onChange={handleCompanyInfoChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
-
-                                </div>
-
-
-                            )}
-
-                            {/* STEP 2: MSME */}
-                            {currentPage === 1 && (
-                                <div className={styles.page}>
-                                    <h3>MSME / Udyam Registration</h3>
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Registered under MSME Act
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            name="registered_under_msme"
-                                            value={msmeInfo?.registered_under_msme}
-                                            onChange={handleMsmeChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            disabled={isReadOnly}
-
-                                        >
-                                            <option value="">Select</option>
-                                            <option value="true">Yes</option>
-                                            <option value="false">No</option>
-                                        </select>
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Udyam Registration Number
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="udyam_registration_number"
-                                            value={msmeInfo?.udyam_registration_number}
-                                            onChange={handleMsmeChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-
-                                        />
-                                    </div>
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Category (Micro/Small/Medium)
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            name="category"
-                                            value={msmeInfo?.category}
-                                            onChange={handleMsmeChange}
-                                            className={styles.fieldInput}
-                                            disabled={isReadOnly}
-
-                                        >
-                                            <option value="">Select</option>
-                                            <option value="Micro">Micro</option>
-                                            <option value="Small">Small</option>
-                                            <option value="Medium">Medium</option>
-                                        </select>
-                                    </div>
-
-                                </div>
-                            )}
-
-                            {/* STEP 3: GST */}
-                            {/* STEP 3: Goods and Services Supplied */}
-                            {currentPage === 2 && (
-                                <div className={styles.page}>
-
-
-                                    <div className={styles.fieldRow} >
-                                        <label className={styles.fieldLabel}>Type of Counterparty Business
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            name="type_of_counterparty"
-                                            value={goodsServices.type_of_counterparty}
-                                            onChange={(e) => handleGoodsServicesChange(e, 'goodsServices')}
-                                            className={styles.fieldInput}
-                                            required
-                                            disabled={isReadOnly}
-                                        >
-                                            <option value="">Select</option>
-                                            <option value="Trading Entity">Trading Entity</option>
-                                            <option value="End-Use">End-Use</option>
-                                            <option value="Manufacturer">Manufacturer</option>
-                                            <option value="Service Provider">Service provider</option>
-                                            <option value="Third Party Payer / Reciever of funds">Third party payer/receiver of funds</option>
-                                            <option value="Others">Others</option>
-                                        </select>
-
-                                        {goodsServices.type_of_counterparty === 'Others' && (
-                                            <input
-                                                type="text"
-                                                name="others"
-                                                value={goodsServices.others}
-                                                onChange={(e) => handleGoodsServicesChange(e, 'goodsServices')}
-                                                placeholder="Please specify other business type"
-                                                className={styles.fieldInput}
-                                                required
-                                                readOnly={isReadOnly}
-                                            />
+                                            </>
                                         )}
-                                    </div>
 
-                                    <h3 style={{
-                                        fontSize: "16px",
-                                        fontWeight: 600,
-                                        marginBottom: "10px",
-                                    }}>Details of the Supplies<span className={styles.requiredSymbol}>*</span></h3>
-
-                                    <div className={styles.fieldRow}>
-
-                                        <select
-                                            name="type"
-                                            value={goodsServices.type}
-                                            onChange={(e) =>
-                                                setGoodsServices((prev) => ({ ...prev, type: e.target.value }))
-                                            }
-                                            className={styles.fieldInput}
-                                            disabled={isReadOnly}
-                                        >
-                                            <option value="">Select</option>
-                                            <option value="Goods">Goods</option>
-                                            <option value="Services">Services</option>
-                                            <option value="Goods and Services">Goods and Services</option>
-                                        </select>
-                                    </div>
-
-                                    {/* ======== GOODS ======== */}
-                                    {goodsServices.type === "Goods" && (
-                                        <div>
-                                            <h4 style={{
-                                                marginBottom: "5px",
-                                            }}>Goods</h4>
-                                            {[...Array(5)].map((_, index) => (
-                                                <div key={index} className={styles.gsForm_row}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder={`Enter Goods ${index + 1}`}
-                                                        value={goods[index] || ""}
-                                                        onChange={(e) => gsForm_changeGoods(index, e.target.value)}
-                                                        className={styles.gsForm_input}
-                                                        readOnly={isReadOnly}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* ======== SERVICES ======== */}
-                                    {goodsServices.type === "Services" && (
-                                        <div>
-                                            <h4 style={{
-                                                marginBottom: "5px",
-                                            }}>Services</h4>
-                                            {[...Array(5)].map((_, index) => (
-                                                <div key={index} className={styles.gsForm_row}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder={`Enter Service ${index + 1}`}
-                                                        value={services[index] || ""}
-                                                        onChange={(e) => gsForm_changeService(index, e.target.value)}
-                                                        className={styles.gsForm_input}
-                                                        readOnly={isReadOnly}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* ======== GOODS & SERVICES ======== */}
-                                    {goodsServices.type === "Goods and Services" && (
-                                        <div>
-                                            <h4 style={{
-                                                marginBottom: "5px",
-                                            }}>Goods and Services</h4>
-                                            {[...Array(5)].map((_, index) => (
-                                                <div key={index} className={styles.gsForm_combinedRow}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder={`Goods ${index + 1}`}
-                                                        value={goodsAndServices[index]?.goods || ""}
-                                                        onChange={(e) =>
-                                                            gsForm_changeGoodsServices(index, "goods", e.target.value)
-                                                        }
-                                                        className={styles.gsForm_input}
-                                                        readOnly={isReadOnly}
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        placeholder={`Service ${index + 1}`}
-                                                        value={goodsAndServices[index]?.services || ""}
-                                                        onChange={(e) =>
-                                                            gsForm_changeGoodsServices(index, "services", e.target.value)
-                                                        }
-                                                        className={styles.gsForm_input}
-                                                        readOnly={isReadOnly}
-
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    <h3 style={{ marginTop: "20px", }}>GST Registrations</h3>
-                                    {/* Number selection */}
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Number of GST Registrations (max 28)
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            className={styles.fieldInput}
-                                            value={count}
-                                            onChange={handleCountChange}
-                                            required
-                                            disabled={isReadOnly}
-                                        >
-                                            <option value={0}>Select</option>
-                                            {[...Array(28)].map((_, i) => (
-                                                <option key={i + 1} value={i + 1}>
-                                                    {i + 1}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* Dynamic registration fields */}
-                                    {gstformData.map((item, i) => (
-                                        <div
-                                            key={i}
-                                            style={{
-                                                border: "1px solid #ddd",
-                                                padding: "20px",
-                                                borderRadius: "8px",
-                                                marginBottom: "24px",
-                                                backgroundColor: "#fdfdfd",
-                                            }}
-                                        >
-                                            <h4 style={{ marginBottom: "16px", color: "#333" }}>
-                                                Registration {i + 1}
-                                            </h4>
-
+                                        {/* For simpler entities: Registration Number only */}
+                                        {showBasicRegistrationField && (
                                             <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>State Name
-                                                    <span className={styles.requiredSymbol}>*</span>
-                                                </label>
-                                                <select
-                                                    className={styles.fieldInput}
-                                                    value={item.state}
-                                                    onChange={(e) => handleGstFieldChange(i, "state", e.target.value)}
-                                                    required
-                                                    disabled={isReadOnly}
-                                                >
-                                                    <option value="">Select State</option>
-                                                    {states.map((state) => (
-                                                        <option key={state.id} value={state.id}>
-                                                            {state.state}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>GST Number (15 digits)
+                                                <label className={styles.fieldLabel}>
+                                                    Registration Number (as per incorporation certificate)
                                                     <span className={styles.requiredSymbol}>*</span>
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    maxLength={15}
+                                                    name="reg_number"
+                                                    value={companyInfo.reg_number || ""}
+                                                    onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
-                                                    value={item.gstNumber}
-                                                    onChange={(e) => handleGstFieldChange(i, "gstNumber", e.target.value)}
-                                                    placeholder="Enter GSTIN"
                                                     required
                                                     readOnly={isReadOnly}
                                                 />
                                             </div>
+                                        )}
 
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>
-                                                    Registration Date
-                                                    <span className={styles.requiredSymbol}>*</span>
-                                                </label>
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Trading Name
+                                                <span className={styles.requiredSymbol}>*</span></label>
+                                            <input
+                                                type="text"
+                                                name="trading_name"
+                                                value={companyInfo.trading_name || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
 
-                                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
 
 
-                                                    {/* Year dropdown */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Country of Incorporation
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                name="country_of_incorporation"
+                                                value={companyInfo.country_of_incorporation || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">-- Select Country --</option>
+                                                {countries.map((country) => (
+                                                    <option key={country.id} value={country.id}>
+                                                        {country.country}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>State
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                name="state"
+                                                value={companyInfo.state || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">-- Select State --</option>
+                                                {states.map((state) => (
+                                                    <option key={state.id} value={state.id}>
+                                                        {state.state}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Telephone Number
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="telephone"
+                                                value={
+                                                    countryCode
+                                                        ? `${countryCode} ${companyInfo.telephone}`
+                                                        : companyInfo.telephone
+                                                }
+                                                onChange={(e) => {
+                                                    // remove country code from input text safely
+                                                    const input = e.target.value.replace(countryCode, "").trim();
+
+                                                    // ✅ allow only digits (0–9)
+                                                    const digitsOnly = input.replace(/[^0-9]/g, "");
+
+                                                    setCompanyInfo({
+                                                        ...companyInfo,
+                                                        telephone: digitsOnly,
+                                                    });
+                                                }}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Registered Address
+                                                <span className={styles.requiredSymbol}>*</span></label>
+                                            <input
+                                                type="text"
+                                                name="registered_address"
+                                                value={companyInfo.registered_address || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Business Address (if different)
+                                                <span className={styles.requiredSymbol}>*</span></label>
+                                            <input
+                                                type="text"
+                                                name="business_address"
+                                                value={companyInfo.business_address || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Contact Person<span className={styles.requiredSymbol}>*</span>
+                                            </label>
+
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    width: "65%",
+                                                    border: "1px solid #ccc",
+                                                    borderRadius: "6px",
+                                                    overflow: "hidden",
+                                                }}
+                                            >
+                                                <select
+                                                    name="contact_person_title"
+                                                    value={companyInfo.contact_person_title || ""}
+                                                    onChange={handleCompanyInfoChange}
+                                                    style={{
+                                                        border: "none",
+                                                        outline: "none",
+                                                        padding: "8px 10px",
+                                                        width: "80px",
+                                                        background: "transparent",
+                                                        borderRight: "1px solid #ccc",
+                                                        cursor: "pointer",
+                                                    }}
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                >
+
+                                                    <option value="Mr">Mr</option>
+                                                    <option value="Mrs">Mrs</option>
+                                                    <option value="Ms">Ms</option>
+                                                </select>
+
+                                                <input
+                                                    type="text"
+                                                    name="contact_person_name"
+                                                    value={companyInfo.contact_person_name || ""}
+                                                    onChange={handleCompanyInfoChange}
+                                                    placeholder="Enter Contact Person Name"
+                                                    style={{
+                                                        border: "none",
+                                                        outline: "none",
+                                                        flex: 1,
+                                                        padding: "8px 10px",
+                                                        background: "transparent",
+                                                    }}
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Contact Person Phone Number
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="contact_person_mobile"
+                                                value={companyInfo.contact_person_mobile || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Contact Person Email ID
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="email"
+                                                name="contact_person_email"
+                                                value={companyInfo.contact_person_email || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Website
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="website"
+                                                value={companyInfo.website || ""}
+                                                onChange={(e) => {
+                                                    let val = e.target.value.trim();
+
+                                                    // ✅ remove spaces inside (user can’t type "example .com")
+                                                    val = val.replace(/\s+/g, "");
+
+                                                    // ✅ optional: auto-add https:// if user types "example.com"
+                                                    if (val && !/^https?:\/\//i.test(val)) {
+                                                        val = "https://" + val;
+                                                    }
+
+                                                    setCompanyInfo({
+                                                        ...companyInfo,
+                                                        website: val,
+                                                    });
+                                                }}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Account Person<span className={styles.requiredSymbol}>*</span>
+                                            </label>
+
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    width: "65%",
+                                                    border: "1px solid #ccc",
+                                                    borderRadius: "6px",
+                                                    overflow: "hidden",
+                                                }}
+                                            >
+                                                <select
+                                                    name="account_person_title"
+                                                    value={companyInfo.account_person_title || ""}
+                                                    onChange={handleCompanyInfoChange}
+                                                    style={{
+                                                        border: "none",
+                                                        outline: "none",
+                                                        padding: "8px 10px",
+                                                        width: "80px",
+                                                        background: "transparent",
+                                                        borderRight: "1px solid #ccc",
+                                                        cursor: "pointer",
+                                                    }}
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                >
+
+                                                    <option value="Mr">Mr</option>
+                                                    <option value="Mrs">Mrs</option>
+                                                    <option value="Ms">Ms</option>
+                                                </select>
+
+                                                <input
+                                                    type="text"
+                                                    name="account_person_name"
+                                                    value={companyInfo.account_person_name || ""}
+                                                    onChange={handleCompanyInfoChange}
+                                                    placeholder="Enter Account Person Name"
+                                                    style={{
+                                                        border: "none",
+                                                        outline: "none",
+                                                        flex: 1,
+                                                        padding: "8px 10px",
+                                                        background: "transparent",
+                                                    }}
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Accounts Person Contact Number
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="accounts_person_contact_no"
+                                                value={companyInfo.accounts_person_contact_no || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Accounts Person Email ID
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="email"
+                                                name="accounts_person_email"
+                                                value={companyInfo.accounts_person_email || ""}
+                                                onChange={handleCompanyInfoChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+                                    </div>
+
+
+                                )}
+
+                                {/* STEP 2: MSME */}
+                                {currentPage === 2 && hasAgreed && (
+                                    <div className={styles.page}>
+                                        <h3>MSME / Udyam Registration</h3>
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Registered under MSME Act
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                name="registered_under_msme"
+                                                value={msmeInfo?.registered_under_msme}
+                                                onChange={handleMsmeChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                disabled={isReadOnly}
+
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="true">Yes</option>
+                                                <option value="false">No</option>
+                                            </select>
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Udyam Registration Number
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="udyam_registration_number"
+                                                value={msmeInfo?.udyam_registration_number}
+                                                onChange={handleMsmeChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+
+                                            />
+                                        </div>
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Category (Micro/Small/Medium)
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                name="category"
+                                                value={msmeInfo?.category}
+                                                onChange={handleMsmeChange}
+                                                className={styles.fieldInput}
+                                                disabled={isReadOnly}
+
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="Micro">Micro</option>
+                                                <option value="Small">Small</option>
+                                                <option value="Medium">Medium</option>
+                                            </select>
+                                        </div>
+
+                                    </div>
+                                )}
+
+                                {/* STEP 3: GST */}
+                                {/* STEP 3: Goods and Services Supplied */}
+                                {currentPage === 3 && hasAgreed && (
+                                    <div className={styles.page}>
+
+
+                                        <div className={styles.fieldRow} >
+                                            <label className={styles.fieldLabel}>Type of Counterparty Business
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                name="type_of_counterparty"
+                                                value={goodsServices.type_of_counterparty}
+                                                onChange={(e) => handleGoodsServicesChange(e, 'goodsServices')}
+                                                className={styles.fieldInput}
+                                                required
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="Trading Entity">Trading Entity</option>
+                                                <option value="End-Use">End-Use</option>
+                                                <option value="Manufacturer">Manufacturer</option>
+                                                <option value="Service Provider">Service provider</option>
+                                                <option value="Third Party Payer / Reciever of funds">Third party payer/receiver of funds</option>
+                                                <option value="Others">Others</option>
+                                            </select>
+
+                                            {goodsServices.type_of_counterparty === 'Others' && (
+                                                <input
+                                                    type="text"
+                                                    name="others"
+                                                    value={goodsServices.others}
+                                                    onChange={(e) => handleGoodsServicesChange(e, 'goodsServices')}
+                                                    placeholder="Please specify other business type"
+                                                    className={styles.fieldInput}
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                />
+                                            )}
+                                        </div>
+
+                                        <h3 style={{
+                                            fontSize: "16px",
+                                            fontWeight: 600,
+                                            marginBottom: "10px",
+                                        }}>Details of the Supplies<span className={styles.requiredSymbol}>*</span></h3>
+
+                                        <div className={styles.fieldRow}>
+
+                                            <select
+                                                name="type"
+                                                value={goodsServices.type}
+                                                onChange={(e) =>
+                                                    setGoodsServices((prev) => ({ ...prev, type: e.target.value }))
+                                                }
+                                                className={styles.fieldInput}
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="Goods">Goods</option>
+                                                <option value="Services">Services</option>
+                                                <option value="Goods and Services">Goods and Services</option>
+                                            </select>
+                                        </div>
+
+                                        {/* ======== GOODS ======== */}
+                                        {goodsServices.type === "Goods" && (
+                                            <div>
+                                                <h4 style={{
+                                                    marginBottom: "5px",
+                                                }}>Goods</h4>
+                                                {[...Array(5)].map((_, index) => (
+                                                    <div key={index} className={styles.gsForm_row}>
+                                                        <input
+                                                            type="text"
+                                                            placeholder={`Enter Goods ${index + 1}`}
+                                                            value={goods[index] || ""}
+                                                            onChange={(e) => gsForm_changeGoods(index, e.target.value)}
+                                                            className={styles.gsForm_input}
+                                                            readOnly={isReadOnly}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* ======== SERVICES ======== */}
+                                        {goodsServices.type === "Services" && (
+                                            <div>
+                                                <h4 style={{
+                                                    marginBottom: "5px",
+                                                }}>Services</h4>
+                                                {[...Array(5)].map((_, index) => (
+                                                    <div key={index} className={styles.gsForm_row}>
+                                                        <input
+                                                            type="text"
+                                                            placeholder={`Enter Service ${index + 1}`}
+                                                            value={services[index] || ""}
+                                                            onChange={(e) => gsForm_changeService(index, e.target.value)}
+                                                            className={styles.gsForm_input}
+                                                            readOnly={isReadOnly}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* ======== GOODS & SERVICES ======== */}
+                                        {goodsServices.type === "Goods and Services" && (
+                                            <div>
+                                                <h4 style={{
+                                                    marginBottom: "5px",
+                                                }}>Goods and Services</h4>
+                                                {[...Array(5)].map((_, index) => (
+                                                    <div key={index} className={styles.gsForm_combinedRow}>
+                                                        <input
+                                                            type="text"
+                                                            placeholder={`Goods ${index + 1}`}
+                                                            value={goodsAndServices[index]?.goods || ""}
+                                                            onChange={(e) =>
+                                                                gsForm_changeGoodsServices(index, "goods", e.target.value)
+                                                            }
+                                                            className={styles.gsForm_input}
+                                                            readOnly={isReadOnly}
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            placeholder={`Service ${index + 1}`}
+                                                            value={goodsAndServices[index]?.services || ""}
+                                                            onChange={(e) =>
+                                                                gsForm_changeGoodsServices(index, "services", e.target.value)
+                                                            }
+                                                            className={styles.gsForm_input}
+                                                            readOnly={isReadOnly}
+
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <h3 style={{ marginTop: "20px", }}>GST Registrations</h3>
+                                        {/* Number selection */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Number of GST Registrations (max 28)
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                className={styles.fieldInput}
+                                                value={count}
+                                                onChange={handleCountChange}
+                                                required
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value={0}>Select</option>
+                                                {[...Array(28)].map((_, i) => (
+                                                    <option key={i + 1} value={i + 1}>
+                                                        {i + 1}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Dynamic registration fields */}
+                                        {gstformData.map((item, i) => (
+                                            <div
+                                                key={i}
+                                                style={{
+                                                    border: "1px solid #ddd",
+                                                    padding: "20px",
+                                                    borderRadius: "8px",
+                                                    marginBottom: "24px",
+                                                    backgroundColor: "#fdfdfd",
+                                                }}
+                                            >
+                                                <h4 style={{ marginBottom: "16px", color: "#333" }}>
+                                                    Registration {i + 1}
+                                                </h4>
+
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>State Name
+                                                        <span className={styles.requiredSymbol}>*</span>
+                                                    </label>
                                                     <select
                                                         className={styles.fieldInput}
-                                                        value={item.regYear || ""}
-                                                        onChange={(e) => handleGstFieldChange(i, "regYear", e.target.value)}
+                                                        value={item.state}
+                                                        onChange={(e) => handleGstFieldChange(i, "state", e.target.value)}
                                                         required
                                                         disabled={isReadOnly}
-                                                        style={{ width: "90px", textAlign: "center" }}
                                                     >
-                                                        <option value="">YYYY</option>
-                                                        {Array.from({ length: 50 }, (_, idx) => new Date().getFullYear() - idx).map(
-                                                            (year) => (
-                                                                <option key={year} value={year}>
-                                                                    {year}
-                                                                </option>
-                                                            )
-                                                        )}
-                                                    </select>
-
-                                                    {/* Month dropdown */}
-                                                    <select
-                                                        className={styles.fieldInput}
-                                                        value={item.regMonth || ""}
-                                                        onChange={(e) => handleGstFieldChange(i, "regMonth", e.target.value)}
-                                                        required
-                                                        disabled={isReadOnly}
-                                                        style={{ width: "90px", textAlign: "center" }}
-                                                    >
-                                                        <option value="">MM</option>
-                                                        {[
-                                                            "Jan",
-                                                            "Feb",
-                                                            "Mar",
-                                                            "Apr",
-                                                            "May",
-                                                            "Jun",
-                                                            "Jul",
-                                                            "Aug",
-                                                            "Sep",
-                                                            "Oct",
-                                                            "Nov",
-                                                            "Dec",
-                                                        ].map((month, index) => (
-                                                            <option
-                                                                key={month}
-                                                                value={String(index + 1).padStart(2, "0")}
-                                                            >
-                                                                {month}
+                                                        <option value="">Select State</option>
+                                                        {states.map((state) => (
+                                                            <option key={state.id} value={state.id}>
+                                                                {state.state}
                                                             </option>
                                                         ))}
                                                     </select>
-
-                                                    {/* Day dropdown */}
-                                                    <select
-                                                        className={styles.fieldInput}
-                                                        value={item.regDay || ""}
-                                                        onChange={(e) => handleGstFieldChange(i, "regDay", e.target.value)}
-                                                        required
-                                                        disabled={isReadOnly}
-                                                        style={{ width: "70px", textAlign: "center" }}
-                                                    >
-                                                        <option value="">DD</option>
-                                                        {Array.from(
-                                                            { length: getDaysInMonth(item.regMonth, item.regYear) },
-                                                            (_, day) => (
-                                                                <option key={day + 1} value={String(day + 1).padStart(2, "0")}>
-                                                                    {String(day + 1).padStart(2, "0")}
-                                                                </option>
-                                                            )
-                                                        )}
-                                                    </select>
-
-
                                                 </div>
-                                            </div>
 
-                                        </div>
-                                    ))}
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>GST Number (15 digits)
+                                                        <span className={styles.requiredSymbol}>*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        maxLength={15}
+                                                        className={styles.fieldInput}
+                                                        value={item.gstNumber}
+                                                        onChange={(e) => handleGstFieldChange(i, "gstNumber", e.target.value)}
+                                                        placeholder="Enter GSTIN"
+                                                        required
+                                                        readOnly={isReadOnly}
+                                                    />
+                                                </div>
 
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>
+                                                        Registration Date
+                                                        <span className={styles.requiredSymbol}>*</span>
+                                                    </label>
 
-
-                                    {/* Registration Type Dropdown */}
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Registration Type
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            value={gstMeta.reg_type}
-                                            onChange={(e) => setGstMeta(prev => ({ ...prev, reg_type: e.target.value }))}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        >
-                                            <option value="">Select</option>
-                                            <option value="Regular">Regular</option>
-                                            <option value="Composition">Composition</option>
-                                            <option value="Regular SEZ">Regular SEZ</option>
-                                        </select>
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Periodicity of GSTR-1
-                                            <span className={styles.requiredSymbol}>*</span></label>
-                                        <select
-                                            value={gstMeta.periodicity_gstr1}
-                                            onChange={(e) => setGstMeta(prev => ({ ...prev, periodicity_gstr1: e.target.value }))}
-                                            className={styles.fieldInput}
-                                            required
-                                            disabled={isReadOnly}
-                                        >
-                                            <option value="">Select</option>
-                                            <option value="Monthly">Monthly</option>
-                                            <option value="Quarterly">Quarterly</option>
-                                        </select>
-                                    </div>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
 
 
-                                    <h3>Income Tax Details</h3>
-
-                                    <table className={styles?.incomeTaxTable || "incomeTaxTable"}>
-                                        <thead>
-                                            <tr>
-                                                <th colSpan="4" className={styles?.tableSubtitle}>
-                                                    Details of Turnover for the Last 3 Financial Years
-                                                </th>
-                                            </tr>
-                                            <tr>
-                                                <th>Particulars</th>
-                                                <th>Financial Year - I</th>
-                                                <th>Financial Year - II</th>
-                                                <th>Financial Year - III</th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody>
-                                            {/* Financial Year */}
-                                            <tr>
-                                                <td>
-                                                    Financial Year <span className={styles.requiredSymbol}>*</span>
-                                                </td>
-                                                {[1, 2, 3].map((i) => (
-                                                    <td key={i}>
-                                                        <input
-                                                            type="text"
-                                                            name={`fy${i}`}
-                                                            value={formData[`fy${i}`]}
-                                                            readOnly
+                                                        {/* Year dropdown */}
+                                                        <select
                                                             className={styles.fieldInput}
-                                                        />
-                                                    </td>
-                                                ))}
-                                            </tr>
-
-                                            {/* Turnover field — allows 0 and positive numbers */}
-                                            <tr>
-                                                <td>Turnover
-                                                    <span className={styles.requiredSymbol}>*</span>
-                                                </td>
-                                                {[1, 2, 3].map((i) => (
-                                                    <td key={i}>
-                                                        <input
-                                                            type="text"
-                                                            name={`turnover${i}`}
-                                                            value={formData[`turnover${i}`]}
-                                                            onChange={handleIncomeChange}
-                                                            min="0" // ✅ allows 0 and positive
-                                                            onWheel={(e) => e.target.blur()} // prevent scroll changing value
-                                                            required
-                                                            readOnly={isReadOnly}
-                                                        />
-                                                    </td>
-                                                ))}
-                                            </tr>
-
-                                            {/* ITR Status */}
-                                            <tr>
-                                                <td>Status of ITR filed (Yes/No)
-                                                    <span className={styles.requiredSymbol}>*</span>
-                                                </td>
-                                                {[1, 2, 3].map((i) => (
-                                                    <td key={i}>
-                                                        <select name={`itrStatus${i}`}
-                                                            value={formData[`itrStatus${i}`]}
-                                                            onChange={handleIncomeChange}
+                                                            value={item.regYear || ""}
+                                                            onChange={(e) => handleGstFieldChange(i, "regYear", e.target.value)}
                                                             required
                                                             disabled={isReadOnly}
+                                                            style={{ width: "90px", textAlign: "center" }}
                                                         >
-                                                            <option value="">Select</option>
-                                                            <option value="Yes">Yes</option>
-                                                            <option value="No">No</option>
+                                                            <option value="">YYYY</option>
+                                                            {Array.from({ length: 50 }, (_, idx) => new Date().getFullYear() - idx).map(
+                                                                (year) => (
+                                                                    <option key={year} value={year}>
+                                                                        {year}
+                                                                    </option>
+                                                                )
+                                                            )}
                                                         </select>
+
+                                                        {/* Month dropdown */}
+                                                        <select
+                                                            className={styles.fieldInput}
+                                                            value={item.regMonth || ""}
+                                                            onChange={(e) => handleGstFieldChange(i, "regMonth", e.target.value)}
+                                                            required
+                                                            disabled={isReadOnly}
+                                                            style={{ width: "90px", textAlign: "center" }}
+                                                        >
+                                                            <option value="">MM</option>
+                                                            {[
+                                                                "Jan",
+                                                                "Feb",
+                                                                "Mar",
+                                                                "Apr",
+                                                                "May",
+                                                                "Jun",
+                                                                "Jul",
+                                                                "Aug",
+                                                                "Sep",
+                                                                "Oct",
+                                                                "Nov",
+                                                                "Dec",
+                                                            ].map((month, index) => (
+                                                                <option
+                                                                    key={month}
+                                                                    value={String(index + 1).padStart(2, "0")}
+                                                                >
+                                                                    {month}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+
+                                                        {/* Day dropdown */}
+                                                        <select
+                                                            className={styles.fieldInput}
+                                                            value={item.regDay || ""}
+                                                            onChange={(e) => handleGstFieldChange(i, "regDay", e.target.value)}
+                                                            required
+                                                            disabled={isReadOnly}
+                                                            style={{ width: "70px", textAlign: "center" }}
+                                                        >
+                                                            <option value="">DD</option>
+                                                            {Array.from(
+                                                                { length: getDaysInMonth(item.regMonth, item.regYear) },
+                                                                (_, day) => (
+                                                                    <option key={day + 1} value={String(day + 1).padStart(2, "0")}>
+                                                                        {String(day + 1).padStart(2, "0")}
+                                                                    </option>
+                                                                )
+                                                            )}
+                                                        </select>
+
+
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        ))}
+
+
+
+                                        {/* Registration Type Dropdown */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Registration Type
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                value={gstMeta.reg_type}
+                                                onChange={(e) => setGstMeta(prev => ({ ...prev, reg_type: e.target.value }))}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="Regular">Regular</option>
+                                                <option value="Composition">Composition</option>
+                                                <option value="Regular SEZ">Regular SEZ</option>
+                                            </select>
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Periodicity of GSTR-1
+                                                <span className={styles.requiredSymbol}>*</span></label>
+                                            <select
+                                                value={gstMeta.periodicity_gstr1}
+                                                onChange={(e) => setGstMeta(prev => ({ ...prev, periodicity_gstr1: e.target.value }))}
+                                                className={styles.fieldInput}
+                                                required
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="Monthly">Monthly</option>
+                                                <option value="Quarterly">Quarterly</option>
+                                            </select>
+                                        </div>
+
+
+                                        <h3>Income Tax Details</h3>
+
+                                        <table className={styles?.incomeTaxTable || "incomeTaxTable"}>
+                                            <thead>
+                                                <tr>
+                                                    <th colSpan="4" className={styles?.tableSubtitle}>
+                                                        Details of Turnover for the Last 3 Financial Years
+                                                    </th>
+                                                </tr>
+                                                <tr>
+                                                    <th>Particulars</th>
+                                                    <th>Financial Year - I</th>
+                                                    <th>Financial Year - II</th>
+                                                    <th>Financial Year - III</th>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody>
+                                                {/* Financial Year */}
+                                                <tr>
+                                                    <td>
+                                                        Financial Year <span className={styles.requiredSymbol}>*</span>
                                                     </td>
-                                                ))}
-                                            </tr>
-
-                                            {/* ITR Acknowledgment */}
-                                            {["itrStatus1", "itrStatus2", "itrStatus3"].some(
-                                                (key) => formData[key] === "Yes"
-                                            ) && (
-                                                    <tr>
-                                                        <td>
-                                                            ITR Acknowledgment No.
-                                                            <span className={styles.requiredSymbol}>*</span>
+                                                    {[1, 2, 3].map((i) => (
+                                                        <td key={i}>
+                                                            <input
+                                                                type="text"
+                                                                name={`fy${i}`}
+                                                                value={formData[`fy${i}`]}
+                                                                readOnly
+                                                                className={styles.fieldInput}
+                                                            />
                                                         </td>
-                                                        {[1, 2, 3].map((i) => (
-                                                            <td key={i}>
-                                                                {formData[`itrStatus${i}`] === "Yes" ? (
-                                                                    <input
-                                                                        type="text"
-                                                                        name={`ackNo${i}`}
-                                                                        value={formData[`ackNo${i}`]}
-                                                                        onChange={handleIncomeChange}
-                                                                        required
-                                                                        readOnly={isReadOnly}
-                                                                    />
-                                                                ) : (
-                                                                    <div style={{ height: "30px" }}></div> // keeps table alignment neat
-                                                                )}
+                                                    ))}
+                                                </tr>
+
+                                                {/* Turnover field — allows 0 and positive numbers */}
+                                                <tr>
+                                                    <td>Turnover
+                                                        <span className={styles.requiredSymbol}>*</span>
+                                                    </td>
+                                                    {[1, 2, 3].map((i) => (
+                                                        <td key={i}>
+                                                            <input
+                                                                type="text"
+                                                                name={`turnover${i}`}
+                                                                value={formData[`turnover${i}`]}
+                                                                onChange={handleIncomeChange}
+                                                                min="0" // ✅ allows 0 and positive
+                                                                onWheel={(e) => e.target.blur()} // prevent scroll changing value
+                                                                required
+                                                                readOnly={isReadOnly}
+                                                            />
+                                                        </td>
+                                                    ))}
+                                                </tr>
+
+                                                {/* ITR Status */}
+                                                <tr>
+                                                    <td>Status of ITR filed (Yes/No)
+                                                        <span className={styles.requiredSymbol}>*</span>
+                                                    </td>
+                                                    {[1, 2, 3].map((i) => (
+                                                        <td key={i}>
+                                                            <select name={`itrStatus${i}`}
+                                                                value={formData[`itrStatus${i}`]}
+                                                                onChange={handleIncomeChange}
+                                                                required
+                                                                disabled={isReadOnly}
+                                                            >
+                                                                <option value="">Select</option>
+                                                                <option value="Yes">Yes</option>
+                                                                <option value="No">No</option>
+                                                            </select>
+                                                        </td>
+                                                    ))}
+                                                </tr>
+
+                                                {/* ITR Acknowledgment */}
+                                                {["itrStatus1", "itrStatus2", "itrStatus3"].some(
+                                                    (key) => formData[key] === "Yes"
+                                                ) && (
+                                                        <tr>
+                                                            <td>
+                                                                ITR Acknowledgment No.
+                                                                <span className={styles.requiredSymbol}>*</span>
                                                             </td>
-                                                        ))}
-                                                    </tr>
-                                                )}
-
-
-
-
-                                            {/* ITR Filed Date (visible only if any ITR status = "Yes") */}
-                                            {["itrStatus1", "itrStatus2", "itrStatus3"].some(
-                                                (key) => formData[key] === "Yes"
-                                            ) && (
-                                                    <tr>
-                                                        <td>
-                                                            ITR Filed Date
-                                                            <span className={styles.requiredSymbol}>*</span>
-                                                        </td>
-
-                                                        {[1, 2, 3].map((i) => {
-                                                            // Get Financial Year string (like "2024-2025")
-                                                            const fy = formData[`fy${i}`];
-                                                            const endYear = fy ? parseInt(fy.split("-")[1]) : new Date().getFullYear();
-
-                                                            // Generate last 5 years based on FY end year
-                                                            const itrYears = Array.from({ length: 5 }, (_, idx) => endYear - idx);
-
-                                                            return (
+                                                            {[1, 2, 3].map((i) => (
                                                                 <td key={i}>
                                                                     {formData[`itrStatus${i}`] === "Yes" ? (
-                                                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                                            {/* Year dropdown */}
-                                                                            <select
-                                                                                className={styles.fieldInput}
-                                                                                value={formData[`itrYear${i}`] || ""}
-                                                                                onChange={(e) =>
-                                                                                    handleIncomeChange({
-                                                                                        target: { name: `itrYear${i}`, value: e.target.value },
-                                                                                    })
-                                                                                }
-                                                                                required
-                                                                                disabled={isReadOnly}
-                                                                                style={{ width: "75px", textAlign: "center" }}
-                                                                            >
-                                                                                <option value="">YYYY</option>
-                                                                                {itrYears.map((year) => (
-                                                                                    <option key={year} value={year}>
-                                                                                        {year}
-                                                                                    </option>
-                                                                                ))}
-                                                                            </select>
-
-                                                                            {/* Month dropdown */}
-                                                                            <select
-                                                                                className={styles.fieldInput}
-                                                                                value={formData[`itrMonth${i}`] || ""}
-                                                                                onChange={(e) =>
-                                                                                    handleIncomeChange({
-                                                                                        target: { name: `itrMonth${i}`, value: e.target.value },
-                                                                                    })
-                                                                                }
-                                                                                required
-                                                                                disabled={isReadOnly}
-                                                                                style={{ width: "65px", textAlign: "center" }}
-                                                                            >
-                                                                                <option value="">MM</option>
-                                                                                {[
-                                                                                    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                                                                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-                                                                                ].map((month, index) => (
-                                                                                    <option
-                                                                                        key={month}
-                                                                                        value={String(index + 1).padStart(2, "0")}
-                                                                                    >
-                                                                                        {month}
-                                                                                    </option>
-                                                                                ))}
-                                                                            </select>
-
-                                                                            {/* Day dropdown */}
-                                                                            <select
-                                                                                className={styles.fieldInput}
-                                                                                value={formData[`itrDay${i}`] || ""}
-                                                                                onChange={(e) =>
-                                                                                    handleIncomeChange({
-                                                                                        target: { name: `itrDay${i}`, value: e.target.value },
-                                                                                    })
-                                                                                }
-                                                                                style={{ width: "65px", textAlign: "center" }}
-                                                                            >
-                                                                                <option value="">DD</option>
-                                                                                {Array.from(
-                                                                                    { length: getDaysInMonth(formData[`itrMonth${i}`], formData[`itrYear${i}`]) },
-                                                                                    (_, d) => (
-                                                                                        <option key={d + 1} value={String(d + 1).padStart(2, "0")}>
-                                                                                            {String(d + 1).padStart(2, "0")}
-                                                                                        </option>
-                                                                                    )
-                                                                                )}
-                                                                            </select>
-                                                                        </div>
+                                                                        <input
+                                                                            type="text"
+                                                                            name={`ackNo${i}`}
+                                                                            value={formData[`ackNo${i}`]}
+                                                                            onChange={handleIncomeChange}
+                                                                            required
+                                                                            readOnly={isReadOnly}
+                                                                        />
                                                                     ) : (
                                                                         <div style={{ height: "30px" }}></div> // keeps table alignment neat
                                                                     )}
                                                                 </td>
-                                                            );
-                                                        })}
-                                                    </tr>
-                                                )}
+                                                            ))}
+                                                        </tr>
+                                                    )}
 
 
 
-                                        </tbody>
-                                    </table>
+
+                                                {/* ITR Filed Date (visible only if any ITR status = "Yes") */}
+                                                {["itrStatus1", "itrStatus2", "itrStatus3"].some(
+                                                    (key) => formData[key] === "Yes"
+                                                ) && (
+                                                        <tr>
+                                                            <td>
+                                                                ITR Filed Date
+                                                                <span className={styles.requiredSymbol}>*</span>
+                                                            </td>
+
+                                                            {[1, 2, 3].map((i) => {
+                                                                // Get Financial Year string (like "2024-2025")
+                                                                const fy = formData[`fy${i}`];
+                                                                const endYear = fy ? parseInt(fy.split("-")[1]) : new Date().getFullYear();
+
+                                                                // Generate last 5 years based on FY end year
+                                                                const itrYears = Array.from({ length: 5 }, (_, idx) => endYear - idx);
+
+                                                                return (
+                                                                    <td key={i}>
+                                                                        {formData[`itrStatus${i}`] === "Yes" ? (
+                                                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                                                {/* Year dropdown */}
+                                                                                <select
+                                                                                    className={styles.fieldInput}
+                                                                                    value={formData[`itrYear${i}`] || ""}
+                                                                                    onChange={(e) =>
+                                                                                        handleIncomeChange({
+                                                                                            target: { name: `itrYear${i}`, value: e.target.value },
+                                                                                        })
+                                                                                    }
+                                                                                    required
+                                                                                    disabled={isReadOnly}
+                                                                                    style={{ width: "75px", textAlign: "center" }}
+                                                                                >
+                                                                                    <option value="">YYYY</option>
+                                                                                    {itrYears.map((year) => (
+                                                                                        <option key={year} value={year}>
+                                                                                            {year}
+                                                                                        </option>
+                                                                                    ))}
+                                                                                </select>
+
+                                                                                {/* Month dropdown */}
+                                                                                <select
+                                                                                    className={styles.fieldInput}
+                                                                                    value={formData[`itrMonth${i}`] || ""}
+                                                                                    onChange={(e) =>
+                                                                                        handleIncomeChange({
+                                                                                            target: { name: `itrMonth${i}`, value: e.target.value },
+                                                                                        })
+                                                                                    }
+                                                                                    required
+                                                                                    disabled={isReadOnly}
+                                                                                    style={{ width: "65px", textAlign: "center" }}
+                                                                                >
+                                                                                    <option value="">MM</option>
+                                                                                    {[
+                                                                                        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                                                                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+                                                                                    ].map((month, index) => (
+                                                                                        <option
+                                                                                            key={month}
+                                                                                            value={String(index + 1).padStart(2, "0")}
+                                                                                        >
+                                                                                            {month}
+                                                                                        </option>
+                                                                                    ))}
+                                                                                </select>
+
+                                                                                {/* Day dropdown */}
+                                                                                <select
+                                                                                    className={styles.fieldInput}
+                                                                                    value={formData[`itrDay${i}`] || ""}
+                                                                                    onChange={(e) =>
+                                                                                        handleIncomeChange({
+                                                                                            target: { name: `itrDay${i}`, value: e.target.value },
+                                                                                        })
+                                                                                    }
+                                                                                    style={{ width: "65px", textAlign: "center" }}
+                                                                                >
+                                                                                    <option value="">DD</option>
+                                                                                    {Array.from(
+                                                                                        { length: getDaysInMonth(formData[`itrMonth${i}`], formData[`itrYear${i}`]) },
+                                                                                        (_, d) => (
+                                                                                            <option key={d + 1} value={String(d + 1).padStart(2, "0")}>
+                                                                                                {String(d + 1).padStart(2, "0")}
+                                                                                            </option>
+                                                                                        )
+                                                                                    )}
+                                                                                </select>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div style={{ height: "30px" }}></div> // keeps table alignment neat
+                                                                        )}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    )}
 
 
-                                </div>
-                            )}
+
+                                            </tbody>
+                                        </table>
 
 
-                            {/* STEP 3: Banking & Further Information */}
-                            {currentPage === 3 && (
-                                <div className={styles.page}>
-                                    <h3>Banking Information</h3>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Account Holder’s Name
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="account_holder_name"
-                                            value={bankInfo.account_holder_name}
-                                            onChange={handleBankDetailsChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
                                     </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Bank Name
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="bank_name"
-                                            value={bankInfo.bank_name}
-                                            onChange={handleBankDetailsChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Bank Address
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="bank_address"
-                                            value={bankInfo.bank_address}
-                                            onChange={handleBankDetailsChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Transaction Type <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            name="transactionType"
-                                            value={bankInfo.transactionType || ""}
-                                            onChange={(e) =>
-                                                setBankInfo((prev) => ({ ...prev, transactionType: e.target.value }))
-                                            }
-                                            className={styles.fieldInput}
-                                            required
-                                        >
-                                            <option value="">Select Transaction Type</option>
-                                            <option value="Domestic">Domestic</option>
-                                            <option value="International">International</option>
-                                            <option value="Domestic and International">Domestic and International</option>
-                                        </select>
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Country
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="country"
-                                            value={bankInfo.country}
-                                            onChange={handleBankDetailsChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
+                                )}
 
 
+                                {/* STEP 3: Banking & Further Information */}
+                                {currentPage === 4 && hasAgreed && (
+                                    <div className={styles.page}>
+                                        <h3>Banking Information</h3>
 
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Account Number
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="account_number"
-                                            value={bankInfo.account_number}
-                                            onChange={handleBankDetailsChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
-
-                                    {bankInfo.transactionType === "Domestic" && (
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>IFSC Code</label>
+                                            <label className={styles.fieldLabel}>Account Holder’s Name
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
                                             <input
                                                 type="text"
-                                                name="ifscCode"
-                                                value={bankInfo.ifscCode || ""}
-                                                onChange={(e) =>
-                                                    setBankInfo((prev) => ({
-                                                        ...prev,
-                                                        ifscCode: e.target.value.toUpperCase(), // 🔠 force uppercase
-                                                    }))
-                                                }
-                                                maxLength={11}
+                                                name="account_holder_name"
+                                                value={bankInfo.account_holder_name}
+                                                onChange={handleBankDetailsChange}
                                                 className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
                                             />
                                         </div>
-                                    )}
 
-                                    {bankInfo.transactionType === "International" && (
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>SWIFT Code</label>
+                                            <label className={styles.fieldLabel}>Bank Name
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
                                             <input
                                                 type="text"
-                                                name="swiftCode"
-                                                value={bankInfo.swiftCode || ""}
-                                                onChange={(e) =>
-                                                    setBankInfo((prev) => ({
-                                                        ...prev,
-                                                        swiftCode: e.target.value.toUpperCase(), // 🔠 force uppercase
-                                                    }))
-                                                }
-                                                maxLength={11}
+                                                name="bank_name"
+                                                value={bankInfo.bank_name}
+                                                onChange={handleBankDetailsChange}
                                                 className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
                                             />
                                         </div>
-                                    )}
 
-                                    {bankInfo.transactionType === "Domestic and International" && (
-                                        <>
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Bank Address
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="bank_address"
+                                                value={bankInfo.bank_address}
+                                                onChange={handleBankDetailsChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Transaction Type <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                name="transactionType"
+                                                value={bankInfo.transactionType || ""}
+                                                onChange={(e) =>
+                                                    setBankInfo((prev) => ({ ...prev, transactionType: e.target.value }))
+                                                }
+                                                className={styles.fieldInput}
+                                                required
+                                            >
+                                                <option value="">Select Transaction Type</option>
+                                                <option value="Domestic">Domestic</option>
+                                                <option value="International">International</option>
+                                                <option value="Domestic and International">Domestic and International</option>
+                                            </select>
+                                        </div>
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Country
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="country"
+                                                value={bankInfo.country}
+                                                onChange={handleBankDetailsChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+
+
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Account Number
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="account_number"
+                                                value={bankInfo.account_number}
+                                                onChange={handleBankDetailsChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
+
+                                        {bankInfo.transactionType === "Domestic" && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>IFSC Code</label>
                                                 <input
@@ -2866,13 +2923,16 @@ const VmsRequest = () => {
                                                     onChange={(e) =>
                                                         setBankInfo((prev) => ({
                                                             ...prev,
-                                                            ifscCode: e.target.value.toUpperCase(),
+                                                            ifscCode: e.target.value.toUpperCase(), // 🔠 force uppercase
                                                         }))
                                                     }
-
+                                                    maxLength={11}
                                                     className={styles.fieldInput}
                                                 />
                                             </div>
+                                        )}
+
+                                        {bankInfo.transactionType === "International" && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>SWIFT Code</label>
                                                 <input
@@ -2882,637 +2942,630 @@ const VmsRequest = () => {
                                                     onChange={(e) =>
                                                         setBankInfo((prev) => ({
                                                             ...prev,
-                                                            swiftCode: e.target.value.toUpperCase(),
+                                                            swiftCode: e.target.value.toUpperCase(), // 🔠 force uppercase
                                                         }))
                                                     }
-
+                                                    maxLength={11}
                                                     className={styles.fieldInput}
                                                 />
                                             </div>
-                                        </>
-                                    )}
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Beneficiary of the Account
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="beneficiary_name"
-                                            value={bankInfo.beneficiary_name}
-                                            onChange={handleBankDetailsChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-                                    </div>
-
-                                    <h3 className={styles.subHeading}>Further Information</h3>
-
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Will the proposed business involve a third party acting on your behalf (e.g., an intermediary or agent)?
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            name="involves_third_party"
-                                            value={bankInfo.involves_third_party ?? ""} // This converts true/false to "true"/"false"
-                                            onChange={handleBankDetailsChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            disabled={isReadOnly}
-                                        >
-                                            <option value="">Select</option>
-                                            <option value="true">Yes</option>
-                                            <option value="false">No</option>
-                                        </select>
-                                    </div>
-
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>
-                                            Will you use a third party or subcontractor to act on your behalf or make/receive payments in relation to the proposed business relationship with any sanctioned country?
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <select
-                                            name="subcontractor_in_sanctioned_country"
-                                            value={bankInfo.subcontractor_in_sanctioned_country ?? ""}
-                                            onChange={handleBankDetailsChange}
-                                            className={styles.fieldInput}
-                                            required
-                                            disabled={isReadOnly}
-                                        >
-                                            <option value="">Select</option>
-                                            <option value="true">Yes</option>
-                                            <option value="false">No</option>
-                                        </select>
-                                    </div>
-
-
-                                </div>
-                            )}
-
-                            {/* STEP 4: Documents to be enclosed */}
-                            {currentPage === 4 && (
-                                <div className={styles.page}>
-                                    <h3>Documents to be enclosed</h3>
-                                    <p className={styles.note}>
-                                        Please verify and upload documents in JPG, JPEG, PNG, or PDF format. The maximum file size allowed is 5 MB.
-                                    </p>
-
-                                    {/* PAN */}
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>PAN <span className={styles.requiredSymbol}>*</span></label>
-                                        <input
-                                            type="file"
-                                            accept=".jpg,.jpeg,.png,.pdf"
-                                            className={styles.fieldInput}
-                                            onChange={(e) => handleDocumentChange("pan", e.target.files[0])}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-
-                                        {/* ✅ Show uploaded file name */}
-                                        {documents.pan?.fileName && (
-                                            <span className={styles.fileName}>📄 {documents.pan.fileName}</span>
                                         )}
 
-
-                                        {documents.pan?.url && (
-                                            <a
-                                                href={documents.pan.url.startsWith("blob:")
-                                                    ? documents.pan.url // local preview
-                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.pan.url}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.viewButton}
-
-                                            >
-                                                View
-                                            </a>
-                                        )}
-                                    </div>
-
-
-
-                                    {/* GSTIN */}
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>GSTIN <span className={styles.requiredSymbol}>*</span></label>
-                                        <input
-                                            type="file"
-                                            accept=".jpg,.jpeg,.png,.pdf"
-                                            className={styles.fieldInput}
-                                            onChange={(e) => handleDocumentChange("gstin", e.target.files[0])}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-
-                                        {documents.gstin?.fileName && (
-                                            <span className={styles.fileName}>📄 {documents.gstin.fileName}</span>
-                                        )}
-
-                                        {documents.gstin?.url && (
-                                            <a
-                                                href={documents.gstin.url.startsWith("blob:")
-                                                    ? documents.gstin.url // local preview
-                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.gstin.url}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.viewButton}
-
-                                            >
-                                                View
-                                            </a>
-                                        )}
-                                    </div>
-
-                                    {/* MSME Certificate */}
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>MSME Certificate (if any)
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept=".jpg,.jpeg,.png,.pdf"
-                                            className={styles.fieldInput}
-                                            onChange={(e) => handleDocumentChange("msme", e.target.files[0])}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-
-                                        {documents.msme?.fileName && (
-                                            <span className={styles.fileName}>📄 {documents.msme.fileName}</span>
-                                        )}
-
-
-                                        {documents.msme?.url && (
-                                            <a
-                                                href={documents.msme.url.startsWith("blob:")
-                                                    ? documents.msme.url // local preview
-                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.msme.url}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.viewButton}
-
-                                            >
-                                                View
-                                            </a>
-                                        )}
-                                    </div>
-
-                                    {/* Cancelled Cheque Leaf */}
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Cancelled Cheque Leaf
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept=".jpg,.jpeg,.png,.pdf"
-                                            className={styles.fieldInput}
-                                            onChange={(e) => handleDocumentChange("cheque", e.target.files[0])}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-
-                                        {documents.cheque?.fileName && (
-                                            <span className={styles.fileName}>📄 {documents.cheque.fileName}</span>
-                                        )}
-
-                                        {documents.cheque?.url && (
-                                            <a
-                                                href={documents.cheque.url.startsWith("blob:")
-                                                    ? documents.cheque.url // local preview
-                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.cheque.url}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.viewButton}
-                                            >
-                                                View
-                                            </a>
-                                        )}
-                                    </div>
-
-                                    {/* TAN */}
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>TAN
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept=".jpg,.jpeg,.png,.pdf"
-                                            className={styles.fieldInput}
-                                            onChange={(e) => handleDocumentChange("tan", e.target.files[0])}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-
-                                        {documents.tan?.fileName && (
-                                            <span className={styles.fileName}>📄 {documents.tan.fileName}</span>
-                                        )}
-
-                                        {documents.tan?.url && (
-                                            <a
-                                                href={documents.tan.url.startsWith("blob:")
-                                                    ? documents.tan.url // local preview
-                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.tan.url}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.viewButton}
-                                            >
-                                                View
-                                            </a>
-                                        )}
-                                    </div>
-
-                                    {/* Certificate of Incorporation / Firm Registration */}
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>Certificate of Incorporation / Firm Registration
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept=".jpg,.jpeg,.png,.pdf"
-                                            className={styles.fieldInput}
-                                            onChange={(e) => handleDocumentChange("incorporation", e.target.files[0])}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-
-                                        {documents.incorporation?.fileName && (
-                                            <span className={styles.fileName}>📄 {documents.incorporation.fileName}</span>
-                                        )}
-
-                                        {documents.incorporation?.url && (
-                                            <a
-                                                href={documents.incorporation.url.startsWith("blob:")
-                                                    ? documents.incorporation.url // local preview
-                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.incorporation.url}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.viewButton}
-                                            >
-                                                View
-                                            </a>
-                                        )}
-                                    </div>
-
-                                    {/* TDS Declaration for Exemption */}
-                                    <div className={styles.fieldRow}>
-                                        <label className={styles.fieldLabel}>TDS Declaration for Exemption
-                                            <span className={styles.requiredSymbol}>*</span>
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept=".jpg,.jpeg,.png,.pdf"
-                                            className={styles.fieldInput}
-                                            onChange={(e) => handleDocumentChange("tds", e.target.files[0])}
-                                            required
-                                            readOnly={isReadOnly}
-                                        />
-
-                                        {documents.tds?.fileName && (
-                                            <span className={styles.fileName}>📄 {documents.tds.fileName}</span>
-                                        )}
-
-
-                                        {documents.tds?.url && (
-                                            <a
-                                                href={documents.tds.url.startsWith("blob:")
-                                                    ? documents.tds.url // local preview
-                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.tds.url}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.viewButton}
-                                            >
-                                                View
-                                            </a>
-                                        )}
-                                    </div>
-
-                                </div>
-                            )}
-
-                            {/* STEP 6: Declaration & Confidentiality */}
-                            {currentPage === 5 && (
-                                <div className={styles.page}>
-                                    <h3>Declaration and Acknowledgement</h3>
-
-                                    {/* ✅ Declaration Checkbox */}
-                                    <div className={styles.checkboxRow}>
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                checked={agreeDeclaration}
-                                                onChange={(e) => handleCheckbox("declaration", e.target.checked)}
-                                            />{" "}
-                                            Declaration
-                                        </label>
-                                    </div>
-
-                                    {agreeDeclaration && (
-                                        <p className={styles.declarationText}>
-                                            I/We <strong>{declarationDetails.name || "________"}</strong> of{" "}
-                                            <strong>{declarationDetails.organization || "________"}</strong> designated as{" "}
-                                            <strong>{declarationDetails.designation || "________"}</strong> declare that
-                                            the information provided in this document is true and accurate in all respects
-                                            and that we have performed such procedures and inquiries as necessary to verify
-                                            the answers.
-                                        </p>
-                                    )}
-
-                                    {/* ✅ Confidentiality Checkbox */}
-                                    <div className={styles.checkboxRow}>
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                checked={agreePrivacy}
-                                                onChange={(e) => handleCheckbox("privacy", e.target.checked)}
-                                            />{" "}
-                                            Confidentiality and Data Privacy
-                                        </label>
-                                    </div>
-
-                                    {agreePrivacy && (
-                                        <p className={styles.declarationText}>
-                                            I/We <strong>{declarationDetails.name || "________"}</strong> of{" "}
-                                            <strong>{declarationDetails.organization || "________"}</strong> designated as{" "}
-                                            <strong>{declarationDetails.designation || "________"}</strong> acknowledge that
-                                            the contents of this document and any enclosures may be shared only for the
-                                            purposes of evaluation and shall be kept confidential in accordance with
-                                            applicable data privacy regulations.
-                                        </p>
-                                    )}
-
-                                    {/* ✅ Common Fields visible when both boxes are ticked */}
-                                    {agreeDeclaration && agreePrivacy && (
-                                        <div className={styles.declarationBox}>
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>Place</label>
-                                                <input
-                                                    type="text"
-                                                    value={declarationDetails.place}
-                                                    onChange={(e) =>
-                                                        setDeclarationDetails((prev) => ({
-                                                            ...prev,
-                                                            place: e.target.value
-                                                                .replace(/[^A-Za-z\s]/g, "") // ✅ only letters + spaces
-                                                                .replace(/\s+/g, " ")         // ✅ collapse multiple spaces
-                                                                .toUpperCase()                // ✅ convert to uppercase
-                                                                .trim(),                      // ✅ trim extra spaces
-                                                        }))
-                                                    }
-                                                    className={styles.fieldInput}
-                                                    readOnly={isReadOnly}
-                                                />
-                                            </div>
-
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={declarationDetails.date}
-                                                    readOnly
-                                                    className={styles.fieldInput}
-                                                />
-                                            </div>
-
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>
-                                                    Signature<br></br>
-                                                    (JPG, JPEG, PNG — white background only, max 1 MB)
-                                                </label>
-                                                <input
-                                                    type="file"
-                                                    accept=".jpg,.jpeg,.png"
-                                                    onChange={(e) => {
-                                                        const file = e.target.files[0];
-                                                        if (!file) return;
-
-                                                        const validTypes = ["image/jpeg", "image/jpg", "image/png"];
-                                                        if (!validTypes.includes(file.type)) {
-                                                            alert("❌ Please upload a valid image file (JPG, JPEG, or PNG).");
-                                                            e.target.value = "";
-                                                            return;
+                                        {bankInfo.transactionType === "Domestic and International" && (
+                                            <>
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>IFSC Code</label>
+                                                    <input
+                                                        type="text"
+                                                        name="ifscCode"
+                                                        value={bankInfo.ifscCode || ""}
+                                                        onChange={(e) =>
+                                                            setBankInfo((prev) => ({
+                                                                ...prev,
+                                                                ifscCode: e.target.value.toUpperCase(),
+                                                            }))
                                                         }
 
-                                                        if (file.size > 1024 * 1024) {
-                                                            alert("❌ File size exceeds 1 MB. Please upload a smaller image.");
-                                                            e.target.value = "";
-                                                            return;
+                                                        className={styles.fieldInput}
+                                                    />
+                                                </div>
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>SWIFT Code</label>
+                                                    <input
+                                                        type="text"
+                                                        name="swiftCode"
+                                                        value={bankInfo.swiftCode || ""}
+                                                        onChange={(e) =>
+                                                            setBankInfo((prev) => ({
+                                                                ...prev,
+                                                                swiftCode: e.target.value.toUpperCase(),
+                                                            }))
                                                         }
 
-                                                        // ✅ Check for white background
-                                                        const reader = new FileReader();
-                                                        reader.onload = (ev) => {
-                                                            const img = new Image();
-                                                            img.onload = () => {
-                                                                const canvas = document.createElement("canvas");
-                                                                const ctx = canvas.getContext("2d");
-                                                                canvas.width = img.width;
-                                                                canvas.height = img.height;
-                                                                ctx.drawImage(img, 0, 0);
+                                                        className={styles.fieldInput}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
 
-                                                                const borderPixels = [];
-                                                                // Take pixels from corners and borders
-                                                                const positions = [
-                                                                    [0, 0],
-                                                                    [img.width - 1, 0],
-                                                                    [0, img.height - 1],
-                                                                    [img.width - 1, img.height - 1],
-                                                                    [Math.floor(img.width / 2), 0],
-                                                                    [0, Math.floor(img.height / 2)],
-                                                                    [img.width - 1, Math.floor(img.height / 2)],
-                                                                    [Math.floor(img.width / 2), img.height - 1],
-                                                                ];
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Beneficiary of the Account
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="beneficiary_name"
+                                                value={bankInfo.beneficiary_name}
+                                                onChange={handleBankDetailsChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
 
-                                                                positions.forEach(([x, y]) => {
-                                                                    const pixel = ctx.getImageData(x, y, 1, 1).data;
-                                                                    borderPixels.push(pixel);
-                                                                });
+                                        <h3 className={styles.subHeading}>Further Information</h3>
 
-                                                                // Check if all border pixels are white (or nearly white)
-                                                                const allWhite = borderPixels.every(
-                                                                    ([r, g, b]) => r > 240 && g > 240 && b > 240
-                                                                );
 
-                                                                if (!allWhite) {
-                                                                    alert("❌ Please upload a signature with a plain white background.");
-                                                                    e.target.value = "";
-                                                                    return;
-                                                                }
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Will the proposed business involve a third party acting on your behalf (e.g., an intermediary or agent)?
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                name="involves_third_party"
+                                                value={bankInfo.involves_third_party ?? ""} // This converts true/false to "true"/"false"
+                                                onChange={handleBankDetailsChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="true">Yes</option>
+                                                <option value="false">No</option>
+                                            </select>
+                                        </div>
 
-                                                                // ✅ Passed validation
-                                                                setDeclarationDetails((prev) => ({
-                                                                    ...prev,
-                                                                    sign: { file, url: URL.createObjectURL(file) },
-                                                                }));
-                                                            };
-                                                            img.src = ev.target.result;
-                                                        };
-                                                        reader.readAsDataURL(file);
-                                                    }}
-                                                    className={styles.fieldInput}
-                                                />
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Will you use a third party or subcontractor to act on your behalf or make/receive payments in relation to the proposed business relationship with any sanctioned country?
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                name="subcontractor_in_sanctioned_country"
+                                                value={bankInfo.subcontractor_in_sanctioned_country ?? ""}
+                                                onChange={handleBankDetailsChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="true">Yes</option>
+                                                <option value="false">No</option>
+                                            </select>
+                                        </div>
 
-                                                {declarationDetails.sign?.file?.name && (
-                                                    <span className={styles.fileName}>
-                                                        📄 {declarationDetails.sign.file.name}
-                                                    </span>
-                                                )}
-                                            </div>
 
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>Company Stamp </label>
+                                    </div>
+                                )}
+
+                                {/* STEP 4: Documents to be enclosed */}
+                                {currentPage === 5 && hasAgreed && (
+                                    <div className={styles.page}>
+                                        <h3>Documents to be enclosed</h3>
+                                        <p className={styles.note}>
+                                            Please verify and upload documents in JPG, JPEG, PNG, or PDF format. The maximum file size allowed is 5 MB.
+                                        </p>
+
+                                        {/* PAN */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>PAN <span className={styles.requiredSymbol}>*</span></label>
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                className={styles.fieldInput}
+                                                onChange={(e) => handleDocumentChange("pan", e.target.files[0])}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+
+                                            {/* ✅ Show uploaded file name */}
+                                            {documents.pan?.fileName && (
+                                                <span className={styles.fileName}>📄 {documents.pan.fileName}</span>
+                                            )}
+
+
+                                            {documents.pan?.url && (
+                                                <a
+                                                    href={documents.pan.url.startsWith("blob:")
+                                                        ? documents.pan.url // local preview
+                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.pan.url}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.viewButton}
+
+                                                >
+                                                    View
+                                                </a>
+                                            )}
+                                        </div>
+
+
+
+                                        {/* GSTIN */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>GSTIN <span className={styles.requiredSymbol}>*</span></label>
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                className={styles.fieldInput}
+                                                onChange={(e) => handleDocumentChange("gstin", e.target.files[0])}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+
+                                            {documents.gstin?.fileName && (
+                                                <span className={styles.fileName}>📄 {documents.gstin.fileName}</span>
+                                            )}
+
+                                            {documents.gstin?.url && (
+                                                <a
+                                                    href={documents.gstin.url.startsWith("blob:")
+                                                        ? documents.gstin.url // local preview
+                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.gstin.url}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.viewButton}
+
+                                                >
+                                                    View
+                                                </a>
+                                            )}
+                                        </div>
+
+                                        {/* MSME Certificate */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>MSME Certificate (if any)
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                className={styles.fieldInput}
+                                                onChange={(e) => handleDocumentChange("msme", e.target.files[0])}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+
+                                            {documents.msme?.fileName && (
+                                                <span className={styles.fileName}>📄 {documents.msme.fileName}</span>
+                                            )}
+
+
+                                            {documents.msme?.url && (
+                                                <a
+                                                    href={documents.msme.url.startsWith("blob:")
+                                                        ? documents.msme.url // local preview
+                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.msme.url}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.viewButton}
+
+                                                >
+                                                    View
+                                                </a>
+                                            )}
+                                        </div>
+
+                                        {/* Cancelled Cheque Leaf */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Cancelled Cheque Leaf
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                className={styles.fieldInput}
+                                                onChange={(e) => handleDocumentChange("cheque", e.target.files[0])}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+
+                                            {documents.cheque?.fileName && (
+                                                <span className={styles.fileName}>📄 {documents.cheque.fileName}</span>
+                                            )}
+
+                                            {documents.cheque?.url && (
+                                                <a
+                                                    href={documents.cheque.url.startsWith("blob:")
+                                                        ? documents.cheque.url // local preview
+                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.cheque.url}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.viewButton}
+                                                >
+                                                    View
+                                                </a>
+                                            )}
+                                        </div>
+
+                                        {/* TAN */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>TAN
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                className={styles.fieldInput}
+                                                onChange={(e) => handleDocumentChange("tan", e.target.files[0])}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+
+                                            {documents.tan?.fileName && (
+                                                <span className={styles.fileName}>📄 {documents.tan.fileName}</span>
+                                            )}
+
+                                            {documents.tan?.url && (
+                                                <a
+                                                    href={documents.tan.url.startsWith("blob:")
+                                                        ? documents.tan.url // local preview
+                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.tan.url}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.viewButton}
+                                                >
+                                                    View
+                                                </a>
+                                            )}
+                                        </div>
+
+                                        {/* Certificate of Incorporation / Firm Registration */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Certificate of Incorporation / Firm Registration
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                className={styles.fieldInput}
+                                                onChange={(e) => handleDocumentChange("incorporation", e.target.files[0])}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+
+                                            {documents.incorporation?.fileName && (
+                                                <span className={styles.fileName}>📄 {documents.incorporation.fileName}</span>
+                                            )}
+
+                                            {documents.incorporation?.url && (
+                                                <a
+                                                    href={documents.incorporation.url.startsWith("blob:")
+                                                        ? documents.incorporation.url // local preview
+                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.incorporation.url}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.viewButton}
+                                                >
+                                                    View
+                                                </a>
+                                            )}
+                                        </div>
+
+                                        {/* TDS Declaration for Exemption */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>TDS Declaration for Exemption
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                className={styles.fieldInput}
+                                                onChange={(e) => handleDocumentChange("tds", e.target.files[0])}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+
+                                            {documents.tds?.fileName && (
+                                                <span className={styles.fileName}>📄 {documents.tds.fileName}</span>
+                                            )}
+
+
+                                            {documents.tds?.url && (
+                                                <a
+                                                    href={documents.tds.url.startsWith("blob:")
+                                                        ? documents.tds.url // local preview
+                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.tds.url}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.viewButton}
+                                                >
+                                                    View
+                                                </a>
+                                            )}
+                                        </div>
+
+                                    </div>
+                                )}
+
+                                {/* STEP 6: Declaration & Confidentiality */}
+                                {currentPage === 6 && hasAgreed && (
+                                    <div className={styles.page}>
+                                        <h3>Declaration and Acknowledgement</h3>
+
+                                        {/* ✅ Declaration Checkbox */}
+                                        <div className={styles.checkboxRow}>
+                                            <label>
                                                 <input
-                                                    type="file"
-                                                    accept=".png,.jpg,.jpeg"
-                                                    onChange={(e) => {
-                                                        const file = e.target.files[0];
-                                                        if (file && file.size <= 1024 * 1024) {
+                                                    type="checkbox"
+                                                    checked={agreeDeclaration}
+                                                    onChange={(e) => handleCheckbox("declaration", e.target.checked)}
+                                                />{" "}
+                                                Declaration
+                                            </label>
+                                        </div>
+
+                                        {agreeDeclaration && (
+                                            <p className={styles.declarationText}>
+                                                I/We <strong>{declarationDetails.name || "________"}</strong> of{" "}
+                                                <strong>{declarationDetails.organization || "________"}</strong> designated as{" "}
+                                                <strong>{declarationDetails.designation || "________"}</strong> declare that
+                                                the information provided in this document is true and accurate in all respects
+                                                and that we have performed such procedures and inquiries as necessary to verify
+                                                the answers.
+                                            </p>
+                                        )}
+
+                                        {/* ✅ Confidentiality Checkbox */}
+                                        <div className={styles.checkboxRow}>
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={agreePrivacy}
+                                                    onChange={(e) => handleCheckbox("privacy", e.target.checked)}
+                                                />{" "}
+                                                Confidentiality and Data Privacy
+                                            </label>
+                                        </div>
+
+                                        {agreePrivacy && (
+                                            <p className={styles.declarationText}>
+                                                I/We <strong>{declarationDetails.name || "________"}</strong> of{" "}
+                                                <strong>{declarationDetails.organization || "________"}</strong> designated as{" "}
+                                                <strong>{declarationDetails.designation || "________"}</strong> acknowledge that
+                                                the contents of this document and any enclosures may be shared only for the
+                                                purposes of evaluation and shall be kept confidential in accordance with
+                                                applicable data privacy regulations.
+                                            </p>
+                                        )}
+
+                                        {/* ✅ Common Fields visible when both boxes are ticked */}
+                                        {agreeDeclaration && agreePrivacy && (
+                                            <div className={styles.declarationBox}>
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>Place</label>
+                                                    <input
+                                                        type="text"
+                                                        value={declarationDetails.place}
+                                                        onChange={(e) =>
                                                             setDeclarationDetails((prev) => ({
                                                                 ...prev,
-                                                                stamp: { file, url: URL.createObjectURL(file) },
-                                                            }));
-                                                        } else {
-                                                            alert("❌ Stamp must be PNG/JPG and below 1 MB.");
+                                                                place: e.target.value
+                                                                    .replace(/[^A-Za-z\s]/g, "") // ✅ only letters + spaces
+                                                                    .replace(/\s+/g, " ")         // ✅ collapse multiple spaces
+                                                                    .toUpperCase()                // ✅ convert to uppercase
+                                                                    .trim(),                      // ✅ trim extra spaces
+                                                            }))
                                                         }
-                                                    }}
-                                                    className={styles.fieldInput}
-                                                />
-                                                {declarationDetails.stamp?.file?.name && (
-                                                    <span className={styles.fileName}>📄 {declarationDetails.stamp.file.name}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                                        className={styles.fieldInput}
+                                                        readOnly={isReadOnly}
+                                                    />
+                                                </div>
 
-                            )}
-                            {/* 🔹 Dynamic Comments Section (for all steps) */}
-                            <div className="mt-4">
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>Date</label>
+                                                    <input
+                                                        type="date"
+                                                        value={declarationDetails.date}
+                                                        readOnly
+                                                        className={styles.fieldInput}
+                                                    />
+                                                </div>
 
-                                {/* ===== LABEL ===== */}
-                                <label
-                                    className={styles.fieldLabel}
-                                    style={{
-                                        marginBottom: "10px",
-                                        marginTop: "50px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        whiteSpace: "nowrap",
-                                        fontSize: "20px",
-                                        gap: "6px",
-                                    }}
-                                >
-                                    <span style={{ flexShrink: 0, fontWeight: 500 }}>Comments By</span>
-                                    <span style={{ fontWeight: 500 }}>{stepLabels[currentPage]}</span>
-                                </label>
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>
+                                                        Signature<br></br>
+                                                        (JPG, JPEG, PNG — white background only, max 1 MB)
+                                                    </label>
+                                                    <input
+                                                        type="file"
+                                                        accept=".jpg,.jpeg,.png"
+                                                        onChange={(e) => {
+                                                            const file = e.target.files[0];
+                                                            if (!file) return;
 
-                                {/* ===== COMMENTS HISTORY TABLE ===== */}
-                                <table
-                                    style={{
-                                        width: "100%",
-                                        borderCollapse: "collapse",
-                                        border: "1px solid #ddd",
-                                        marginBottom: "20px",
-                                    }}
-                                >
-                                    <thead style={{ backgroundColor: "#eee" }}>
-                                        <tr>
-                                            <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "center", color: "#000" }}>S.No</th>
-                                            <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Date</th>
-                                            <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Comment</th>
-                                            <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Comment By</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {/* ✅ Table rows change dynamically per step */}
-                                        {commentHistory[stepLabels[currentPage]] &&
-                                            commentHistory[stepLabels[currentPage]].length > 0 ? (
-                                            commentHistory[stepLabels[currentPage]].map((item, index) => (
-                                                <tr key={index}>
-                                                    <td
-                                                        style={{
-                                                            border: "1px solid #ddd",
-                                                            padding: "8px",
-                                                            textAlign: "center",
-                                                            color: "#000"
+                                                            const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+                                                            if (!validTypes.includes(file.type)) {
+                                                                alert("❌ Please upload a valid image file (JPG, JPEG, or PNG).");
+                                                                e.target.value = "";
+                                                                return;
+                                                            }
+
+                                                            if (file.size > 1024 * 1024) {
+                                                                alert("❌ File size exceeds 1 MB. Please upload a smaller image.");
+                                                                e.target.value = "";
+                                                                return;
+                                                            }
+
+                                                            // ✅ Check for white background
+                                                            const reader = new FileReader();
+                                                            reader.onload = (ev) => {
+                                                                const img = new Image();
+                                                                img.onload = () => {
+                                                                    const canvas = document.createElement("canvas");
+                                                                    const ctx = canvas.getContext("2d");
+                                                                    canvas.width = img.width;
+                                                                    canvas.height = img.height;
+                                                                    ctx.drawImage(img, 0, 0);
+
+                                                                    const borderPixels = [];
+                                                                    // Take pixels from corners and borders
+                                                                    const positions = [
+                                                                        [0, 0],
+                                                                        [img.width - 1, 0],
+                                                                        [0, img.height - 1],
+                                                                        [img.width - 1, img.height - 1],
+                                                                        [Math.floor(img.width / 2), 0],
+                                                                        [0, Math.floor(img.height / 2)],
+                                                                        [img.width - 1, Math.floor(img.height / 2)],
+                                                                        [Math.floor(img.width / 2), img.height - 1],
+                                                                    ];
+
+                                                                    positions.forEach(([x, y]) => {
+                                                                        const pixel = ctx.getImageData(x, y, 1, 1).data;
+                                                                        borderPixels.push(pixel);
+                                                                    });
+
+                                                                    // Check if all border pixels are white (or nearly white)
+                                                                    const allWhite = borderPixels.every(
+                                                                        ([r, g, b]) => r > 240 && g > 240 && b > 240
+                                                                    );
+
+                                                                    if (!allWhite) {
+                                                                        alert("❌ Please upload a signature with a plain white background.");
+                                                                        e.target.value = "";
+                                                                        return;
+                                                                    }
+
+                                                                    // ✅ Passed validation
+                                                                    setDeclarationDetails((prev) => ({
+                                                                        ...prev,
+                                                                        sign: { file, url: URL.createObjectURL(file) },
+                                                                    }));
+                                                                };
+                                                                img.src = ev.target.result;
+                                                            };
+                                                            reader.readAsDataURL(file);
                                                         }}
-                                                    >
-                                                        {index + 1}
-                                                    </td>
-                                                    <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.comment}</td>
-                                                    <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.commenter_name}</td>
-                                                    <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.commented_on}</td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="4" style={{ textAlign: "center", padding: "10px", color: "#000" }}>
-                                                    No comments yet for this step.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                                                        className={styles.fieldInput}
+                                                    />
 
-                                <div
-                                    className={styles.btnGroup}
-                                    style={{
-                                        display: "flex",
-                                        justifyContent: currentPage === 0 ? "flex-end" : "space-between",
-                                        marginTop: "20px",
-                                    }}
-                                >
-                                    {/* 🔹 Previous button (hidden on first step) */}
-                                    {currentPage > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={prevPage}
+                                                    {declarationDetails.sign?.file?.name && (
+                                                        <span className={styles.fileName}>
+                                                            📄 {declarationDetails.sign.file.name}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>Company Stamp </label>
+                                                    <input
+                                                        type="file"
+                                                        accept=".png,.jpg,.jpeg"
+                                                        onChange={(e) => {
+                                                            const file = e.target.files[0];
+                                                            if (file && file.size <= 1024 * 1024) {
+                                                                setDeclarationDetails((prev) => ({
+                                                                    ...prev,
+                                                                    stamp: { file, url: URL.createObjectURL(file) },
+                                                                }));
+                                                            } else {
+                                                                alert("❌ Stamp must be PNG/JPG and below 1 MB.");
+                                                            }
+                                                        }}
+                                                        className={styles.fieldInput}
+                                                    />
+                                                    {declarationDetails.stamp?.file?.name && (
+                                                        <span className={styles.fileName}>📄 {declarationDetails.stamp.file.name}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                )}
+                                {/* ✅ Show comments + navigation buttons only AFTER Instructions */}
+                                {currentPage !== 0 && (
+                                    <div className="mt-4">
+                                        {/* ===== LABEL ===== */}
+                                        <label
+                                            className={styles.fieldLabel}
                                             style={{
-                                                backgroundColor: "#6c757d",
-                                                color: "white",
-                                                border: "none",
-                                                borderRadius: "6px",
-                                                padding: "8px 16px",
-                                                cursor: "pointer",
-                                                fontSize: "14px",
+                                                marginBottom: "10px",
+                                                marginTop: "50px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                whiteSpace: "nowrap",
+                                                fontSize: "20px",
+                                                gap: "6px",
                                             }}
                                         >
-                                            Previous
-                                        </button>
-                                    )}
+                                            <span style={{ flexShrink: 0, fontWeight: 500 }}>Comments</span>
+                                        </label>
 
-                                    {/* 🔹 Right-side buttons */}
-                                    {rfqStatus !== 8 ? (
-                                        <>
-                                            {/* If NOT the last step */}
-                                            {currentPage < totalSteps - 1 ? (
+                                        {/* ===== COMMENTS HISTORY TABLE ===== */}
+                                        <table
+                                            style={{
+                                                width: "100%",
+                                                borderCollapse: "collapse",
+                                                border: "1px solid #ddd",
+                                                marginBottom: "20px",
+                                            }}
+                                        >
+                                            <thead style={{ backgroundColor: "#eee" }}>
+                                                <tr>
+                                                    <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "center", color: "#000" }}>S.No</th>
+                                                    <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Date</th>
+                                                    <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Comment</th>
+                                                    <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Comment By</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {commentHistory[stepLabels[currentPage]] &&
+                                                    commentHistory[stepLabels[currentPage]].length > 0 ? (
+                                                    commentHistory[stepLabels[currentPage]].map((item, index) => (
+                                                        <tr key={index}>
+                                                            <td
+                                                                style={{
+                                                                    border: "1px solid #ddd",
+                                                                    padding: "8px",
+                                                                    textAlign: "center",
+                                                                    color: "#000",
+                                                                }}
+                                                            >
+                                                                {index + 1}
+                                                            </td>
+                                                            <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.comment}</td>
+                                                            <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.commenter_name}</td>
+                                                            <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.commented_on}</td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan="4" style={{ textAlign: "center", padding: "10px", color: "#000" }}>
+                                                            No comments yet for this step.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+
+                                        {/* ===== NAVIGATION BUTTONS ===== */}
+                                        <div
+                                            className={styles.btnGroup}
+                                            style={{
+                                                display: "flex",
+                                                justifyContent: currentPage === 0 ? "flex-end" : "space-between",
+                                                marginTop: "20px",
+                                            }}
+                                        >
+                                            {/* Previous button */}
+                                            {currentPage > 0 && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => {
-                                                        switch (currentPage) {
-                                                            case 0:
-                                                                handleSubmitCompanyInfo();
-                                                                break;
-                                                            case 1:
-                                                                handleSaveMsmeInfo();
-                                                                break;
-                                                            case 2:
-                                                                handleSaveGstForm();
-                                                                break;
-                                                            case 3:
-                                                                handleSaveBankDetails();
-                                                                break;
-                                                            case 4:
-                                                                handleSaveDocuments();
-                                                                break;
-                                                            default:
-                                                                nextPage();
-                                                        }
-                                                    }}
+                                                    onClick={prevPage}
                                                     style={{
-                                                        backgroundColor: "#007bff",
+                                                        backgroundColor: "#6c757d",
                                                         color: "white",
                                                         border: "none",
                                                         borderRadius: "6px",
@@ -3521,397 +3574,298 @@ const VmsRequest = () => {
                                                         fontSize: "14px",
                                                     }}
                                                 >
-                                                    Save and Continue
-                                                </button>
-                                            ) : (
-                                                /* 🔹 On last step → show Final Submit */
-                                                <button
-                                                    type="button"
-                                                    onClick={handleOpenModal} // 👈 Opens final review popup
-                                                    style={{
-                                                        backgroundColor: "#28a745",
-                                                        color: "white",
-                                                        border: "none",
-                                                        borderRadius: "6px",
-                                                        padding: "10px 22px",
-                                                        cursor: "pointer",
-                                                        fontSize: "15px",
-                                                        fontWeight: "600",
-                                                    }}
-                                                >
-                                                    Review All
+                                                    Previous
                                                 </button>
                                             )}
-                                        </>
-                                    ) : (
-                                        /* 🔹 Read-only mode (for rfqStatus = 8) */
-                                        currentPage < totalSteps - 1 && (
-                                            <button
-                                                type="button"
-                                                onClick={nextPage}
-                                                style={{
-                                                    backgroundColor: "#6c757d",
-                                                    color: "white",
-                                                    border: "none",
-                                                    borderRadius: "6px",
-                                                    padding: "8px 16px",
-                                                    cursor: "pointer",
-                                                    fontSize: "14px",
-                                                }}
-                                            >
-                                                Next
-                                            </button>
-                                        )
-                                    )}
-                                </div>
 
-                            </div>
+                                            {/* Right-side buttons */}
+                                            {rfqStatus !== 8 ? (
+                                                <>
+                                                    {currentPage < totalSteps - 1 ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                switch (currentPage) {
+                                                                    case 0:
+                                                                        handleSubmitCompanyInfo();
+                                                                        break;
+                                                                    case 1:
+                                                                        handleSaveMsmeInfo();
+                                                                        break;
+                                                                    case 2:
+                                                                        handleSaveGstForm();
+                                                                        break;
+                                                                    case 3:
+                                                                        handleSaveBankDetails();
+                                                                        break;
+                                                                    case 4:
+                                                                        handleSaveDocuments();
+                                                                        break;
+                                                                    default:
+                                                                        nextPage();
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                backgroundColor: "#007bff",
+                                                                color: "white",
+                                                                border: "none",
+                                                                borderRadius: "6px",
+                                                                padding: "8px 16px",
+                                                                cursor: "pointer",
+                                                                fontSize: "14px",
+                                                            }}
+                                                        >
+                                                            Save and Continue
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleOpenModal}
+                                                            style={{
+                                                                backgroundColor: "#28a745",
+                                                                color: "white",
+                                                                border: "none",
+                                                                borderRadius: "6px",
+                                                                padding: "10px 22px",
+                                                                cursor: "pointer",
+                                                                fontSize: "15px",
+                                                                fontWeight: "600",
+                                                            }}
+                                                        >
+                                                            Review All
+                                                        </button>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                currentPage < totalSteps - 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={nextPage}
+                                                        style={{
+                                                            backgroundColor: "#6c757d",
+                                                            color: "white",
+                                                            border: "none",
+                                                            borderRadius: "6px",
+                                                            padding: "8px 16px",
+                                                            cursor: "pointer",
+                                                            fontSize: "14px",
+                                                        }}
+                                                    >
+                                                        Next
+                                                    </button>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
 
 
-                            <Modal
-                                open={openConfirmModal}
-                                onClose={handleCloseModal}
-                                aria-labelledby="confirm-modal-title"
-                                aria-describedby="confirm-modal-description"
-                                sx={{
-                                    position: "fixed",
-                                    top: 0,
-                                    left: 0,
-                                    width: "100vw",
-                                    height: "100vh",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    backgroundColor: "rgba(0, 0, 0, 0.6)",
-                                    zIndex: 2000,
-                                }}
-                            >
-                                <Box
+                                <Modal
+                                    open={openConfirmModal}
+                                    onClose={handleCloseModal}
+                                    aria-labelledby="confirm-modal-title"
+                                    aria-describedby="confirm-modal-description"
                                     sx={{
-                                        backgroundColor: "#fff",
-                                        color: "#1a1a1a",
-                                        borderRadius: "14px",
-                                        padding: "30px 40px",
-                                        width: "90%",
-                                        maxWidth: "950px",
-                                        maxHeight: "90vh",
-                                        overflowY: "auto",
-                                        fontFamily: "'Segoe UI', Roboto, sans-serif",
-                                        boxShadow: "0 8px 35px rgba(0,0,0,0.4)",
-                                        position: "relative",
+                                        position: "fixed",
+                                        top: 0,
+                                        left: 0,
+                                        width: "100vw",
+                                        height: "100vh",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        backgroundColor: "rgba(0, 0, 0, 0.6)",
+                                        zIndex: 2000,
                                     }}
                                 >
-                                    {/* Header */}
-                                    <h2
-                                        id="confirm-modal-title"
-                                        style={{
-                                            textAlign: "center",
-                                            marginBottom: "25px",
-                                            fontSize: "26px",
-                                            fontWeight: "700",
-                                            color: "#0d47a1",
+                                    <Box
+                                        sx={{
+                                            backgroundColor: "#fff",
+                                            color: "#1a1a1a",
+                                            borderRadius: "14px",
+                                            padding: "30px 40px",
+                                            width: "90%",
+                                            maxWidth: "950px",
+                                            maxHeight: "90vh",
+                                            overflowY: "auto",
+                                            fontFamily: "'Segoe UI', Roboto, sans-serif",
+                                            boxShadow: "0 8px 35px rgba(0,0,0,0.4)",
+                                            position: "relative",
                                         }}
                                     >
-                                        🧾 Review All Details Before Final Submission —{" "}
-                                        {new Date().toLocaleDateString("en-GB", {
-                                            day: "2-digit",
-                                            month: "long",
-                                            year: "numeric",
-                                        })}
-                                    </h2>
-
-                                    {/* --- Step Sections --- */}
-                                    {[
-                                        {
-                                            title: "1️⃣ Business Entity Details",
-                                            content: (
-                                                <>
-                                                    {renderValue("Full Registered Name", companyInfo.full_registered_name)}
-                                                    {renderValue("Business Entity Type", companyInfo.business_entity_type)}
-                                                    {renderValue("Trading Name", companyInfo.trading_name)}
-                                                    {renderValue("Telephone", companyInfo.telephone)}
-                                                    {renderValue("Country of Incorporation", countries.find(c => c.id == companyInfo.country_of_incorporation)?.country)}
-                                                    {renderValue("Registered Address", companyInfo.registered_address)}
-                                                    {renderValue("Business Address", companyInfo.business_address)}
-                                                    {renderValue("Contact Person Name", companyInfo.contact_person_name)}
-                                                    {renderValue("Contact Person Email", companyInfo.contact_person_email)}
-                                                </>
-                                            ),
-                                        },
-                                        {
-                                            title: "2️⃣ MSME Details",
-                                            content: (
-                                                <>
-                                                    {renderValue("Registered under MSME", msmeInfo.registered_under_msme === "true" ? "Yes" : "No")}
-                                                    {renderValue("Udyam Registration Number", msmeInfo.udyam_registration_number)}
-                                                    {renderValue("Category", msmeInfo.category)}
-                                                </>
-                                            ),
-                                        },
-                                        {
-                                            title: "3️⃣ GST & Goods/Services Information",
-                                            content: (
-                                                <>
-                                                    {renderValue("Type of Counterparty", goodsServices.type_of_counterparty)}
-                                                    {renderValue("Other Type", goodsServices.others)}
-                                                    {renderValue("Registration Type", gstMeta.reg_type)}
-                                                    {renderValue("Periodicity of GSTR-1", gstMeta.periodicity_gstr1)}
-                                                </>
-                                            ),
-                                        },
-                                        {
-                                            title: "4️⃣ Bank Details",
-                                            content: (
-                                                <>
-                                                    {renderValue("Account Holder Name", bankInfo.account_holder_name)}
-                                                    {renderValue("Bank Name", bankInfo.bank_name)}
-                                                    {renderValue("Account Number", bankInfo.account_number)}
-                                                    {renderValue("IFSC Code", bankInfo.ifsc_code)}
-                                                    {renderValue("SWIFT Code", bankInfo.swift_code)}
-                                                    {renderValue("Beneficiary Name", bankInfo.beneficiary_name)}
-                                                </>
-                                            ),
-                                        },
-                                        {
-                                            title: "5️⃣ Documents Uploaded",
-                                            content: (
-                                                <ul style={{ listStyle: "none", paddingLeft: "0" }}>
-                                                    {Object.entries(documents).map(([key, value]) => (
-                                                        <li key={key} style={{ marginBottom: "6px" }}>
-                                                            <b style={{ textTransform: "capitalize" }}>{key}</b> —{" "}
-                                                            {value?.url ? (
-                                                                <a
-                                                                    href={value.url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    style={{ color: "#1976d2", textDecoration: "underline" }}
-                                                                >
-                                                                    View
-                                                                </a>
-                                                            ) : (
-                                                                "Not Uploaded"
-                                                            )}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            ),
-                                        },
-                                        {
-                                            title: "6️⃣ Declaration & Acknowledgement",
-                                            content: (
-                                                <>
-                                                    {renderValue("Name", declarationInfo.name)}
-                                                    {renderValue("Organization", declarationInfo.organization)}
-                                                    {renderValue("Designation", declarationInfo.designation)}
-                                                    {renderValue("Date", declarationInfo.date)}
-                                                    {renderValue("Place", declarationInfo.place)}
-                                                </>
-                                            ),
-                                        },
-                                    ].map((section, index) => (
-                                        <Box
-                                            key={index}
-                                            sx={{
-                                                border: "1px solid #e0e0e0",
-                                                borderRadius: "10px",
-                                                padding: "20px 25px",
-                                                mb: 3,
-                                                backgroundColor: "#f9fbff",
+                                        {/* Header */}
+                                        <h2
+                                            id="confirm-modal-title"
+                                            style={{
+                                                textAlign: "center",
+                                                marginBottom: "25px",
+                                                fontSize: "26px",
+                                                fontWeight: "700",
+                                                color: "#0d47a1",
                                             }}
                                         >
-                                            <h3
-                                                style={{
-                                                    marginBottom: "10px",
-                                                    fontSize: "18px",
-                                                    fontWeight: "600",
-                                                    color: "#0d47a1",
-                                                    borderBottom: "2px solid #bbdefb",
-                                                    paddingBottom: "4px",
+                                            🧾 Review All Details Before Final Submission —{" "}
+                                            {new Date().toLocaleDateString("en-GB", {
+                                                day: "2-digit",
+                                                month: "long",
+                                                year: "numeric",
+                                            })}
+                                        </h2>
+
+                                        {/* --- Step Sections --- */}
+                                        {[
+                                            {
+                                                title: "1️⃣ Business Entity Details",
+                                                content: (
+                                                    <>
+                                                        {renderValue("Full Registered Name", companyInfo.full_registered_name)}
+                                                        {renderValue("Business Entity Type", companyInfo.business_entity_type)}
+                                                        {renderValue("Trading Name", companyInfo.trading_name)}
+                                                        {renderValue("Telephone", companyInfo.telephone)}
+                                                        {renderValue("Country of Incorporation", countries.find(c => c.id == companyInfo.country_of_incorporation)?.country)}
+                                                        {renderValue("Registered Address", companyInfo.registered_address)}
+                                                        {renderValue("Business Address", companyInfo.business_address)}
+                                                        {renderValue("Contact Person Name", companyInfo.contact_person_name)}
+                                                        {renderValue("Contact Person Email", companyInfo.contact_person_email)}
+                                                    </>
+                                                ),
+                                            },
+                                            {
+                                                title: "2️⃣ MSME Details",
+                                                content: (
+                                                    <>
+                                                        {renderValue("Registered under MSME", msmeInfo.registered_under_msme === "true" ? "Yes" : "No")}
+                                                        {renderValue("Udyam Registration Number", msmeInfo.udyam_registration_number)}
+                                                        {renderValue("Category", msmeInfo.category)}
+                                                    </>
+                                                ),
+                                            },
+                                            {
+                                                title: "3️⃣ GST & Goods/Services Information",
+                                                content: (
+                                                    <>
+                                                        {renderValue("Type of Counterparty", goodsServices.type_of_counterparty)}
+                                                        {renderValue("Other Type", goodsServices.others)}
+                                                        {renderValue("Registration Type", gstMeta.reg_type)}
+                                                        {renderValue("Periodicity of GSTR-1", gstMeta.periodicity_gstr1)}
+                                                    </>
+                                                ),
+                                            },
+                                            {
+                                                title: "4️⃣ Bank Details",
+                                                content: (
+                                                    <>
+                                                        {renderValue("Account Holder Name", bankInfo.account_holder_name)}
+                                                        {renderValue("Bank Name", bankInfo.bank_name)}
+                                                        {renderValue("Account Number", bankInfo.account_number)}
+                                                        {renderValue("IFSC Code", bankInfo.ifsc_code)}
+                                                        {renderValue("SWIFT Code", bankInfo.swift_code)}
+                                                        {renderValue("Beneficiary Name", bankInfo.beneficiary_name)}
+                                                    </>
+                                                ),
+                                            },
+                                            {
+                                                title: "5️⃣ Documents Uploaded",
+                                                content: (
+                                                    <ul style={{ listStyle: "none", paddingLeft: "0" }}>
+                                                        {Object.entries(documents).map(([key, value]) => (
+                                                            <li key={key} style={{ marginBottom: "6px" }}>
+                                                                <b style={{ textTransform: "capitalize" }}>{key}</b> —{" "}
+                                                                {value?.url ? (
+                                                                    <a
+                                                                        href={value.url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        style={{ color: "#1976d2", textDecoration: "underline" }}
+                                                                    >
+                                                                        View
+                                                                    </a>
+                                                                ) : (
+                                                                    "Not Uploaded"
+                                                                )}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                ),
+                                            },
+                                            {
+                                                title: "6️⃣ Declaration & Acknowledgement",
+                                                content: (
+                                                    <>
+                                                        {renderValue("Name", declarationInfo.name)}
+                                                        {renderValue("Organization", declarationInfo.organization)}
+                                                        {renderValue("Designation", declarationInfo.designation)}
+                                                        {renderValue("Date", declarationInfo.date)}
+                                                        {renderValue("Place", declarationInfo.place)}
+                                                    </>
+                                                ),
+                                            },
+                                        ].map((section, index) => (
+                                            <Box
+                                                key={index}
+                                                sx={{
+                                                    border: "1px solid #e0e0e0",
+                                                    borderRadius: "10px",
+                                                    padding: "20px 25px",
+                                                    mb: 3,
+                                                    backgroundColor: "#f9fbff",
                                                 }}
                                             >
-                                                {section.title}
-                                            </h3>
-                                            <div style={{ lineHeight: "1.6", fontSize: "15px", color: "#222" }}>{section.content}</div>
+                                                <h3
+                                                    style={{
+                                                        marginBottom: "10px",
+                                                        fontSize: "18px",
+                                                        fontWeight: "600",
+                                                        color: "#0d47a1",
+                                                        borderBottom: "2px solid #bbdefb",
+                                                        paddingBottom: "4px",
+                                                    }}
+                                                >
+                                                    {section.title}
+                                                </h3>
+                                                <div style={{ lineHeight: "1.6", fontSize: "15px", color: "#222" }}>{section.content}</div>
+                                            </Box>
+                                        ))}
+
+                                        {/* --- Action Buttons --- */}
+                                        <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 4 }}>
+                                            <Button
+                                                variant="contained"
+                                                color="success"
+                                                onClick={handleFinalSubmit}
+                                                sx={{
+                                                    px: 4,
+                                                    py: 1,
+                                                    fontWeight: "600",
+                                                    textTransform: "none",
+                                                    fontSize: "15px",
+                                                }}
+                                            >
+                                                Confirm & Submit
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                color="error"
+                                                onClick={handleCloseModal}
+                                                sx={{
+                                                    px: 4,
+                                                    py: 1,
+                                                    fontWeight: "600",
+                                                    textTransform: "none",
+                                                    fontSize: "15px",
+                                                }}
+                                            >
+                                                Go Back
+                                            </Button>
                                         </Box>
-                                    ))}
-
-                                    {/* --- Action Buttons --- */}
-                                    <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 4 }}>
-                                        <Button
-                                            variant="contained"
-                                            color="success"
-                                            onClick={handleFinalSubmit}
-                                            sx={{
-                                                px: 4,
-                                                py: 1,
-                                                fontWeight: "600",
-                                                textTransform: "none",
-                                                fontSize: "15px",
-                                            }}
-                                        >
-                                            Confirm & Submit
-                                        </Button>
-                                        <Button
-                                            variant="outlined"
-                                            color="error"
-                                            onClick={handleCloseModal}
-                                            sx={{
-                                                px: 4,
-                                                py: 1,
-                                                fontWeight: "600",
-                                                textTransform: "none",
-                                                fontSize: "15px",
-                                            }}
-                                        >
-                                            Go Back
-                                        </Button>
                                     </Box>
-                                </Box>
-                            </Modal>
+                                </Modal>
 
-
-
-
-
-
-
+                            </>
 
                         </form>
 
-                        {/* ✅ Instructions Popup */}
-                        {showInstructions && (
-                            <div className={styles.popupOverlay}>
-                                <div className={styles.popupContainer}>
-                                    <h2 className={styles.popupTitle}>Instructions to Fill the Vendor Registration Form</h2>
-
-                                    <div className={styles.popupScroll}>
-                                        <h3>📘 <span style={{ color: "#1d3557" }}>General Guidelines</span></h3>
-                                        <ul>
-                                            <li>👉 <strong>Read all instructions carefully</strong> before starting the form.</li>
-                                            <li>Ensure all required <strong>documents and information</strong> are ready before you begin.</li>
-                                            <li>Fields marked with <span style={{ color: "red" }}>*</span> are <strong>mandatory</strong>.</li>
-                                            <li>Upload only <strong>JPG, JPEG, PNG, or PDF</strong> formats.</li>
-                                            <li>Maximum file size: <strong style={{ color: "#e63946" }}>5 MB</strong> for documents, and <strong style={{ color: "#e63946" }}>1 MB</strong> for signature/stamp.</li>
-                                            <li>Use <strong>UPPERCASE letters</strong> for all codes like GSTIN, CIN, IFSC, and SWIFT.</li>
-                                            <li>Double-check your entries before submitting — <strong>incorrect data may delay approval.</strong></li>
-                                            <li>Signature must be on a <strong style={{ color: "#457b9d" }}>white background</strong> only.</li>
-                                            <li>💻 Use a <strong>laptop or desktop</strong> for the best experience.</li>
-                                        </ul>
-
-                                        <h3>🧭 <span style={{ color: "#1d3557" }}>Step-by-Step Instructions</span></h3>
-
-                                        <h4>🔹 Step 1: Business Entity Details</h4>
-                                        <ul>
-                                            <li>Select your <strong>Business Type</strong> (Proprietorship, Partnership, Private Limited, LLP, NGO, etc.).</li>
-                                            <li>Enter the <strong>Registration Number</strong> as per your entity type (e.g., CIN for companies, NGO Reg. No for NGOs).</li>
-                                            <li>Provide complete <strong>Company Information</strong> – name, PAN, address, and contact details.</li>
-                                            <li>Ensure your organization name matches your <strong>official registration documents.</strong></li>
-                                        </ul>
-
-                                        <h4>🔹 Step 2: MSME / UDYAM Details</h4>
-                                        <ul>
-                                            <li>Enter your <strong>MSME or UDYAM Registration Number</strong> if applicable.</li>
-                                            <li>Upload the valid MSME/UDYAM certificate in the supported format.</li>
-                                            <li>If not applicable, select or mention <strong>“Not Registered / Not Applicable.”</strong></li>
-                                        </ul>
-
-                                        <h4>🔹 Step 3: GST Information</h4>
-                                        <ul>
-                                            <li>Enter valid <strong>GSTIN</strong> as per your business registration.</li>
-                                            <li>Upload the <strong>GST Certificate</strong> clearly showing GST number and business name.</li>
-                                            <li>Provide your <strong>ITR Filed Date</strong> and <strong>Acknowledgement Number.</strong></li>
-                                            <li>Select the relevant <strong>Financial Year</strong> from the dropdown (last 5 years available).</li>
-                                            <li>Ensure your GST & ITR details are <strong>accurate and consistent</strong> with official records.</li>
-                                        </ul>
-
-                                        <h4>🔹 Step 4: Bank Details</h4>
-                                        <ul>
-                                            <li>Select <strong>Transaction Type:</strong> Domestic / International / Both.</li>
-                                            <li>For Domestic → provide <strong>IFSC Code</strong>.</li>
-                                            <li>For International → provide <strong>SWIFT Code</strong>.</li>
-                                            <li>Enter accurate <strong>Account Name, Number, Bank Name,</strong> and <strong>Branch.</strong></li>
-                                            <li>Upload a clear <strong>Cancelled Cheque Leaf</strong> (showing account details clearly).</li>
-                                        </ul>
-
-                                        <h4>🔹 Step 5: Documents and Attachments</h4>
-                                        <ul>
-                                            <li>Upload all required documents in <strong>JPG, JPEG, PNG, or PDF</strong> format.</li>
-                                            <li>Each file must be under <strong style={{ color: "#e63946" }}>5 MB</strong>.</li>
-                                            <li>Ensure the document names and scanned details are <strong>clearly visible and readable.</strong></li>
-                                            <li>Mandatory uploads include:
-                                                <ul>
-                                                    <li>PAN Card</li>
-                                                    <li>GST Certificate</li>
-                                                    <li>MSME / UDYAM Certificate (if applicable)</li>
-                                                    <li>TAN</li>
-                                                    <li>Certificate of Incorporation / Firm Registration</li>
-                                                    <li>TDS Declaration (if applicable)</li>
-                                                    <li>Cancelled Cheque Leaf</li>
-                                                </ul>
-                                            </li>
-                                            <li>Once uploaded, the <strong>file name will appear automatically</strong> for confirmation.</li>
-                                        </ul>
-
-                                        <h4>🔹 Step 6: Declaration and Confidentiality</h4>
-                                        <ul>
-                                            <li>Carefully read both:
-                                                <ul>
-                                                    <li>✅ <strong>Declaration</strong></li>
-                                                    <li>✅ <strong>Confidentiality & Data Privacy Agreement</strong></li>
-                                                </ul>
-                                            </li>
-                                            <li>Tick both checkboxes to confirm your acceptance.</li>
-                                            <li>Once checked, the following fields will appear automatically:
-                                                <ul>
-                                                    <li><strong>Place</strong></li>
-                                                    <li><strong>Date</strong> (auto-filled with current date)</li>
-                                                    <li><strong>Signature</strong> (upload on white background only)</li>
-                                                    <li><strong>Company Stamp</strong></li>
-                                                </ul>
-                                            </li>
-                                            <li>Signature and Stamp files must be:
-                                                <ul>
-                                                    <li>In <strong>JPG / JPEG / PNG</strong> format only</li>
-                                                    <li>Under <strong>1 MB</strong> each</li>
-                                                    <li>With <strong>white or plain background</strong> (no colors or shadows)</li>
-                                                </ul>
-                                            </li>
-                                        </ul>
-
-                                        <h3>🟢 <span style={{ color: "#1d3557" }}>Before You Submit</span></h3>
-                                        <ul>
-                                            <li>Review all six steps carefully in the <strong>final confirmation popup</strong> before submission.</li>
-                                            <li>Ensure all uploads, names, and numbers are <strong>correct and match your documents.</strong></li>
-                                            <li>Incomplete or incorrect details may result in <strong style={{ color: "#e63946" }}>rejection</strong> or delays in approval.</li>
-                                            <li>Once satisfied, click <strong style={{ color: "#007bff" }}>Submit</strong> to complete your registration process.</li>
-                                        </ul>
-                                    </div>
-
-                                    {/* Checkbox and Buttons */}
-                                    <div className={styles.instructionsFooter}>
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                checked={agreeInstructions}
-                                                onChange={(e) => setAgreeInstructions(e.target.checked)}
-                                            />{" "}
-                                            I have read and understood the instructions.
-                                        </label>
-
-                                        <div className={styles.popupButtonRow}>
-                                            <button
-                                                className={styles.proceedButton}
-                                                disabled={!agreeInstructions}
-                                                onClick={() => setShowInstructions(false)}
-                                            >
-                                                Proceed to Form
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
 
                     </div>

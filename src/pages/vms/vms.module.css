@@ -1010,6 +1010,85 @@ color: #ff0000 !important;
   text-transform: lowercase;
 }
 
+.instructionsBtn {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+.instructionsBtn:hover {
+  background-color: #005ecb;
+}
+
+.stepHeader {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.stepHeader h4 {
+  color: #555;
+  margin: 0;
+  font-weight: 500;
+}
+
+.stepHeader h3 {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #222;
+}
+/* 🔹 Special Styling for Instructions Tab */
+.instructionsTab {
+  background-color: #e8f0fe; /* soft light blue */
+  color: #1a73e8;
+  font-weight: 600;
+  border-left: 4px solid #1a73e8;
+  transition: all 0.3s ease;
+}
+
+.instructionsTab:hover {
+  background-color: #dbeafe;
+  cursor: pointer;
+}
+
+/* 🔹 When active (clicked) */
+.activeTab.instructionsTab {
+  background-color: #1a73e8;
+  color: white;
+}
+
+.activeTab.instructionsTab .infoIconWrapper {
+  background-color: white; /* contrast circle when active */
+}
+
+.activeTab.instructionsTab .infoIconWrapper svg {
+  color: #1a73e8;
+}
+
+/* 🔹 Blue circular icon badge */
+.infoIconWrapper {
+  background-color: #1a73e8;
+  color: white;
+  border-radius: 50%;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.infoIconWrapper svg {
+  color: white;
+}
+
+
 
 
 
