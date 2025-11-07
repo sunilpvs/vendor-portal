@@ -2893,15 +2893,22 @@ const VmsRequest = () => {
                                             <label className={styles.fieldLabel}>Country
                                                 <span className={styles.requiredSymbol}>*</span>
                                             </label>
-                                            <input
-                                                type="text"
+
+                                            <select
                                                 name="country"
-                                                value={bankInfo.country}
+                                                value={bankInfo.country || ""}
                                                 onChange={handleBankDetailsChange}
                                                 className={styles.fieldInput}
                                                 required
-                                                readOnly={isReadOnly}
-                                            />
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">-- Select Country --</option>
+                                                {countries.map((country) => (
+                                                    <option key={country.id} value={country.id}>
+                                                        {country.country}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
 
