@@ -41,7 +41,7 @@ const VmsRequest = () => {
     const [showInstructions, setShowInstructions] = useState(false);
     const [firstTime, setFirstTime] = useState(false);
 
-    const totalSteps = 6;
+
 
     const handleInstructionsClick = () => {
         const hasAgreed = localStorage.getItem("hasAgreedInstructions");
@@ -119,41 +119,24 @@ const VmsRequest = () => {
         "Declaration and Acknowledgement",
     ];
 
-
-    // Track whether user has already accepted the instructions before
-const [instructionsAccepted, setInstructionsAccepted] = useState(
-  localStorage.getItem("instructionsAccepted") === "true"
-);
-
-useEffect(() => {
-  if (!instructionsAccepted) {
-    setCurrentPage(0); // show Instructions step
-  } else {
-    setCurrentPage(0); // jump directly to Business Entity
-  }
-}, [instructionsAccepted]);
-
-{currentPage === 0 && (
-  <InstructionsStep
-    onProceed={() => {
-      setInstructionsAccepted(true);
-      setCurrentPage(1);
-    }}
-    firstTime={!instructionsAccepted}
-  />
-)}
-
-    const [hasAgreed, setHasAgreed] = useState(
-        localStorage.getItem("hasAgreedInstructions") === "true"
-    );
+    const totalSteps = stepLabels.length;
 
 
-    const handleProceedToForm = () => {
-        localStorage.setItem("hasAgreedInstructions", "true");
-        setHasAgreed(true);
-        setCurrentPage(1);
-    };
-    
+    useEffect(() => {
+        const accepted = localStorage.getItem("instructionsAccepted");
+        const refId = new URLSearchParams(window.location.search).get("refId");
+
+        if (accepted === "true" || refId) {
+            // ✅ Already accepted or accessed by reference ID — skip instructions
+            setCurrentPage(1);
+            setFirstTime(false);
+        } else {
+            // 🆕 First visit — show instructions step
+            setCurrentPage(0);
+            setFirstTime(true);
+        }
+    }, []);
+
 
     const [goods, setGoods] = useState([]);
     const [services, setServices] = useState([]);
@@ -1716,30 +1699,24 @@ useEffect(() => {
 
 
 
-   {/* Sidebar Tabs */}
-<div className={styles.verticalTabs}>
-  {stepLabels.map((label, index) => (
-    <div
-      key={index}
-      className={`${styles.tab} 
-        ${currentPage === index ? styles.activeTab : ""} 
-        ${currentPage > index ? styles.completedTab : ""} 
-        ${index === 0 ? styles.instructionsTab : ""}`} // ✅ Only for the first (Instructions)
-      onClick={() => setCurrentPage(index)}
-    >
-      <div className={styles.tabIcon}>
-        {index === 0 ? (
-          <div className={styles.infoIconWrapper}>
-            <FiBookOpen size={16} strokeWidth={2.2} />
-          </div>
-        ) : (
-          index
-        )}
-      </div>
-      <div className={styles.tabLabel}>{label}</div>
-    </div>
-  ))}
-</div>
+                    {/* Sidebar Tabs */}
+                    <div className={styles.verticalTabs}>
+                        {stepLabels.map((label, index) => (
+                            <div
+                                key={index}
+                                className={`${styles.tab} 
+        ${index === 0 ? styles.instructionsTab : ""} 
+        ${currentPage === index && index !== 0 ? styles.activeTab : ""} 
+        ${currentPage > index && index !== 0 ? styles.completedTab : ""}`}
+                                onClick={() => setCurrentPage(index)}
+                            >
+                                <div className={styles.tabIcon}>
+                                    {index === 0 ? <FiBookOpen size={16} /> : index}
+                                </div>
+                                <div className={styles.tabLabel}>{label}</div>
+                            </div>
+                        ))}
+                    </div>
 
 
                     {/* Form content */}
@@ -1749,19 +1726,19 @@ useEffect(() => {
 
                             <>
 
-                            {currentPage === 0 && (
-  <InstructionsStep
-    onProceed={() => {
-      setInstructionsAccepted(true);
-      setCurrentPage(0);
-    }}
-    firstTime={!instructionsAccepted}
-  />
-)}
-
+                                {currentPage === 0 && (
+                                    <InstructionsStep
+                                        firstTime={firstTime}
+                                        onProceed={() => {
+                                            localStorage.setItem("instructionsAccepted", "true");
+                                            setCurrentPage(1); // move to Business Entity step
+                                            setFirstTime(false);
+                                        }}
+                                    />
+                                )}
 
                                 {/* Step 1: Company Info */}
-                                {currentPage === 1 && hasAgreed && (
+                                {currentPage === 1 && (
 
                                     <div className={styles.page}>
                                         <h3>Business Entity Details </h3>
@@ -2219,7 +2196,7 @@ useEffect(() => {
                                 )}
 
                                 {/* STEP 2: MSME */}
-                                {currentPage === 2 && hasAgreed && (
+                                {currentPage === 2 && (
                                     <div className={styles.page}>
                                         <h3>MSME / Udyam Registration</h3>
                                         <div className={styles.fieldRow}>
@@ -2283,7 +2260,7 @@ useEffect(() => {
 
                                 {/* STEP 3: GST */}
                                 {/* STEP 3: Goods and Services Supplied */}
-                                {currentPage === 3 && hasAgreed && (
+                                {currentPage === 3 && (
                                     <div className={styles.page}>
 
 
@@ -2843,7 +2820,7 @@ useEffect(() => {
 
 
                                 {/* STEP 3: Banking & Further Information */}
-                                {currentPage === 4 && hasAgreed && (
+                                {currentPage === 4 && (
                                     <div className={styles.page}>
                                         <h3>Banking Information</h3>
 
@@ -3080,7 +3057,7 @@ useEffect(() => {
                                 )}
 
                                 {/* STEP 4: Documents to be enclosed */}
-                                {currentPage === 5 && hasAgreed && (
+                                {currentPage === 5 && (
                                     <div className={styles.page}>
                                         <h3>Documents to be enclosed</h3>
                                         <p className={styles.note}>
@@ -3320,7 +3297,7 @@ useEffect(() => {
                                 )}
 
                                 {/* STEP 6: Declaration & Confidentiality */}
-                                {currentPage === 6 && hasAgreed && (
+                                {currentPage === 6 && (
                                     <div className={styles.page}>
                                         <h3>Declaration and Acknowledgement</h3>
 

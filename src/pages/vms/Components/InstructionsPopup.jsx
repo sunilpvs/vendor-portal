@@ -1,8 +1,9 @@
 import React from "react";
+import { useState } from "react";
 import styles from "./InstructionsStep.module.css";
 
 const InstructionsStep = ({ firstTime, onProceed }) => {
-  const [checked, setChecked] = React.useState(false);
+  const [agreeInstructions, setAgreeInstructions] = useState(false);
 
   return (
     
@@ -92,13 +93,13 @@ const InstructionsStep = ({ firstTime, onProceed }) => {
         </div>
 
      {/* ✅ Show checkbox + button only on first visit */}
-        {firstTime && (
+       {firstTime && (
           <div className={styles.instructionsFooter}>
-            <label>
+            <label className={styles.checkboxLabel}>
               <input
                 type="checkbox"
-                checked={checked}
-                onChange={(e) => setChecked(e.target.checked)}
+                checked={agreeInstructions}
+                onChange={(e) => setAgreeInstructions(e.target.checked)}
               />{" "}
               I have read and understood the instructions.
             </label>
@@ -106,11 +107,8 @@ const InstructionsStep = ({ firstTime, onProceed }) => {
             <div className={styles.popupButtonRow}>
               <button
                 className={styles.proceedButton}
-                disabled={!checked}
-                onClick={() => {
-                  localStorage.setItem("instructionsAccepted", "true");
-                  onProceed(); // go to step 1
-                }}
+                disabled={!agreeInstructions}
+                onClick={onProceed}
               >
                 Proceed to Form
               </button>
