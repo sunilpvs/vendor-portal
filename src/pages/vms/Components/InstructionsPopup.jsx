@@ -1,8 +1,11 @@
 import React from "react";
 import styles from "./InstructionsStep.module.css";
 
-const InstructionsStep = () => {
+const InstructionsStep = ({ firstTime, onProceed }) => {
+  const [checked, setChecked] = React.useState(false);
+
   return (
+    
     <div className={styles.instructionsWrapper}>
       <div className={styles.instructionsContainer}>
         <h2 className={styles.title}>Instructions to Fill the Vendor Registration Form</h2>
@@ -87,9 +90,35 @@ const InstructionsStep = () => {
             <li>Incomplete or incorrect details may result in rejection or delay.</li>
           </ul>
         </div>
+
+     {/* ✅ Show checkbox + button only on first visit */}
+        {firstTime && (
+          <div className={styles.instructionsFooter}>
+            <label>
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => setChecked(e.target.checked)}
+              />{" "}
+              I have read and understood the instructions.
+            </label>
+
+            <div className={styles.popupButtonRow}>
+              <button
+                className={styles.proceedButton}
+                disabled={!checked}
+                onClick={() => {
+                  localStorage.setItem("instructionsAccepted", "true");
+                  onProceed(); // go to step 1
+                }}
+              >
+                Proceed to Form
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
-
 export default InstructionsStep;

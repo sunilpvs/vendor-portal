@@ -63,3 +63,62 @@
 .highlight {
   color: #457b9d;
 }
+
+.instructionsFooter {
+  margin-top: 20px;
+  padding: 20px;
+  border-top: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 15px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+}
+
+.instructionsFooter label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  user-select: none;
+}
+
+.instructionsFooter input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb; /* modern blue checkbox color */
+  cursor: pointer;
+}
+
+.popupButtonRow {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.proceedButton {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.proceedButton:hover {
+  background-color: #1d4ed8;
+}
+
+.proceedButton:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+}

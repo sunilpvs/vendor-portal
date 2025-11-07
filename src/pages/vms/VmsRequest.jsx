@@ -119,6 +119,30 @@ const VmsRequest = () => {
         "Declaration and Acknowledgement",
     ];
 
+
+    // Track whether user has already accepted the instructions before
+const [instructionsAccepted, setInstructionsAccepted] = useState(
+  localStorage.getItem("instructionsAccepted") === "true"
+);
+
+useEffect(() => {
+  if (!instructionsAccepted) {
+    setCurrentPage(0); // show Instructions step
+  } else {
+    setCurrentPage(0); // jump directly to Business Entity
+  }
+}, [instructionsAccepted]);
+
+{currentPage === 0 && (
+  <InstructionsStep
+    onProceed={() => {
+      setInstructionsAccepted(true);
+      setCurrentPage(1);
+    }}
+    firstTime={!instructionsAccepted}
+  />
+)}
+
     const [hasAgreed, setHasAgreed] = useState(
         localStorage.getItem("hasAgreedInstructions") === "true"
     );
@@ -129,6 +153,7 @@ const VmsRequest = () => {
         setHasAgreed(true);
         setCurrentPage(1);
     };
+    
 
     const [goods, setGoods] = useState([]);
     const [services, setServices] = useState([]);
@@ -1724,9 +1749,15 @@ const VmsRequest = () => {
 
                             <>
 
-                                {currentPage === 0 && (
-                                    <InstructionsStep hasAgreed={hasAgreed} onProceed={handleProceedToForm} />
-                                )}
+                            {currentPage === 0 && (
+  <InstructionsStep
+    onProceed={() => {
+      setInstructionsAccepted(true);
+      setCurrentPage(0);
+    }}
+    firstTime={!instructionsAccepted}
+  />
+)}
 
 
                                 {/* Step 1: Company Info */}
