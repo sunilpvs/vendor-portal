@@ -31,6 +31,7 @@ const VmsRequest = () => {
     const [countries, setCountries] = useState([]);
     const [states, setStates] = useState([]);
     const [countryCode, setCountryCode] = useState("");
+    const [sameAsRegistered, setSameAsRegistered] = useState(false);
     const [transactionType, setTransactionType] = useState("");
     const [ifscCode, setIfscCode] = useState("");
     const [swiftCode, setSwiftCode] = useState("");
@@ -40,6 +41,8 @@ const VmsRequest = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [showInstructions, setShowInstructions] = useState(false);
     const [firstTime, setFirstTime] = useState(false);
+    const [gstNotApplicable, setGstNotApplicable] = useState(false);
+
 
 
 
@@ -103,6 +106,8 @@ const VmsRequest = () => {
             console.error("Failed to fetch countries:", error);
         }
     };
+
+
 
     useEffect(() => {
         getStates();
@@ -341,7 +346,7 @@ const VmsRequest = () => {
 
     const generateFinancialYears = () => {
         const years = [];
-        for (let y = currentYear - 3; y < currentYear; y++) {
+        for (let y = currentYear - 2; y < currentYear; y++) {
             years.push(`${y}-${y + 1}`);
         }
         return years;
@@ -351,32 +356,32 @@ const VmsRequest = () => {
     const [formData, setFormData] = useState({
         fy1: "",
         fy2: "",
-        fy3: "",
+        currencyType1: "",
+        currencyType2: "",
+        currencyName1: "",
+        currencyName2: "",
         turnover1: "",
         turnover2: "",
-        turnover3: "",
         itrStatus1: "",
         itrStatus2: "",
-        itrStatus3: "",
         ackNo1: "",
         ackNo2: "",
-        ackNo3: "",
         filedDate1: "",
         filedDate2: "",
-        filedDate3: "",
+
     });
 
     useEffect(() => {
         const currentYear = new Date().getFullYear();
         const fy1 = `${currentYear - 1}-${currentYear}`;
         const fy2 = `${currentYear - 2}-${currentYear - 1}`;
-        const fy3 = `${currentYear - 3}-${currentYear - 2}`;
+
 
         setFormData((prev) => ({
             ...prev,
             fy1,
             fy2,
-            fy3,
+
         }));
     }, []);
 
@@ -495,6 +500,11 @@ const VmsRequest = () => {
         'Non-Government Organization(NGO)',
     ];
 
+    const [hasTan, setHasTan] = useState(""); // "Yes" or "No"
+    const [tanExemptionFile, setTanExemptionFile] = useState(null);
+
+
+
 
 
 
@@ -523,11 +533,29 @@ const VmsRequest = () => {
         accounts_person_email: "",
         reg_number: "", // Dynamic based on business entity type
     });
+    const isIndia = countries.find(c => c.id == companyInfo.country_of_incorporation)?.country?.toLowerCase() === "india";
 
 
     const selectedEntityType = companyInfo.business_entity_type;
     const showFullCompanyFields = companyTypesRequiringFullDetails.includes(selectedEntityType);
     const showBasicRegistrationField = entitiesRequiringBasicRegistration.includes(selectedEntityType);
+
+    // 🟢 Auto-set India for Sole Proprietorship or Partnership
+    useEffect(() => {
+        if (["Sole Proprietorship", "Partnership"].includes(companyInfo.business_entity_type)) {
+            const india = countries.find(
+                (c) => c.country?.toLowerCase() === "india"
+            );
+
+            if (india && companyInfo.country_of_incorporation !== india.id) {
+                setCompanyInfo((prev) => ({
+                    ...prev,
+                    country_of_incorporation: india.id,
+                }));
+            }
+        }
+    }, [companyInfo.business_entity_type, countries]);
+
 
 
     useEffect(() => {
@@ -575,6 +603,23 @@ const VmsRequest = () => {
 
 
     const handleSubmitCompanyInfo = async (e) => {
+
+        try {
+            const tanFormData = new FormData();
+            tanFormData.append("reference_id", referenceId);
+            tanFormData.append("tan_number", hasTan === "Yes" ? companyInfo.tan_number : "");
+            if (hasTan === "No" && tanExemptionFile) {
+                tanFormData.append("tan_exemption_certificate", tanExemptionFile);
+            }
+
+            await addCompanyInfo(referenceId, tanFormData);
+
+            toast.success("Company information added successfully!");
+            nextPage();
+        } catch (error) {
+            console.error("Error adding company info:", error);
+            toast.error("Error occurred while saving company information.");
+        }
 
         // If CIN exists, ensure it's exactly 21 alphanumeric chars
         if (companyInfo.cin_number) {
@@ -914,23 +959,23 @@ const VmsRequest = () => {
                     setFormData({
                         fy1: details[0]?.fin_year || "",
                         fy2: details[1]?.fin_year || "",
-                        fy3: details[2]?.fin_year || "",
+
 
                         turnover1: details[0]?.turnover || "",
                         turnover2: details[1]?.turnover || "",
-                        turnover3: details[2]?.turnover || "",
+
 
                         itrStatus1: details[0]?.status_of_itr || "",
                         itrStatus2: details[1]?.status_of_itr || "",
-                        itrStatus3: details[2]?.status_of_itr || "",
+
 
                         ackNo1: details[0]?.itr_ack_num || "",
                         ackNo2: details[1]?.itr_ack_num || "",
-                        ackNo3: details[2]?.itr_ack_num || "",
+
 
                         filedDate1: details[0]?.itr_filed_date || "",
                         filedDate2: details[1]?.itr_filed_date || "",
-                        filedDate3: details[2]?.itr_filed_date || "",
+
                     });
                 }
             } catch (error) {
@@ -1299,6 +1344,30 @@ const VmsRequest = () => {
         tds: null,
     });
 
+    const [documentStatus, setDocumentStatus] = useState({
+        gstin: "",
+        msme: "",
+        tds: "",
+    });
+
+    const handleDocumentStatusChange = (e) => {
+        const { name, value } = e.target;
+
+        setDocumentStatus((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+
+        // Clear file if "No" selected
+        if (value === "No") {
+            const field = name; // gstin / msme / tds
+            setDocuments((prev) => ({
+                ...prev,
+                [field]: null,
+            }));
+        }
+    };
+
     useEffect(() => {
         const fetchDocuments = async () => {
             try {
@@ -1628,50 +1697,50 @@ const VmsRequest = () => {
         }
     }, [currentPage, companyInfo]);
 
-    // ✅ Checkboxes for Declaration & Privacy
     const [agreeDeclaration, setAgreeDeclaration] = useState(false);
-    const [agreePrivacy, setAgreePrivacy] = useState(false);
+    const [agreeCounterparty, setAgreeCounterparty] = useState(false);
 
-    // ✅ Auto-filled info for both
     const [declarationDetails, setDeclarationDetails] = useState({
         name: "",
         organization: "",
         designation: "",
         place: "",
-        date: new Date().toISOString().split("T")[0],
+        date: "",
         sign: null,
-        stamp: null,
+    });
+
+    const [counterpartyDetails, setCounterpartyDetails] = useState({
+        name: "",
+        organization: "",
+        designation: "",
     });
 
     const handleCheckbox = (type, checked) => {
         if (type === "declaration") setAgreeDeclaration(checked);
-        if (type === "privacy") setAgreePrivacy(checked);
-
-        // Auto-fill when any is checked
-        if (checked) {
-            setDeclarationDetails((prev) => ({
-                ...prev,
-                name: companyInfo?.contact_person || companyInfo?.contact_name || "",
-                organization: companyInfo?.company_name || companyInfo?.entityName || "",
-                designation: companyInfo?.designation || companyInfo?.designation || "",
-                place: companyInfo?.city || "",
-                date: new Date().toISOString().split("T")[0],
-            }));
-        }
-
-        // Reset when both are unchecked
-        if (!checked && !agreeDeclaration && !agreePrivacy) {
-            setDeclarationDetails({
-                name: "",
-                organization: "",
-                designation: "",
-                place: "",
-                date: new Date().toISOString().split("T")[0],
-                sign: null,
-                stamp: null,
-            });
-        }
+        if (type === "counterparty") setAgreeCounterparty(checked);
     };
+
+    const handleSignatureUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setDeclarationDetails((prev) => ({
+            ...prev,
+            sign: { file, url: URL.createObjectURL(file) },
+        }));
+    };
+
+    useEffect(() => {
+        if (!declarationDetails.date) {
+            const today = new Date().toISOString().slice(0, 10);
+            setDeclarationDetails((prev) => ({ ...prev, date: today }));
+        }
+    }, [declarationDetails.date]);
+
+    useEffect(() => {
+        const today = new Date().toISOString().slice(0, 10);
+        setDeclarationDetails((prev) => ({ ...prev, date: today }));
+    }, []); // runs once on mount
+
 
 
 
@@ -1699,7 +1768,6 @@ const VmsRequest = () => {
 
 
 
-                    {/* Sidebar Tabs */}
                     <div className={styles.verticalTabs}>
                         {stepLabels.map((label, index) => (
                             <div
@@ -1708,7 +1776,15 @@ const VmsRequest = () => {
         ${index === 0 ? styles.instructionsTab : ""} 
         ${currentPage === index && index !== 0 ? styles.activeTab : ""} 
         ${currentPage > index && index !== 0 ? styles.completedTab : ""}`}
-                                onClick={() => setCurrentPage(index)}
+                                onClick={() => {
+                                    const accepted = localStorage.getItem("instructionsAccepted");
+                                    // ✅ Prevent navigation if user hasn't accepted instructions
+                                    if (!accepted && index !== 0) {
+                                        alert("⚠️ Please read and accept the Instructions first!");
+                                        return;
+                                    }
+                                    setCurrentPage(index);
+                                }}
                             >
                                 <div className={styles.tabIcon}>
                                     {index === 0 ? <FiBookOpen size={16} /> : index}
@@ -1829,29 +1905,81 @@ const VmsRequest = () => {
                                                     />
                                                 </div>
 
-                                                {/* TAN field hidden for Section 8 */}
-                                                {companyInfo.business_entity_type !== "Section 8 Company" && (
-                                                    <div className={styles.fieldRow}>
-                                                        <label className={styles.fieldLabel}>TAN Number
-                                                            <span className={styles.requiredSymbol}>*</span></label>
-                                                        <input
-                                                            type="text"
-                                                            name="tan_number"
-                                                            value={companyInfo.tan_number || ""}
-                                                            onChange={handleCompanyInfoChange}
-                                                            className={styles.fieldInput}
-                                                            required
-                                                            readOnly={isReadOnly}
 
-                                                        />
-                                                    </div>
-                                                )}
 
                                             </>
                                         )}
 
-                                        {/* For simpler entities: Registration Number only */}
-                                        {showBasicRegistrationField && (
+                                        {/* 🟢 Sole Proprietorship → Registration Number */}
+                                        {companyInfo.business_entity_type === "Sole Proprietorship" && (
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>
+                                                    Registration Number
+
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="reg_number"
+                                                    value={companyInfo.reg_number || ""}
+                                                    onChange={handleCompanyInfoChange}
+                                                    className={styles.fieldInput}
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* 🟢 Partnership → Firm Registration Number */}
+                                        {companyInfo.business_entity_type === "Partnership" && (
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>
+                                                    Firm Registration Number
+                                                    <span className={styles.requiredSymbol}>*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="firm_reg_number"
+                                                    value={companyInfo.firm_reg_number || ""}
+                                                    onChange={(e) =>
+                                                        setCompanyInfo((prev) => ({
+                                                            ...prev,
+                                                            firm_reg_number: e.target.value.toUpperCase(),
+                                                        }))
+                                                    }
+                                                    className={styles.fieldInput}
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* 🟢 Limited Liability Partnership → LLP Registration Number */}
+                                        {companyInfo.business_entity_type === "Limited Liability Partnership" && (
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>
+                                                    LLP Registration Number
+                                                    <span className={styles.requiredSymbol}>*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="llp_reg_number"
+                                                    value={companyInfo.llp_reg_number || ""}
+                                                    onChange={(e) =>
+                                                        setCompanyInfo((prev) => ({
+                                                            ...prev,
+                                                            llp_reg_number: e.target.value.toUpperCase(),
+                                                        }))
+                                                    }
+                                                    className={styles.fieldInput}
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                />
+                                            </div>
+                                        )}
+
+
+                                        {/* 🟢 Sole Proprietorship → Registration Number */}
+                                        {companyInfo.business_entity_type === "Non-Government Organization(NGO)" && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>
                                                     Registration Number (as per incorporation certificate)
@@ -1866,6 +1994,76 @@ const VmsRequest = () => {
                                                     required
                                                     readOnly={isReadOnly}
                                                 />
+                                            </div>
+                                        )}
+
+                                        {/* 🟢 TAN Number Section (generalized for all) */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Do you have a TAN Number?
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                value={hasTan}
+                                                onChange={(e) => {
+                                                    setHasTan(e.target.value);
+                                                    // clear previous values when changing
+                                                    if (e.target.value === "Yes") {
+                                                        setTanExemptionFile(null);
+                                                    } else {
+                                                        setCompanyInfo((prev) => ({ ...prev, tan_number: "" }));
+                                                    }
+                                                }}
+                                                className={styles.fieldInput}
+                                                required
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">-- Select --</option>
+                                                <option value="Yes">Yes</option>
+                                                <option value="No">No</option>
+                                            </select>
+                                        </div>
+
+                                        {/* ✅ If YES → TAN Number input */}
+                                        {hasTan === "Yes" && (
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>
+                                                    TAN Number
+                                                    <span className={styles.requiredSymbol}>*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="tan_number"
+                                                    value={companyInfo.tan_number || ""}
+                                                    onChange={handleCompanyInfoChange}
+                                                    className={styles.fieldInput}
+                                                    placeholder="Enter TAN Number"
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* ✅ If NO → Upload TAN Exemption Certificate */}
+                                        {hasTan === "No" && (
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>
+                                                    Upload TAN Exemption Certificate
+                                                    <span className={styles.requiredSymbol}>*</span>
+                                                </label>
+                                                <input
+                                                    type="file"
+                                                    accept=".pdf,.jpg,.jpeg,.png"
+                                                    onChange={(e) => setTanExemptionFile(e.target.files[0])}
+                                                    className={styles.fieldInput}
+                                                    required
+                                                    disabled={isReadOnly}
+                                                />
+                                                {tanExemptionFile && (
+                                                    <small style={{ color: "#007bff", marginTop: "5px" }}>
+                                                        Selected file: {tanExemptionFile.name}
+                                                    </small>
+                                                )}
                                             </div>
                                         )}
 
@@ -1886,16 +2084,21 @@ const VmsRequest = () => {
 
 
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>Country of Incorporation
+                                            <label className={styles.fieldLabel}>
+                                                Country of Incorporation
                                                 <span className={styles.requiredSymbol}>*</span>
                                             </label>
+
                                             <select
                                                 name="country_of_incorporation"
                                                 value={companyInfo.country_of_incorporation || ""}
                                                 onChange={handleCompanyInfoChange}
                                                 className={styles.fieldInput}
                                                 required
-                                                disabled={isReadOnly}
+                                                disabled={
+                                                    isReadOnly ||
+                                                    ["Sole Proprietorship", "Partnership"].includes(companyInfo.business_entity_type)
+                                                }
                                             >
                                                 <option value="">-- Select Country --</option>
                                                 {countries.map((country) => (
@@ -1904,29 +2107,50 @@ const VmsRequest = () => {
                                                     </option>
                                                 ))}
                                             </select>
+
+
                                         </div>
 
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>State
+                                            <label className={styles.fieldLabel}>
+                                                State / Province
                                                 <span className={styles.requiredSymbol}>*</span>
                                             </label>
-                                            <select
-                                                name="state"
-                                                value={companyInfo.state || ""}
-                                                onChange={handleCompanyInfoChange}
-                                                className={styles.fieldInput}
-                                                required
-                                                disabled={isReadOnly}
-                                            >
-                                                <option value="">-- Select State --</option>
-                                                {states.map((state) => (
-                                                    <option key={state.id} value={state.id}>
-                                                        {state.state}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
 
+                                            {isIndia ? (
+                                                // ✅ Show dropdown if country is India
+                                                <select
+                                                    name="state"
+                                                    value={companyInfo.state || ""}
+                                                    onChange={handleCompanyInfoChange}
+                                                    className={styles.fieldInput}
+                                                    required
+                                                    disabled={isReadOnly}
+                                                >
+                                                    <option value="">-- Select State --</option>
+                                                    {states.map((state) => (
+                                                        <option key={state.id} value={state.id}>
+                                                            {state.state}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                // 🌎 Show text input if not India
+                                                <input
+                                                    type="text"
+                                                    name="state"
+                                                    value={companyInfo.state || ""}
+                                                    onChange={(e) => {
+                                                        const cleaned = e.target.value.replace(/[^A-Za-z\s]/g, "").toUpperCase();
+                                                        setCompanyInfo(prev => ({ ...prev, state: cleaned }));
+                                                    }}
+                                                    className={styles.fieldInput}
+                                                    placeholder="Enter State / Province"
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                />
+                                            )}
+                                        </div>
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
                                                 Telephone Number
@@ -1960,22 +2184,55 @@ const VmsRequest = () => {
 
 
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>Registered Address
-                                                <span className={styles.requiredSymbol}>*</span></label>
+                                            <label className={styles.fieldLabel}>
+                                                Registered Address
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
                                             <input
                                                 type="text"
                                                 name="registered_address"
                                                 value={companyInfo.registered_address || ""}
-                                                onChange={handleCompanyInfoChange}
+                                                onChange={(e) => {
+                                                    handleCompanyInfoChange(e);
+                                                    if (sameAsRegistered) {
+                                                        setCompanyInfo(prev => ({
+                                                            ...prev,
+                                                            business_address: e.target.value,
+                                                        }));
+                                                    }
+                                                }}
                                                 className={styles.fieldInput}
                                                 required
                                                 readOnly={isReadOnly}
                                             />
                                         </div>
 
+                                        {/* ✅ Checkbox for same address */}
+                                        <center><div className={styles.fieldRow}>
+                                            <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={sameAsRegistered}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked;
+                                                        setSameAsRegistered(checked);
+                                                        setCompanyInfo(prev => ({
+                                                            ...prev,
+                                                            business_address: checked ? prev.registered_address : "",
+                                                        }));
+                                                    }}
+                                                    disabled={isReadOnly}
+                                                />
+                                                Registered Address same as Business Address
+                                            </label>
+                                        </div></center>
+
+                                        {/* Business Address field */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>Business Address (if different)
-                                                <span className={styles.requiredSymbol}>*</span></label>
+                                            <label className={styles.fieldLabel}>
+                                                Business Address
+                                                <span className={styles.requiredSymbol}>*</span>
+                                            </label>
                                             <input
                                                 type="text"
                                                 name="business_address"
@@ -1983,7 +2240,7 @@ const VmsRequest = () => {
                                                 onChange={handleCompanyInfoChange}
                                                 className={styles.fieldInput}
                                                 required
-                                                readOnly={isReadOnly}
+                                                readOnly={isReadOnly || sameAsRegistered}
                                             />
                                         </div>
 
@@ -2076,7 +2333,6 @@ const VmsRequest = () => {
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
                                                 Website
-                                                <span className={styles.requiredSymbol}>*</span>
                                             </label>
                                             <input
                                                 type="text"
@@ -2399,220 +2655,170 @@ const VmsRequest = () => {
                                             </div>
                                         )}
 
-                                        <h3 style={{ marginTop: "20px", }}>GST Registrations</h3>
-                                        {/* Number selection */}
+                                        <h3 style={{ marginTop: "20px" }}>GST Registrations</h3>
+
+                                        {/* ✅ Checkbox — controls GST field visibility */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>Number of GST Registrations (max 28)
-                                                <span className={styles.requiredSymbol}>*</span>
-                                            </label>
-                                            <select
-                                                className={styles.fieldInput}
-                                                value={count}
-                                                onChange={handleCountChange}
-                                                required
-                                                disabled={isReadOnly}
-                                            >
-                                                <option value={0}>Select</option>
-                                                {[...Array(28)].map((_, i) => (
-                                                    <option key={i + 1} value={i + 1}>
-                                                        {i + 1}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <label className={styles.fieldLabel}>GST Not Applicable<br></br>(other Than India)</label>
+                                            <div className={styles.checkboxRow}>
+                                                <label>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={gstNotApplicable}
+                                                        onChange={(e) => setGstNotApplicable(e.target.checked)}
+                                                        disabled={isReadOnly}
+                                                    />{" "}
+                                                    If applicable
+                                                </label>
+                                            </div>
                                         </div>
 
-                                        {/* Dynamic registration fields */}
-                                        {gstformData.map((item, i) => (
-                                            <div
-                                                key={i}
-                                                style={{
-                                                    border: "1px solid #ddd",
-                                                    padding: "20px",
-                                                    borderRadius: "8px",
-                                                    marginBottom: "24px",
-                                                    backgroundColor: "#fdfdfd",
-                                                }}
-                                            >
-                                                <h4 style={{ marginBottom: "16px", color: "#333" }}>
-                                                    Registration {i + 1}
-                                                </h4>
-
+                                        {/* ✅ GST Fields visible only when checkbox is UNCHECKED */}
+                                        {!gstNotApplicable && (
+                                            <>
+                                                {/* Number selection */}
                                                 <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>State Name
+                                                    <label className={styles.fieldLabel}>
+                                                        Number of GST Registrations (max 28)
                                                         <span className={styles.requiredSymbol}>*</span>
                                                     </label>
                                                     <select
                                                         className={styles.fieldInput}
-                                                        value={item.state}
-                                                        onChange={(e) => handleGstFieldChange(i, "state", e.target.value)}
+                                                        value={count}
+                                                        onChange={handleCountChange}
                                                         required
                                                         disabled={isReadOnly}
                                                     >
-                                                        <option value="">Select State</option>
-                                                        {states.map((state) => (
-                                                            <option key={state.id} value={state.id}>
-                                                                {state.state}
+                                                        <option value={0}>Select</option>
+                                                        {[...Array(28)].map((_, i) => (
+                                                            <option key={i + 1} value={i + 1}>
+                                                                {i + 1}
                                                             </option>
                                                         ))}
                                                     </select>
                                                 </div>
 
-                                                <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>GST Number (15 digits)
-                                                        <span className={styles.requiredSymbol}>*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        maxLength={15}
-                                                        className={styles.fieldInput}
-                                                        value={item.gstNumber}
-                                                        onChange={(e) => handleGstFieldChange(i, "gstNumber", e.target.value)}
-                                                        placeholder="Enter GSTIN"
-                                                        required
-                                                        readOnly={isReadOnly}
-                                                    />
-                                                </div>
+                                                {/* Dynamic registration fields */}
+                                                {gstformData.map((item, i) => (
+                                                    <div
+                                                        key={i}
+                                                        style={{
+                                                            border: "1px solid #ddd",
+                                                            padding: "20px",
+                                                            borderRadius: "8px",
+                                                            marginBottom: "24px",
+                                                            backgroundColor: "#fdfdfd",
+                                                        }}
+                                                    >
+                                                        <h4 style={{ marginBottom: "16px", color: "#333" }}>
+                                                            Registration {i + 1}
+                                                        </h4>
 
+                                                        <div className={styles.fieldRow}>
+                                                            <label className={styles.fieldLabel}>
+                                                                State Name
+                                                                <span className={styles.requiredSymbol}>*</span>
+                                                            </label>
+                                                            <select
+                                                                className={styles.fieldInput}
+                                                                value={item.state}
+                                                                onChange={(e) =>
+                                                                    handleGstFieldChange(i, "state", e.target.value)
+                                                                }
+                                                                required
+                                                                disabled={isReadOnly}
+                                                            >
+                                                                <option value="">Select State</option>
+                                                                {states.map((state) => (
+                                                                    <option key={state.id} value={state.id}>
+                                                                        {state.state}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+
+                                                        <div className={styles.fieldRow}>
+                                                            <label className={styles.fieldLabel}>
+                                                                GST Number (15 digits)
+                                                                <span className={styles.requiredSymbol}>*</span>
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                maxLength={15}
+                                                                className={styles.fieldInput}
+                                                                value={item.gstNumber}
+                                                                onChange={(e) =>
+                                                                    handleGstFieldChange(i, "gstNumber", e.target.value)
+                                                                }
+                                                                placeholder="Enter GSTIN"
+                                                                required
+                                                                readOnly={isReadOnly}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                                {/* Registration Type Dropdown */}
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>
-                                                        Registration Date
+                                                        Registration Type
                                                         <span className={styles.requiredSymbol}>*</span>
                                                     </label>
-
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-
-
-                                                        {/* Year dropdown */}
-                                                        <select
-                                                            className={styles.fieldInput}
-                                                            value={item.regYear || ""}
-                                                            onChange={(e) => handleGstFieldChange(i, "regYear", e.target.value)}
-                                                            required
-                                                            disabled={isReadOnly}
-                                                            style={{ width: "90px", textAlign: "center" }}
-                                                        >
-                                                            <option value="">YYYY</option>
-                                                            {Array.from({ length: 50 }, (_, idx) => new Date().getFullYear() - idx).map(
-                                                                (year) => (
-                                                                    <option key={year} value={year}>
-                                                                        {year}
-                                                                    </option>
-                                                                )
-                                                            )}
-                                                        </select>
-
-                                                        {/* Month dropdown */}
-                                                        <select
-                                                            className={styles.fieldInput}
-                                                            value={item.regMonth || ""}
-                                                            onChange={(e) => handleGstFieldChange(i, "regMonth", e.target.value)}
-                                                            required
-                                                            disabled={isReadOnly}
-                                                            style={{ width: "90px", textAlign: "center" }}
-                                                        >
-                                                            <option value="">MM</option>
-                                                            {[
-                                                                "Jan",
-                                                                "Feb",
-                                                                "Mar",
-                                                                "Apr",
-                                                                "May",
-                                                                "Jun",
-                                                                "Jul",
-                                                                "Aug",
-                                                                "Sep",
-                                                                "Oct",
-                                                                "Nov",
-                                                                "Dec",
-                                                            ].map((month, index) => (
-                                                                <option
-                                                                    key={month}
-                                                                    value={String(index + 1).padStart(2, "0")}
-                                                                >
-                                                                    {month}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-
-                                                        {/* Day dropdown */}
-                                                        <select
-                                                            className={styles.fieldInput}
-                                                            value={item.regDay || ""}
-                                                            onChange={(e) => handleGstFieldChange(i, "regDay", e.target.value)}
-                                                            required
-                                                            disabled={isReadOnly}
-                                                            style={{ width: "70px", textAlign: "center" }}
-                                                        >
-                                                            <option value="">DD</option>
-                                                            {Array.from(
-                                                                { length: getDaysInMonth(item.regMonth, item.regYear) },
-                                                                (_, day) => (
-                                                                    <option key={day + 1} value={String(day + 1).padStart(2, "0")}>
-                                                                        {String(day + 1).padStart(2, "0")}
-                                                                    </option>
-                                                                )
-                                                            )}
-                                                        </select>
-
-
-                                                    </div>
+                                                    <select
+                                                        value={gstMeta.reg_type}
+                                                        onChange={(e) =>
+                                                            setGstMeta((prev) => ({ ...prev, reg_type: e.target.value }))
+                                                        }
+                                                        className={styles.fieldInput}
+                                                        required
+                                                        readOnly={isReadOnly}
+                                                    >
+                                                        <option value="">Select</option>
+                                                        <option value="Regular">Regular</option>
+                                                        <option value="Composition">Composition</option>
+                                                        <option value="SEZ">SEZ</option>
+                                                    </select>
                                                 </div>
 
-                                            </div>
-                                        ))}
-
-
-
-                                        {/* Registration Type Dropdown */}
-                                        <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>Registration Type
-                                                <span className={styles.requiredSymbol}>*</span>
-                                            </label>
-                                            <select
-                                                value={gstMeta.reg_type}
-                                                onChange={(e) => setGstMeta(prev => ({ ...prev, reg_type: e.target.value }))}
-                                                className={styles.fieldInput}
-                                                required
-                                                readOnly={isReadOnly}
-                                            >
-                                                <option value="">Select</option>
-                                                <option value="Regular">Regular</option>
-                                                <option value="Composition">Composition</option>
-                                                <option value="Regular SEZ">Regular SEZ</option>
-                                            </select>
-                                        </div>
-
-                                        <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>Periodicity of GSTR-1
-                                                <span className={styles.requiredSymbol}>*</span></label>
-                                            <select
-                                                value={gstMeta.periodicity_gstr1}
-                                                onChange={(e) => setGstMeta(prev => ({ ...prev, periodicity_gstr1: e.target.value }))}
-                                                className={styles.fieldInput}
-                                                required
-                                                disabled={isReadOnly}
-                                            >
-                                                <option value="">Select</option>
-                                                <option value="Monthly">Monthly</option>
-                                                <option value="Quarterly">Quarterly</option>
-                                            </select>
-                                        </div>
-
+                                                {/* GSTR Filing Type */}
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>
+                                                        GSTR Filing Type
+                                                        <span className={styles.requiredSymbol}>*</span>
+                                                    </label>
+                                                    <select
+                                                        value={gstMeta.periodicity_gstr1}
+                                                        onChange={(e) =>
+                                                            setGstMeta((prev) => ({
+                                                                ...prev,
+                                                                periodicity_gstr1: e.target.value,
+                                                            }))
+                                                        }
+                                                        className={styles.fieldInput}
+                                                        required
+                                                        disabled={isReadOnly}
+                                                    >
+                                                        <option value="">Select</option>
+                                                        <option value="Monthly">Monthly</option>
+                                                        <option value="Quarterly">Quarterly</option>
+                                                    </select>
+                                                </div>
+                                            </>
+                                        )}
 
                                         <h3>Income Tax Details</h3>
 
                                         <table className={styles?.incomeTaxTable || "incomeTaxTable"}>
                                             <thead>
                                                 <tr>
-                                                    <th colSpan="4" className={styles?.tableSubtitle}>
-                                                        Details of Turnover for the Last 3 Financial Years
+                                                    <th colSpan="3" className={styles?.tableSubtitle}>
+                                                        Details of Turnover for the Last 2 Financial Years
                                                     </th>
                                                 </tr>
                                                 <tr>
                                                     <th>Particulars</th>
                                                     <th>Financial Year - I</th>
                                                     <th>Financial Year - II</th>
-                                                    <th>Financial Year - III</th>
                                                 </tr>
                                             </thead>
 
@@ -2622,7 +2828,7 @@ const VmsRequest = () => {
                                                     <td>
                                                         Financial Year <span className={styles.requiredSymbol}>*</span>
                                                     </td>
-                                                    {[1, 2, 3].map((i) => (
+                                                    {[1, 2].map((i) => (
                                                         <td key={i}>
                                                             <input
                                                                 type="text"
@@ -2634,40 +2840,107 @@ const VmsRequest = () => {
                                                         </td>
                                                     ))}
                                                 </tr>
-
-                                                {/* Turnover field — allows 0 and positive numbers */}
+                                                {/* Currency Type Row */}
                                                 <tr>
-                                                    <td>Turnover
-                                                        <span className={styles.requiredSymbol}>*</span>
+                                                    <td>
+                                                        Currency Type
                                                     </td>
-                                                    {[1, 2, 3].map((i) => (
+
+                                                    {[1, 2].map((i) => (
                                                         <td key={i}>
-                                                            <input
-                                                                type="text"
-                                                                name={`turnover${i}`}
-                                                                value={formData[`turnover${i}`]}
-                                                                onChange={handleIncomeChange}
-                                                                min="0" // ✅ allows 0 and positive
-                                                                onWheel={(e) => e.target.blur()} // prevent scroll changing value
+                                                            <select
+                                                                name={`currencyType${i}`}
+                                                                value={formData[`currencyType${i}`] || ""}
+                                                                onChange={(e) => {
+                                                                    handleIncomeChange(e);
+                                                                    // clear currency name if switched back to Rupees
+                                                                    if (e.target.value === "Rupees") {
+                                                                        setFormData((prev) => ({
+                                                                            ...prev,
+                                                                            [`currencyName${i}`]: "",
+                                                                        }));
+                                                                    }
+                                                                }}
                                                                 required
-                                                                readOnly={isReadOnly}
-                                                            />
+                                                                disabled={isReadOnly}
+                                                                className={styles.fieldInput}
+                                                            >
+                                                                <option value="">-- Select Currency Type --</option>
+                                                                <option value="Rupees">Rupees (INR)</option>
+                                                                <option value="Others">Others</option>
+                                                            </select>
                                                         </td>
                                                     ))}
                                                 </tr>
 
+                                                {/* Currency Name Row (only shows if 'Others' selected) */}
+                                                {["currencyType1", "currencyType2"].some(
+                                                    (key) => formData[key] === "Others"
+                                                ) && (
+                                                        <tr>
+                                                            <td>
+                                                                Currency Name <span className={styles.requiredSymbol}>*</span>
+                                                            </td>
+                                                            {[1, 2].map((i) => (
+                                                                <td key={i}>
+                                                                    {formData[`currencyType${i}`] === "Others" ? (
+                                                                        <input
+                                                                            type="text"
+                                                                            name={`currencyName${i}`}
+                                                                            value={formData[`currencyName${i}`] || ""}
+                                                                            onChange={handleIncomeChange}
+                                                                            required
+                                                                            readOnly={isReadOnly}
+                                                                            className={styles.fieldInput}
+                                                                            placeholder="Enter currency name"
+                                                                        />
+                                                                    ) : (
+                                                                        <div style={{ height: "30px" }}></div> // keep table alignment
+                                                                    )}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    )}
+                                                <tr>
+                                                    <td>
+                                                        Turnover
+                                                    </td>
+                                                    {[1, 2].map((i) => (
+                                                        <td key={i}>
+                                                            <input
+                                                                type="number"
+                                                                name={`turnover${i}`}
+                                                                value={formData[`turnover${i}`] || ""}
+                                                                onChange={handleIncomeChange}
+                                                                min="0"
+                                                                onWheel={(e) => e.target.blur()}
+                                                                required
+                                                                readOnly={isReadOnly}
+                                                                className={styles.fieldInput}
+                                                                placeholder={
+                                                                    formData[`currencyType${i}`] === "Rupees"
+                                                                        ? "Enter amount in INR"
+                                                                        : "Enter turnover amount"
+                                                                }
+                                                            />
+                                                        </td>
+                                                    ))}
+                                                </tr>
                                                 {/* ITR Status */}
                                                 <tr>
-                                                    <td>Status of ITR filed (Yes/No)
+                                                    <td>
+                                                        Status of ITR filed (Yes/No)
                                                         <span className={styles.requiredSymbol}>*</span>
                                                     </td>
-                                                    {[1, 2, 3].map((i) => (
+                                                    {[1, 2].map((i) => (
                                                         <td key={i}>
-                                                            <select name={`itrStatus${i}`}
+                                                            <select
+                                                                name={`itrStatus${i}`}
                                                                 value={formData[`itrStatus${i}`]}
                                                                 onChange={handleIncomeChange}
                                                                 required
                                                                 disabled={isReadOnly}
+                                                                className={styles.fieldInput}
                                                             >
                                                                 <option value="">Select</option>
                                                                 <option value="Yes">Yes</option>
@@ -2678,139 +2951,129 @@ const VmsRequest = () => {
                                                 </tr>
 
                                                 {/* ITR Acknowledgment */}
-                                                {["itrStatus1", "itrStatus2", "itrStatus3"].some(
-                                                    (key) => formData[key] === "Yes"
-                                                ) && (
-                                                        <tr>
-                                                            <td>
-                                                                ITR Acknowledgment No.
-                                                                <span className={styles.requiredSymbol}>*</span>
+                                                {["itrStatus1", "itrStatus2"].some((key) => formData[key] === "Yes") && (
+                                                    <tr>
+                                                        <td>
+                                                            ITR Acknowledgment No.
+
+                                                        </td>
+                                                        {[1, 2].map((i) => (
+                                                            <td key={i}>
+                                                                {formData[`itrStatus${i}`] === "Yes" ? (
+                                                                    <input
+                                                                        type="text"
+                                                                        name={`ackNo${i}`}
+                                                                        value={formData[`ackNo${i}`]}
+                                                                        onChange={handleIncomeChange}
+                                                                        required
+                                                                        readOnly={isReadOnly}
+                                                                        className={styles.fieldInput}
+                                                                    />
+                                                                ) : (
+                                                                    <div style={{ height: "30px" }}></div> // keeps alignment
+                                                                )}
                                                             </td>
-                                                            {[1, 2, 3].map((i) => (
+                                                        ))}
+                                                    </tr>
+                                                )}
+
+                                                {/* ITR Filed Date */}
+                                                {["itrStatus1", "itrStatus2"].some((key) => formData[key] === "Yes") && (
+                                                    <tr>
+                                                        <td>
+                                                            ITR Filed Date
+                                                            <span className={styles.requiredSymbol}>*</span>
+                                                        </td>
+
+                                                        {[1, 2].map((i) => {
+                                                            const fy = formData[`fy${i}`];
+                                                            const endYear = fy ? parseInt(fy.split("-")[1]) : new Date().getFullYear();
+
+                                                            // Generate last 5 years from end year
+                                                            const itrYears = Array.from({ length: 5 }, (_, idx) => endYear - idx);
+
+                                                            return (
                                                                 <td key={i}>
                                                                     {formData[`itrStatus${i}`] === "Yes" ? (
-                                                                        <input
-                                                                            type="text"
-                                                                            name={`ackNo${i}`}
-                                                                            value={formData[`ackNo${i}`]}
-                                                                            onChange={handleIncomeChange}
-                                                                            required
-                                                                            readOnly={isReadOnly}
-                                                                        />
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                                            {/* Year dropdown */}
+                                                                            <select
+                                                                                className={styles.fieldInput}
+                                                                                value={formData[`itrYear${i}`] || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleIncomeChange({
+                                                                                        target: { name: `itrYear${i}`, value: e.target.value },
+                                                                                    })
+                                                                                }
+                                                                                required
+                                                                                disabled={isReadOnly}
+                                                                                style={{ width: "75px", textAlign: "center" }}
+                                                                            >
+                                                                                <option value="">YYYY</option>
+                                                                                {itrYears.map((year) => (
+                                                                                    <option key={year} value={year}>
+                                                                                        {year}
+                                                                                    </option>
+                                                                                ))}
+                                                                            </select>
+
+                                                                            {/* Month dropdown */}
+                                                                            <select
+                                                                                className={styles.fieldInput}
+                                                                                value={formData[`itrMonth${i}`] || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleIncomeChange({
+                                                                                        target: { name: `itrMonth${i}`, value: e.target.value },
+                                                                                    })
+                                                                                }
+                                                                                required
+                                                                                disabled={isReadOnly}
+                                                                                style={{ width: "65px", textAlign: "center" }}
+                                                                            >
+                                                                                <option value="">MM</option>
+                                                                                {[
+                                                                                    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                                                                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+                                                                                ].map((month, index) => (
+                                                                                    <option
+                                                                                        key={month}
+                                                                                        value={String(index + 1).padStart(2, "0")}
+                                                                                    >
+                                                                                        {month}
+                                                                                    </option>
+                                                                                ))}
+                                                                            </select>
+
+                                                                            {/* Day dropdown */}
+                                                                            <select
+                                                                                className={styles.fieldInput}
+                                                                                value={formData[`itrDay${i}`] || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleIncomeChange({
+                                                                                        target: { name: `itrDay${i}`, value: e.target.value },
+                                                                                    })
+                                                                                }
+                                                                                style={{ width: "65px", textAlign: "center" }}
+                                                                            >
+                                                                                <option value="">DD</option>
+                                                                                {Array.from(
+                                                                                    { length: getDaysInMonth(formData[`itrMonth${i}`], formData[`itrYear${i}`]) },
+                                                                                    (_, d) => (
+                                                                                        <option key={d + 1} value={String(d + 1).padStart(2, "0")}>
+                                                                                            {String(d + 1).padStart(2, "0")}
+                                                                                        </option>
+                                                                                    )
+                                                                                )}
+                                                                            </select>
+                                                                        </div>
                                                                     ) : (
-                                                                        <div style={{ height: "30px" }}></div> // keeps table alignment neat
+                                                                        <div style={{ height: "30px" }}></div>
                                                                     )}
                                                                 </td>
-                                                            ))}
-                                                        </tr>
-                                                    )}
-
-
-
-
-                                                {/* ITR Filed Date (visible only if any ITR status = "Yes") */}
-                                                {["itrStatus1", "itrStatus2", "itrStatus3"].some(
-                                                    (key) => formData[key] === "Yes"
-                                                ) && (
-                                                        <tr>
-                                                            <td>
-                                                                ITR Filed Date
-                                                                <span className={styles.requiredSymbol}>*</span>
-                                                            </td>
-
-                                                            {[1, 2, 3].map((i) => {
-                                                                // Get Financial Year string (like "2024-2025")
-                                                                const fy = formData[`fy${i}`];
-                                                                const endYear = fy ? parseInt(fy.split("-")[1]) : new Date().getFullYear();
-
-                                                                // Generate last 5 years based on FY end year
-                                                                const itrYears = Array.from({ length: 5 }, (_, idx) => endYear - idx);
-
-                                                                return (
-                                                                    <td key={i}>
-                                                                        {formData[`itrStatus${i}`] === "Yes" ? (
-                                                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                                                {/* Year dropdown */}
-                                                                                <select
-                                                                                    className={styles.fieldInput}
-                                                                                    value={formData[`itrYear${i}`] || ""}
-                                                                                    onChange={(e) =>
-                                                                                        handleIncomeChange({
-                                                                                            target: { name: `itrYear${i}`, value: e.target.value },
-                                                                                        })
-                                                                                    }
-                                                                                    required
-                                                                                    disabled={isReadOnly}
-                                                                                    style={{ width: "75px", textAlign: "center" }}
-                                                                                >
-                                                                                    <option value="">YYYY</option>
-                                                                                    {itrYears.map((year) => (
-                                                                                        <option key={year} value={year}>
-                                                                                            {year}
-                                                                                        </option>
-                                                                                    ))}
-                                                                                </select>
-
-                                                                                {/* Month dropdown */}
-                                                                                <select
-                                                                                    className={styles.fieldInput}
-                                                                                    value={formData[`itrMonth${i}`] || ""}
-                                                                                    onChange={(e) =>
-                                                                                        handleIncomeChange({
-                                                                                            target: { name: `itrMonth${i}`, value: e.target.value },
-                                                                                        })
-                                                                                    }
-                                                                                    required
-                                                                                    disabled={isReadOnly}
-                                                                                    style={{ width: "65px", textAlign: "center" }}
-                                                                                >
-                                                                                    <option value="">MM</option>
-                                                                                    {[
-                                                                                        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                                                                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-                                                                                    ].map((month, index) => (
-                                                                                        <option
-                                                                                            key={month}
-                                                                                            value={String(index + 1).padStart(2, "0")}
-                                                                                        >
-                                                                                            {month}
-                                                                                        </option>
-                                                                                    ))}
-                                                                                </select>
-
-                                                                                {/* Day dropdown */}
-                                                                                <select
-                                                                                    className={styles.fieldInput}
-                                                                                    value={formData[`itrDay${i}`] || ""}
-                                                                                    onChange={(e) =>
-                                                                                        handleIncomeChange({
-                                                                                            target: { name: `itrDay${i}`, value: e.target.value },
-                                                                                        })
-                                                                                    }
-                                                                                    style={{ width: "65px", textAlign: "center" }}
-                                                                                >
-                                                                                    <option value="">DD</option>
-                                                                                    {Array.from(
-                                                                                        { length: getDaysInMonth(formData[`itrMonth${i}`], formData[`itrYear${i}`]) },
-                                                                                        (_, d) => (
-                                                                                            <option key={d + 1} value={String(d + 1).padStart(2, "0")}>
-                                                                                                {String(d + 1).padStart(2, "0")}
-                                                                                            </option>
-                                                                                        )
-                                                                                    )}
-                                                                                </select>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div style={{ height: "30px" }}></div> // keeps table alignment neat
-                                                                        )}
-                                                                    </td>
-                                                                );
-                                                            })}
-                                                        </tr>
-                                                    )}
-
-
-
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                )}
                                             </tbody>
                                         </table>
 
@@ -2930,7 +3193,8 @@ const VmsRequest = () => {
 
                                         {bankInfo.transactionType === "Domestic" && (
                                             <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>IFSC Code</label>
+                                                <label className={styles.fieldLabel}>IFSC Code
+                                                    <span className={styles.requiredSymbol}>*</span></label>
                                                 <input
                                                     type="text"
                                                     name="ifscCode"
@@ -2949,7 +3213,9 @@ const VmsRequest = () => {
 
                                         {bankInfo.transactionType === "International" && (
                                             <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>SWIFT Code</label>
+                                                <label className={styles.fieldLabel}>SWIFT Code
+                                                    <span className={styles.requiredSymbol}>*</span>
+                                                </label>
                                                 <input
                                                     type="text"
                                                     name="swiftCode"
@@ -2969,7 +3235,9 @@ const VmsRequest = () => {
                                         {bankInfo.transactionType === "Domestic and International" && (
                                             <>
                                                 <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>IFSC Code</label>
+                                                    <label className={styles.fieldLabel}>IFSC Code
+                                                        <span className={styles.requiredSymbol}>*</span>
+                                                    </label>
                                                     <input
                                                         type="text"
                                                         name="ifscCode"
@@ -2985,7 +3253,9 @@ const VmsRequest = () => {
                                                     />
                                                 </div>
                                                 <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>SWIFT Code</label>
+                                                    <label className={styles.fieldLabel}>SWIFT Code
+                                                        <span className={styles.requiredSymbol}>*</span>
+                                                    </label>
                                                     <input
                                                         type="text"
                                                         name="swiftCode"
@@ -3017,49 +3287,6 @@ const VmsRequest = () => {
                                                 readOnly={isReadOnly}
                                             />
                                         </div>
-
-                                        <h3 className={styles.subHeading}>Further Information</h3>
-
-
-                                        <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>
-                                                Will the proposed business involve a third party acting on your behalf (e.g., an intermediary or agent)?
-                                                <span className={styles.requiredSymbol}>*</span>
-                                            </label>
-                                            <select
-                                                name="involves_third_party"
-                                                value={bankInfo.involves_third_party ?? ""} // This converts true/false to "true"/"false"
-                                                onChange={handleBankDetailsChange}
-                                                className={styles.fieldInput}
-                                                required
-                                                disabled={isReadOnly}
-                                            >
-                                                <option value="">Select</option>
-                                                <option value="true">Yes</option>
-                                                <option value="false">No</option>
-                                            </select>
-                                        </div>
-
-                                        <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>
-                                                Will you use a third party or subcontractor to act on your behalf or make/receive payments in relation to the proposed business relationship with any sanctioned country?
-                                                <span className={styles.requiredSymbol}>*</span>
-                                            </label>
-                                            <select
-                                                name="subcontractor_in_sanctioned_country"
-                                                value={bankInfo.subcontractor_in_sanctioned_country ?? ""}
-                                                onChange={handleBankDetailsChange}
-                                                className={styles.fieldInput}
-                                                required
-                                                disabled={isReadOnly}
-                                            >
-                                                <option value="">Select</option>
-                                                <option value="true">Yes</option>
-                                                <option value="false">No</option>
-                                            </select>
-                                        </div>
-
-
                                     </div>
                                 )}
 
@@ -3067,8 +3294,15 @@ const VmsRequest = () => {
                                 {currentPage === 5 && (
                                     <div className={styles.page}>
                                         <h3>Documents to be enclosed</h3>
-                                        <p className={styles.note}>
-                                            Please verify and upload documents in JPG, JPEG, PNG, or PDF format. The maximum file size allowed is 5 MB.
+                                        <p
+                                            className={styles.note}
+                                            style={{
+                                                color: "red",
+                                                fontSize: "12px",
+                                            }}
+                                        >
+                                            (Please verify and upload documents in JPG, JPEG, PNG, or PDF format. The
+                                            maximum file size allowed is 5 MB.)
                                         </p>
 
                                         {/* PAN */}
@@ -3108,127 +3342,153 @@ const VmsRequest = () => {
 
                                         {/* GSTIN */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>GSTIN <span className={styles.requiredSymbol}>*</span></label>
-                                            <input
-                                                type="file"
-                                                accept=".jpg,.jpeg,.png,.pdf"
-                                                className={styles.fieldInput}
-                                                onChange={(e) => handleDocumentChange("gstin", e.target.files[0])}
+                                            <label className={styles.fieldLabel}>
+                                                GSTIN
+                                            </label>
+
+                                            {/* Dropdown */}
+                                            <select
+                                                name="gstin"
+                                                value={documentStatus.gstin || ""}
+                                                onChange={handleDocumentStatusChange}
                                                 required
-                                                readOnly={isReadOnly}
-                                            />
+                                                disabled={isReadOnly}
+                                                className={styles.fieldInput}
+                                            >
+                                                <option value="">-- Select --</option>
+                                                <option value="Yes">Yes</option>
+                                                <option value="No">No</option>
+                                            </select>
 
-                                            {documents.gstin?.fileName && (
-                                                <span className={styles.fileName}>📄 {documents.gstin.fileName}</span>
-                                            )}
+                                            {/* File upload only if Yes */}
+                                            {documentStatus.gstin === "Yes" && (
+                                                <>
+                                                    <input
+                                                        type="file"
+                                                        accept=".jpg,.jpeg,.png,.pdf"
+                                                        className={styles.fieldInput}
+                                                        onChange={(e) => handleDocumentChange("gstin", e.target.files[0])}
+                                                        required
+                                                        readOnly={isReadOnly}
+                                                    />
 
-                                            {documents.gstin?.url && (
-                                                <a
-                                                    href={documents.gstin.url.startsWith("blob:")
-                                                        ? documents.gstin.url // local preview
-                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.gstin.url}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className={styles.viewButton}
+                                                    {documents.gstin?.fileName && (
+                                                        <span className={styles.fileName}>📄 {documents.gstin.fileName}</span>
+                                                    )}
 
-                                                >
-                                                    View
-                                                </a>
+                                                    {documents.gstin?.url && (
+                                                        <a
+                                                            href={
+                                                                documents.gstin.url.startsWith("blob:")
+                                                                    ? documents.gstin.url
+                                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.gstin.url}`
+                                                            }
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={styles.viewButton}
+                                                        >
+                                                            View
+                                                        </a>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
-
                                         {/* MSME Certificate */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>MSME Certificate (if any)
-                                                <span className={styles.requiredSymbol}>*</span>
-                                            </label>
-                                            <input
-                                                type="file"
-                                                accept=".jpg,.jpeg,.png,.pdf"
+                                            <label className={styles.fieldLabel}>MSME Certificate (if any)</label>
+
+                                            <select
+                                                name="msme"
+                                                value={documentStatus.msme || ""}
+                                                onChange={handleDocumentStatusChange}
+                                                disabled={isReadOnly}
                                                 className={styles.fieldInput}
-                                                onChange={(e) => handleDocumentChange("msme", e.target.files[0])}
-                                                required
-                                                readOnly={isReadOnly}
-                                            />
+                                            >
+                                                <option value="">-- Select --</option>
+                                                <option value="Yes">Yes</option>
+                                                <option value="No">No</option>
+                                            </select>
 
-                                            {documents.msme?.fileName && (
-                                                <span className={styles.fileName}>📄 {documents.msme.fileName}</span>
-                                            )}
+                                            {documentStatus.msme === "Yes" && (
+                                                <>
+                                                    <input
+                                                        type="file"
+                                                        accept=".jpg,.jpeg,.png,.pdf"
+                                                        className={styles.fieldInput}
+                                                        onChange={(e) => handleDocumentChange("msme", e.target.files[0])}
+                                                        readOnly={isReadOnly}
+                                                    />
 
+                                                    {documents.msme?.fileName && (
+                                                        <span className={styles.fileName}>📄 {documents.msme.fileName}</span>
+                                                    )}
 
-                                            {documents.msme?.url && (
-                                                <a
-                                                    href={documents.msme.url.startsWith("blob:")
-                                                        ? documents.msme.url // local preview
-                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.msme.url}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className={styles.viewButton}
-
-                                                >
-                                                    View
-                                                </a>
+                                                    {documents.msme?.url && (
+                                                        <a
+                                                            href={
+                                                                documents.msme.url.startsWith("blob:")
+                                                                    ? documents.msme.url
+                                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.msme.url}`
+                                                            }
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={styles.viewButton}
+                                                        >
+                                                            View
+                                                        </a>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
 
-                                        {/* Cancelled Cheque Leaf */}
+                                        {/* Cancelled Cheque Leaf Upload */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>Cancelled Cheque Leaf
-                                                <span className={styles.requiredSymbol}>*</span>
+                                            <label className={styles.fieldLabel}>
+                                                Cancelled Cheque Leaf
+
                                             </label>
+
                                             <input
                                                 type="file"
-                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => handleValidatedFileChange(e, "cheque")}
                                                 className={styles.fieldInput}
-                                                onChange={(e) => handleDocumentChange("cheque", e.target.files[0])}
-                                                required
-                                                readOnly={isReadOnly}
+                                                disabled={isReadOnly}
                                             />
-
-                                            {documents.cheque?.fileName && (
-                                                <span className={styles.fileName}>📄 {documents.cheque.fileName}</span>
-                                            )}
 
                                             {documents.cheque?.url && (
                                                 <a
-                                                    href={documents.cheque.url.startsWith("blob:")
-                                                        ? documents.cheque.url // local preview
-                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.cheque.url}`}
+                                                    href={documents.cheque.url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className={styles.viewButton}
+                                                    className={styles.fileLink}
                                                 >
-                                                    View
+                                                    View Uploaded Cheque
                                                 </a>
                                             )}
                                         </div>
 
-                                        {/* TAN */}
+                                        {/* 🟢 TAN Certificate Upload */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>TAN
-                                                <span className={styles.requiredSymbol}>*</span>
+                                            <label className={styles.fieldLabel}>
+                                                TAN Certificate
+
                                             </label>
+
                                             <input
                                                 type="file"
-                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => handleValidatedFileChange(e, "tan")}
                                                 className={styles.fieldInput}
-                                                onChange={(e) => handleDocumentChange("tan", e.target.files[0])}
-                                                required
-                                                readOnly={isReadOnly}
+                                                disabled={isReadOnly}
                                             />
-
-                                            {documents.tan?.fileName && (
-                                                <span className={styles.fileName}>📄 {documents.tan.fileName}</span>
-                                            )}
 
                                             {documents.tan?.url && (
                                                 <a
-                                                    href={documents.tan.url.startsWith("blob:")
-                                                        ? documents.tan.url // local preview
-                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.tan.url}`}
+                                                    href={documents.tan.url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className={styles.viewButton}
+                                                    className={styles.fileLink}
                                                 >
                                                     View
                                                 </a>
@@ -3237,8 +3497,7 @@ const VmsRequest = () => {
 
                                         {/* Certificate of Incorporation / Firm Registration */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>Certificate of Incorporation / Firm Registration
-                                                <span className={styles.requiredSymbol}>*</span>
+                                            <label className={styles.fieldLabel}>Registration Certificate
                                             </label>
                                             <input
                                                 type="file"
@@ -3269,34 +3528,49 @@ const VmsRequest = () => {
 
                                         {/* TDS Declaration for Exemption */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>TDS Declaration for Exemption
-                                                <span className={styles.requiredSymbol}>*</span>
-                                            </label>
-                                            <input
-                                                type="file"
-                                                accept=".jpg,.jpeg,.png,.pdf"
+                                            <label className={styles.fieldLabel}>TDS Declaration for Exemption</label>
+
+                                            <select
+                                                name="tds"
+                                                value={documentStatus.tds || ""}
+                                                onChange={handleDocumentStatusChange}
+                                                disabled={isReadOnly}
                                                 className={styles.fieldInput}
-                                                onChange={(e) => handleDocumentChange("tds", e.target.files[0])}
-                                                required
-                                                readOnly={isReadOnly}
-                                            />
+                                            >
+                                                <option value="">-- Select --</option>
+                                                <option value="Yes">Yes</option>
+                                                <option value="No">No</option>
+                                            </select>
 
-                                            {documents.tds?.fileName && (
-                                                <span className={styles.fileName}>📄 {documents.tds.fileName}</span>
-                                            )}
+                                            {documentStatus.tds === "Yes" && (
+                                                <>
+                                                    <input
+                                                        type="file"
+                                                        accept=".jpg,.jpeg,.png,.pdf"
+                                                        className={styles.fieldInput}
+                                                        onChange={(e) => handleDocumentChange("tds", e.target.files[0])}
+                                                        readOnly={isReadOnly}
+                                                    />
 
+                                                    {documents.tds?.fileName && (
+                                                        <span className={styles.fileName}>📄 {documents.tds.fileName}</span>
+                                                    )}
 
-                                            {documents.tds?.url && (
-                                                <a
-                                                    href={documents.tds.url.startsWith("blob:")
-                                                        ? documents.tds.url // local preview
-                                                        : `${process.env.REACT_APP_API_BASE_URL}/${documents.tds.url}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className={styles.viewButton}
-                                                >
-                                                    View
-                                                </a>
+                                                    {documents.tds?.url && (
+                                                        <a
+                                                            href={
+                                                                documents.tds.url.startsWith("blob:")
+                                                                    ? documents.tds.url
+                                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.tds.url}`
+                                                            }
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={styles.viewButton}
+                                                        >
+                                                            View
+                                                        </a>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
 
@@ -3308,7 +3582,17 @@ const VmsRequest = () => {
                                     <div className={styles.page}>
                                         <h3>Declaration and Acknowledgement</h3>
 
-                                        {/* ✅ Declaration Checkbox */}
+                                        {/* ✅ Declaration Section */}
+                                        <p className={styles.declarationText}>
+                                            I/We <strong>{declarationDetails.name || "________"}</strong> of{" "}
+                                            <strong>{declarationDetails.organization || "________"}</strong> designated as{" "}
+                                            <strong>{declarationDetails.designation || "________"}</strong> declare that the
+                                            information provided in this document is true and accurate in all respects and
+                                            that we have performed such procedures and inquiries as necessary to verify the
+                                            answers.
+                                        </p>
+
+                                        {/* Declaration Checkbox */}
                                         <div className={styles.checkboxRow}>
                                             <label>
                                                 <input
@@ -3316,46 +3600,33 @@ const VmsRequest = () => {
                                                     checked={agreeDeclaration}
                                                     onChange={(e) => handleCheckbox("declaration", e.target.checked)}
                                                 />{" "}
-                                                Declaration
+                                                I agree with the above Declaration
                                             </label>
                                         </div>
 
-                                        {agreeDeclaration && (
-                                            <p className={styles.declarationText}>
-                                                I/We <strong>{declarationDetails.name || "________"}</strong> of{" "}
-                                                <strong>{declarationDetails.organization || "________"}</strong> designated as{" "}
-                                                <strong>{declarationDetails.designation || "________"}</strong> declare that
-                                                the information provided in this document is true and accurate in all respects
-                                                and that we have performed such procedures and inquiries as necessary to verify
-                                                the answers.
-                                            </p>
-                                        )}
+                                        {/* ✅ Counterparty Section */}
+                                        <p className={styles.declarationText}>
+                                            I/We <strong>{counterpartyDetails.name || "________"}</strong> of{" "}
+                                            <strong>{counterpartyDetails.organization || "________"}</strong> designated as{" "}
+                                            <strong>{counterpartyDetails.designation || "________"}</strong> confirm that all
+                                            the information shared is accurate and valid. I/We acknowledge that this document
+                                            will be used for official evaluation purposes only.
+                                        </p>
 
-                                        {/* ✅ Confidentiality Checkbox */}
+                                        {/* Counterparty Checkbox */}
                                         <div className={styles.checkboxRow}>
                                             <label>
                                                 <input
                                                     type="checkbox"
-                                                    checked={agreePrivacy}
-                                                    onChange={(e) => handleCheckbox("privacy", e.target.checked)}
+                                                    checked={agreeCounterparty}
+                                                    onChange={(e) => handleCheckbox("counterparty", e.target.checked)}
                                                 />{" "}
-                                                Confidentiality and Data Privacy
+                                                I agree with the above Counterparty Declaration
                                             </label>
                                         </div>
 
-                                        {agreePrivacy && (
-                                            <p className={styles.declarationText}>
-                                                I/We <strong>{declarationDetails.name || "________"}</strong> of{" "}
-                                                <strong>{declarationDetails.organization || "________"}</strong> designated as{" "}
-                                                <strong>{declarationDetails.designation || "________"}</strong> acknowledge that
-                                                the contents of this document and any enclosures may be shared only for the
-                                                purposes of evaluation and shall be kept confidential in accordance with
-                                                applicable data privacy regulations.
-                                            </p>
-                                        )}
-
-                                        {/* ✅ Common Fields visible when both boxes are ticked */}
-                                        {agreeDeclaration && agreePrivacy && (
+                                        {/* ✅ Show these 3 fields only when BOTH checkboxes are ticked */}
+                                        {agreeDeclaration && agreeCounterparty && (
                                             <div className={styles.declarationBox}>
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>Place</label>
@@ -3366,10 +3637,10 @@ const VmsRequest = () => {
                                                             setDeclarationDetails((prev) => ({
                                                                 ...prev,
                                                                 place: e.target.value
-                                                                    .replace(/[^A-Za-z\s]/g, "") // ✅ only letters + spaces
-                                                                    .replace(/\s+/g, " ")         // ✅ collapse multiple spaces
-                                                                    .toUpperCase()                // ✅ convert to uppercase
-                                                                    .trim(),                      // ✅ trim extra spaces
+                                                                    .replace(/[^A-Za-z\s]/g, "")
+                                                                    .replace(/\s+/g, " ")
+                                                                    .toUpperCase()
+                                                                    .trim(),
                                                             }))
                                                         }
                                                         className={styles.fieldInput}
@@ -3377,126 +3648,42 @@ const VmsRequest = () => {
                                                     />
                                                 </div>
 
+                                                {/* Date (auto-filled with today's date, not editable) */}
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>Date</label>
                                                     <input
                                                         type="date"
-                                                        value={declarationDetails.date}
-                                                        readOnly
+                                                        value={
+                                                            declarationDetails.date ||
+                                                            new Date().toISOString().slice(0, 10) // today's date in yyyy-mm-dd
+                                                        }
+                                                        onChange={() => { }} // prevent typing
                                                         className={styles.fieldInput}
+                                                        readOnly // 🔒 makes it non-editable
                                                     />
                                                 </div>
 
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>
-                                                        Signature<br></br>
+                                                        Signature<br />
                                                         (JPG, JPEG, PNG — white background only, max 1 MB)
                                                     </label>
                                                     <input
                                                         type="file"
                                                         accept=".jpg,.jpeg,.png"
-                                                        onChange={(e) => {
-                                                            const file = e.target.files[0];
-                                                            if (!file) return;
-
-                                                            const validTypes = ["image/jpeg", "image/jpg", "image/png"];
-                                                            if (!validTypes.includes(file.type)) {
-                                                                alert("❌ Please upload a valid image file (JPG, JPEG, or PNG).");
-                                                                e.target.value = "";
-                                                                return;
-                                                            }
-
-                                                            if (file.size > 1024 * 1024) {
-                                                                alert("❌ File size exceeds 1 MB. Please upload a smaller image.");
-                                                                e.target.value = "";
-                                                                return;
-                                                            }
-
-                                                            // ✅ Check for white background
-                                                            const reader = new FileReader();
-                                                            reader.onload = (ev) => {
-                                                                const img = new Image();
-                                                                img.onload = () => {
-                                                                    const canvas = document.createElement("canvas");
-                                                                    const ctx = canvas.getContext("2d");
-                                                                    canvas.width = img.width;
-                                                                    canvas.height = img.height;
-                                                                    ctx.drawImage(img, 0, 0);
-
-                                                                    const borderPixels = [];
-                                                                    // Take pixels from corners and borders
-                                                                    const positions = [
-                                                                        [0, 0],
-                                                                        [img.width - 1, 0],
-                                                                        [0, img.height - 1],
-                                                                        [img.width - 1, img.height - 1],
-                                                                        [Math.floor(img.width / 2), 0],
-                                                                        [0, Math.floor(img.height / 2)],
-                                                                        [img.width - 1, Math.floor(img.height / 2)],
-                                                                        [Math.floor(img.width / 2), img.height - 1],
-                                                                    ];
-
-                                                                    positions.forEach(([x, y]) => {
-                                                                        const pixel = ctx.getImageData(x, y, 1, 1).data;
-                                                                        borderPixels.push(pixel);
-                                                                    });
-
-                                                                    // Check if all border pixels are white (or nearly white)
-                                                                    const allWhite = borderPixels.every(
-                                                                        ([r, g, b]) => r > 240 && g > 240 && b > 240
-                                                                    );
-
-                                                                    if (!allWhite) {
-                                                                        alert("❌ Please upload a signature with a plain white background.");
-                                                                        e.target.value = "";
-                                                                        return;
-                                                                    }
-
-                                                                    // ✅ Passed validation
-                                                                    setDeclarationDetails((prev) => ({
-                                                                        ...prev,
-                                                                        sign: { file, url: URL.createObjectURL(file) },
-                                                                    }));
-                                                                };
-                                                                img.src = ev.target.result;
-                                                            };
-                                                            reader.readAsDataURL(file);
-                                                        }}
+                                                        onChange={handleSignatureUpload}
                                                         className={styles.fieldInput}
                                                     />
-
                                                     {declarationDetails.sign?.file?.name && (
                                                         <span className={styles.fileName}>
                                                             📄 {declarationDetails.sign.file.name}
                                                         </span>
                                                     )}
                                                 </div>
-
-                                                <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>Company Stamp </label>
-                                                    <input
-                                                        type="file"
-                                                        accept=".png,.jpg,.jpeg"
-                                                        onChange={(e) => {
-                                                            const file = e.target.files[0];
-                                                            if (file && file.size <= 1024 * 1024) {
-                                                                setDeclarationDetails((prev) => ({
-                                                                    ...prev,
-                                                                    stamp: { file, url: URL.createObjectURL(file) },
-                                                                }));
-                                                            } else {
-                                                                alert("❌ Stamp must be PNG/JPG and below 1 MB.");
-                                                            }
-                                                        }}
-                                                        className={styles.fieldInput}
-                                                    />
-                                                    {declarationDetails.stamp?.file?.name && (
-                                                        <span className={styles.fileName}>📄 {declarationDetails.stamp.file.name}</span>
-                                                    )}
-                                                </div>
                                             </div>
                                         )}
                                     </div>
+
 
                                 )}
                                 {/* ✅ Show comments + navigation buttons only AFTER Instructions */}
@@ -3532,7 +3719,6 @@ const VmsRequest = () => {
                                                     <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "center", color: "#000" }}>S.No</th>
                                                     <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Date</th>
                                                     <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Comment</th>
-                                                    <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>Comment By</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -3551,7 +3737,7 @@ const VmsRequest = () => {
                                                                 {index + 1}
                                                             </td>
                                                             <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.comment}</td>
-                                                            <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.commenter_name}</td>
+
                                                             <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.commented_on}</td>
                                                         </tr>
                                                     ))

@@ -6,10 +6,10 @@ const InstructionsStep = ({ firstTime, onProceed }) => {
   const [agreeInstructions, setAgreeInstructions] = useState(false);
 
   return (
-    
+
     <div className={styles.instructionsWrapper}>
       <div className={styles.instructionsContainer}>
-        <h2 className={styles.title}>Instructions to Fill the Vendor Registration Form</h2>
+        <h2 className={styles.title}>Guidelines to Fill the Vendor Registration Form</h2>
 
         <div className={styles.scrollArea}>
           <h3>📘 <span className={styles.sectionTitle}>General Guidelines</span></h3>
@@ -92,8 +92,8 @@ const InstructionsStep = ({ firstTime, onProceed }) => {
           </ul>
         </div>
 
-     {/* ✅ Show checkbox + button only on first visit */}
-       {firstTime && (
+        {/* ✅ Show checkbox + button only on first visit */}
+        {firstTime && (
           <div className={styles.instructionsFooter}>
             <label className={styles.checkboxLabel}>
               <input
@@ -108,7 +108,10 @@ const InstructionsStep = ({ firstTime, onProceed }) => {
               <button
                 className={styles.proceedButton}
                 disabled={!agreeInstructions}
-                onClick={onProceed}
+                onClick={() => {
+                  localStorage.setItem("instructionsAccepted", "true");
+                  onProceed();
+                }}
               >
                 Proceed to Form
               </button>
