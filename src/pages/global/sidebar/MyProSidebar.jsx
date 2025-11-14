@@ -230,6 +230,14 @@ const MyProSidebar = () => {
                             setSelected={setSelected}
                         />
 
+                        <Item
+                            title="My rfq Page"
+                            to="/rfqpage"
+                            icon={<PersonOutlineIcon />}
+                            selected={selected}
+                            setSelected={setSelected}
+                        />
+
 
                     </Box>
                 </Menu>

@@ -27,6 +27,7 @@ import InitiateVendor from "./pages/vms/InitiateVendor";
 import VmsRequest from "./pages/vms/VmsRequest";
 import CostCenter from "./pages/costcenter/CostCenter";
 import StatusPage from "./pages/vms/StatusPage";
+import EntityRfqPage from "./pages/vms/EntityRfqPage";
 
 const App = () => {
   const [theme, colorMode] = useMode();
@@ -69,6 +70,7 @@ const AppRoutes = () => (
             <Route path={"initiate-vendor"} element={<InitiateVendor />} />
             <Route path={"request-vendor"} element={<VmsRequest />} />
             <Route path={"status"} element={<StatusPage />} />
+            <Route path={"rfqpage"} element={<EntityRfqPage />} />
         </Route>
 
         {/* Catch-all */}
