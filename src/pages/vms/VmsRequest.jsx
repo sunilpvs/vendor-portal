@@ -2274,7 +2274,7 @@ const VmsRequest = () => {
                                         {/* 🌎 Country of Incorporation */}
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
-                                                Country of Incorporation <span className={styles.requiredSymbol}>*</span>
+                                                Country of Incorporation
                                             </label>
 
                                             <select
@@ -2325,7 +2325,7 @@ const VmsRequest = () => {
                                                 {/* 🏳️ Editable Country (below dropdown) */}
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>
-                                                        Specify Country <span className={styles.requiredSymbol}>*</span>
+                                                        Specify Country
                                                     </label>
                                                     <input
                                                         type="text"
@@ -2350,7 +2350,7 @@ const VmsRequest = () => {
                                                 {/* 🏙️ Editable State */}
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>
-                                                        State / Province <span className={styles.requiredSymbol}>*</span>
+                                                        State / Province
                                                     </label>
                                                     <input
                                                         type="text"
@@ -2375,7 +2375,7 @@ const VmsRequest = () => {
                                         {!companyInfo.isOtherCountry && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>
-                                                    State <span className={styles.requiredSymbol}>*</span>
+                                                    State
                                                 </label>
                                                 <select
                                                     name="state"
@@ -2582,35 +2582,6 @@ const VmsRequest = () => {
                                             />
                                         </div>
 
-                                        <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>
-                                                Website
-                                            </label>
-                                            <input
-                                                type="text"
-                                                name="website"
-                                                value={companyInfo.website || ""}
-                                                onChange={(e) => {
-                                                    let val = e.target.value.trim();
-
-                                                    // ✅ remove spaces inside (user can’t type "example .com")
-                                                    val = val.replace(/\s+/g, "");
-
-                                                    // ✅ optional: auto-add https:// if user types "example.com"
-                                                    if (val && !/^https?:\/\//i.test(val)) {
-                                                        val = "https://" + val;
-                                                    }
-
-                                                    setCompanyInfo({
-                                                        ...companyInfo,
-                                                        website: val,
-                                                    });
-                                                }}
-                                                className={styles.fieldInput}
-                                                required
-                                                readOnly={isReadOnly}
-                                            />
-                                        </div>
 
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
@@ -2977,7 +2948,7 @@ const VmsRequest = () => {
                                                         <div className={styles.fieldRow}>
                                                             <label className={styles.fieldLabel}>
                                                                 State Name
-                                                                <span className={styles.requiredSymbol}>*</span>
+                                                               
                                                             </label>
                                                             <select
                                                                 className={styles.fieldInput}
@@ -3420,7 +3391,7 @@ const VmsRequest = () => {
 
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
-                                                Country <span className={styles.requiredSymbol}>*</span>
+                                                Country 
                                             </label>
 
                                             <select
@@ -3460,7 +3431,7 @@ const VmsRequest = () => {
                                         {isOtherBankCountry && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>
-                                                    Specify Country <span className={styles.requiredSymbol}>*</span>
+                                                    Specify Country 
                                                 </label>
                                                 <input
                                                     type="text"
