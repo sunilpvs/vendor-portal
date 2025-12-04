@@ -2528,9 +2528,9 @@ const VmsRequest = () => {
                                                     readOnly={isReadOnly}
                                                 >
 
-                                                    <option value="Mr">Mr</option>
-                                                    <option value="Mrs">Mrs</option>
-                                                    <option value="Ms">Ms</option>
+                                                    <option value="Mr.">Mr.</option>
+                                                    <option value="Mrs.">Mrs.</option>
+                                                    <option value="Ms.">Ms.</option>
                                                 </select>
 
                                                 <input
@@ -2615,9 +2615,9 @@ const VmsRequest = () => {
                                                     readOnly={isReadOnly}
                                                 >
 
-                                                    <option value="Mr">Mr</option>
-                                                    <option value="Mrs">Mrs</option>
-                                                    <option value="Ms">Ms</option>
+                                                    <option value="Mr.">Mr. </option>
+                                                    <option value="Mrs.">Mrs.</option>
+                                                    <option value="Ms.">Ms.</option>
                                                 </select>
 
                                                 <input
@@ -3691,11 +3691,12 @@ const VmsRequest = () => {
                                                 }
                                                 className={styles.fieldInput}
                                                 required
-                                                disabled={isReadOnly}
+                                                disabled={true}
                                             >
                                                 <option value="">Select</option>
                                                 <option value="true">Yes</option>
                                                 <option value="false">No</option>
+                                                
                                             </select>
                                         </div>
 
