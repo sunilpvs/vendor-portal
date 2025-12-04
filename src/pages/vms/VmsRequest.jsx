@@ -2063,7 +2063,7 @@ const VmsRequest = () => {
                                                     type="text"
                                                     name="firm_reg_number"
                                                     value={companyInfo.firm_reg_number || ""}
-                                                   onChange={handleCompanyInfoChange}
+                                                    onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
                                                     readOnly={isReadOnly}
@@ -2082,7 +2082,7 @@ const VmsRequest = () => {
                                                     type="text"
                                                     name="llp_reg_number"
                                                     value={companyInfo.llp_reg_number || ""}
-                                                   onChange={handleCompanyInfoChange}
+                                                    onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
                                                     readOnly={isReadOnly}
@@ -2120,7 +2120,7 @@ const VmsRequest = () => {
                                                     type="text"
                                                     name="pulc_reg_number"
                                                     value={companyInfo.pulc_reg_number || ""}
-                                                   onChange={handleCompanyInfoChange}
+                                                    onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
                                                     readOnly={isReadOnly}
@@ -2139,7 +2139,7 @@ const VmsRequest = () => {
                                                     type="text"
                                                     name="opc_reg_number"
                                                     value={companyInfo.opc_reg_number || ""}
-                                                   onChange={handleCompanyInfoChange}
+                                                    onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
                                                     readOnly={isReadOnly}
@@ -2178,7 +2178,7 @@ const VmsRequest = () => {
                                                     type="text"
                                                     name="jvc_reg_number"
                                                     value={companyInfo.jvc_reg_number || ""}
-                                                   onChange={handleCompanyInfoChange}
+                                                    onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
                                                     readOnly={isReadOnly}
@@ -2214,7 +2214,18 @@ const VmsRequest = () => {
                                             <select
                                                 name="tanStatus"
                                                 value={tanStatus}
-                                                onChange={(e) => setTanStatus(e.target.value)}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    setTanStatus(value);
+
+                                                    // Clear TAN number whenever user selects: no OR blank option
+                                                    if (value === "no" || value === "") {
+                                                        setCompanyInfo(prev => ({
+                                                            ...prev,
+                                                            tan_number: ""
+                                                        }));
+                                                    }
+                                                }}
                                                 className={styles.fieldInput}
                                                 required
                                                 disabled={isReadOnly}
@@ -2273,28 +2284,35 @@ const VmsRequest = () => {
 
                                         {/* 🌎 Country of Incorporation */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>
-                                                Country of Incorporation
-                                            </label>
+                                            <label className={styles.fieldLabel}>Country of Incorporation</label>
 
                                             <select
                                                 name="country_of_incorporation"
                                                 value={companyInfo.country_of_incorporation || ""}
                                                 onChange={(e) => {
                                                     const selectedId = e.target.value;
-                                                    const selectedCountry = countries.find((c) => c.id == selectedId);
-                                                    const isOther =
-                                                        selectedCountry && selectedCountry.country.toLowerCase() !== "india";
 
+                                                    // Find country object
+                                                    const selectedCountry = countries.find((c) => c.id == selectedId);
+
+                                                    // Check if other country (not India)
+                                                    let isOther = false;
+
+                                                    if (selectedCountry) {
+                                                        isOther = selectedCountry.country.toLowerCase() !== "india";
+                                                    }
+
+                                                    // Reset dependent fields EVERY TIME selection changes
                                                     setCompanyInfo((prev) => ({
                                                         ...prev,
                                                         country_of_incorporation: selectedId,
-                                                        country_of_incorporation_text: "", // ✅ make this field blank always
                                                         isOtherCountry: isOther,
+                                                        country_of_incorporation_text: "",
                                                         state: "",
-                                                        country_of_origin: "", // ✅ also start empty
+                                                        country_of_origin: "",
                                                     }));
 
+                                                    // Set country code only for India
                                                     if (selectedCountry && selectedCountry.country.toLowerCase() === "india") {
                                                         setCountryCode(selectedCountry.code || "");
                                                     } else {
@@ -2308,7 +2326,7 @@ const VmsRequest = () => {
                                                     ["Sole Proprietorship", "Partnership"].includes(
                                                         companyInfo.business_entity_type
                                                     )
-                                                } // 🛑 disable only for sole/partnership or readonly mode
+                                                }
                                             >
                                                 <option value="">-- Select Country --</option>
                                                 {countries.map((c) => (
@@ -2319,14 +2337,12 @@ const VmsRequest = () => {
                                             </select>
                                         </div>
 
-                                        {/* 🌍 When country ≠ India → show editable country + editable state + country of origin */}
-                                        {companyInfo.isOtherCountry && (
+                                        {/* 🌍 Country ≠ India */}
+                                        {companyInfo.isOtherCountry && companyInfo.country_of_incorporation !== "" && (
                                             <>
-                                                {/* 🏳️ Editable Country (below dropdown) */}
+                                                {/* 🏳️ Specify Country */}
                                                 <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>
-                                                        Specify Country
-                                                    </label>
+                                                    <label className={styles.fieldLabel}>Specify Country</label>
                                                     <input
                                                         type="text"
                                                         name="country_of_incorporation_text"
@@ -2347,11 +2363,9 @@ const VmsRequest = () => {
                                                     />
                                                 </div>
 
-                                                {/* 🏙️ Editable State */}
+                                                {/* 🏙️ Other Country State */}
                                                 <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>
-                                                        State / Province
-                                                    </label>
+                                                    <label className={styles.fieldLabel}>State / Province</label>
                                                     <input
                                                         type="text"
                                                         name="state"
@@ -2371,32 +2385,30 @@ const VmsRequest = () => {
                                             </>
                                         )}
 
-                                        {/* 🏙️ State (for India only) */}
-                                        {!companyInfo.isOtherCountry && (
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>
-                                                    State
-                                                </label>
-                                                <select
-                                                    name="state"
-                                                    value={companyInfo.state || ""}
-                                                    onChange={(e) =>
-                                                        setCompanyInfo((prev) => ({ ...prev, state: e.target.value }))
-                                                    }
-                                                    className={styles.fieldInput}
-                                                    required
-                                                    disabled={isReadOnly}
-                                                >
-                                                    <option value="">-- Select State --</option>
-                                                    {states.map((s) => (
-                                                        <option key={s.id} value={s.id}>
-                                                            {s.state}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        )}
-
+                                        {/* 🇮🇳 India State Dropdown */}
+                                        {!companyInfo.isOtherCountry &&
+                                            companyInfo.country_of_incorporation !== "" && (
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>State</label>
+                                                    <select
+                                                        name="state"
+                                                        value={companyInfo.state || ""}
+                                                        onChange={(e) =>
+                                                            setCompanyInfo((prev) => ({ ...prev, state: e.target.value }))
+                                                        }
+                                                        className={styles.fieldInput}
+                                                        required
+                                                        disabled={isReadOnly}
+                                                    >
+                                                        <option value="">-- Select State --</option>
+                                                        {states.map((s) => (
+                                                            <option key={s.id} value={s.id}>
+                                                                {s.state}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
 
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
@@ -2678,19 +2690,29 @@ const VmsRequest = () => {
                                 {currentPage === 2 && (
                                     <div className={styles.page}>
                                         <h3>MSME / Udyam Registration</h3>
+                                        {/* 🏢 Registered under MSME Act */}
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
                                                 Registered under MSME Act
                                                 <span className={styles.requiredSymbol}>*</span>
                                             </label>
+
                                             <select
                                                 name="registered_under_msme"
-                                                value={msmeInfo?.registered_under_msme}
-                                                onChange={handleMsmeChange}
+                                                value={msmeInfo.registered_under_msme || ""}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+
+                                                    // Set main dropdown value
+                                                    setMsmeInfo((prev) => ({
+                                                        ...prev,
+                                                        registered_under_msme: value,
+                                                        udyam_registration_number: "" // 🔥 RESET like TAN Number logic
+                                                    }));
+                                                }}
                                                 className={styles.fieldInput}
                                                 required
                                                 disabled={isReadOnly}
-
                                             >
                                                 <option value="">Select</option>
                                                 <option value="true">Yes</option>
@@ -2698,17 +2720,24 @@ const VmsRequest = () => {
                                             </select>
                                         </div>
 
-                                        {/* 🧾 Show Udyam Registration Number only if MSME = Yes */}
+                                        {/* 🧾 Udyam Registration Number only if MSME = Yes */}
                                         {msmeInfo.registered_under_msme === "true" && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>
-                                                    Udyam Registration Number <span className={styles.requiredSymbol}>*</span>
+                                                    Udyam Registration Number
+                                                    <span className={styles.requiredSymbol}>*</span>
                                                 </label>
+
                                                 <input
                                                     type="text"
                                                     name="udyam_registration_number"
                                                     value={msmeInfo.udyam_registration_number || ""}
-                                                    onChange={handleMsmeChange}
+                                                    onChange={(e) =>
+                                                        setMsmeInfo((prev) => ({
+                                                            ...prev,
+                                                            udyam_registration_number: e.target.value
+                                                        }))
+                                                    }
                                                     className={styles.fieldInput}
                                                     placeholder="Enter Udyam Registration Number"
                                                     required
@@ -2716,6 +2745,7 @@ const VmsRequest = () => {
                                                 />
                                             </div>
                                         )}
+
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
                                                 Category (Micro/Small/Medium)
@@ -2948,7 +2978,7 @@ const VmsRequest = () => {
                                                         <div className={styles.fieldRow}>
                                                             <label className={styles.fieldLabel}>
                                                                 State Name
-                                                               
+
                                                             </label>
                                                             <select
                                                                 className={styles.fieldInput}
@@ -3369,184 +3399,140 @@ const VmsRequest = () => {
                                             />
                                         </div>
 
-                                        <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>
-                                                Transaction Type <span className={styles.requiredSymbol}>*</span>
-                                            </label>
-                                            <select
-                                                name="transactionType"
-                                                value={bankInfo.transactionType || ""}
-                                                onChange={(e) =>
-                                                    setBankInfo((prev) => ({ ...prev, transactionType: e.target.value }))
-                                                }
-                                                className={styles.fieldInput}
-                                                required
-                                            >
-                                                <option value="">Select Transaction Type</option>
-                                                <option value="Domestic">Domestic</option>
-                                                <option value="International">International</option>
-                                                <option value="Domestic and International">Domestic and International</option>
-                                            </select>
-                                        </div>
+                                       {/* Transaction Type */}
+<div className={styles.fieldRow}>
+    <label className={styles.fieldLabel}>
+        Transaction Type <span className={styles.requiredSymbol}>*</span>
+    </label>
+    <select
+        name="transactionType"
+        value={bankInfo.transactionType || ""}
+        onChange={(e) => {
+            const value = e.target.value;
 
-                                        <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>
-                                                Country 
-                                            </label>
+            setBankInfo((prev) => ({
+                ...prev,
+                transactionType: value,
+                ifscCode: "",  // 🔥 reset IFSC
+                swiftCode: "", // 🔥 reset SWIFT
+            }));
+        }}
+        className={styles.fieldInput}
+        required
+    >
+        <option value="">Select Transaction Type</option>
+        <option value="Domestic">Domestic</option>
+        <option value="International">International</option>
+        <option value="Domestic and International">Domestic and International</option>
+    </select>
+</div>
 
-                                            <select
-                                                name="country"
-                                                value={bankInfo.country || ""}
-                                                onChange={(e) => {
-                                                    const selectedId = e.target.value;
-                                                    const selectedCountry = countries.find((c) => c.id == selectedId);
-                                                    const isOther =
-                                                        selectedCountry && selectedCountry.country.toLowerCase() !== "india";
+{/* Country */}
+<div className={styles.fieldRow}>
+    <label className={styles.fieldLabel}>Country</label>
+    <select
+        name="country"
+        value={bankInfo.country || ""}
+        onChange={(e) => {
+            const selectedId = e.target.value;
+            const selectedCountry = countries.find((c) => c.id == selectedId);
+            const isOther = selectedCountry && selectedCountry.country.toLowerCase() !== "india";
 
-                                                    // ✅ Update both country ID and name properly
-                                                    setBankInfo((prev) => ({
-                                                        ...prev,
-                                                        country: selectedId, // store ID
-                                                        country_name: selectedCountry ? selectedCountry.country.toUpperCase() : "",
-                                                    }));
+            setBankInfo((prev) => ({
+                ...prev,
+                country: selectedId,
+                country_name: selectedCountry ? selectedCountry.country.toUpperCase() : "",
+            }));
 
-                                                    // ✅ Handle Other Country logic
-                                                    setIsOtherBankCountry(isOther);
-                                                    setBankCountryName("");
-                                                }}
-                                                className={styles.fieldInput}
-                                                required
-                                                disabled={isReadOnly}
-                                            >
-                                                <option value="">-- Select Country --</option>
-                                                {countries.map((country) => (
-                                                    <option key={country.id} value={country.id}>
-                                                        {country.country}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
+            setIsOtherBankCountry(isOther);
+            setBankCountryName(""); // 🔥 reset Specify Country
+        }}
+        className={styles.fieldInput}
+        required
+        disabled={isReadOnly}
+    >
+        <option value="">-- Select Country --</option>
+        {countries.map((country) => (
+            <option key={country.id} value={country.id}>
+                {country.country}
+            </option>
+        ))}
+    </select>
+</div>
 
-                                        {/* When not India → show Specify Country field */}
-                                        {isOtherBankCountry && (
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>
-                                                    Specify Country 
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="bankCountryName"
-                                                    value={bankCountryName}
-                                                    onChange={(e) => {
-                                                        const onlyAlphabets = e.target.value.replace(/[^a-zA-Z]/g, ""); // remove non-alphabets
-                                                        setBankCountryName(onlyAlphabets.toUpperCase());
-                                                    }}
-                                                    className={styles.fieldInput}
-                                                    placeholder="Enter Country Name"
-                                                    required
-                                                    readOnly={isReadOnly}
-                                                />
-                                            </div>
-                                        )}
+{/* Specify Country if not India */}
+{isOtherBankCountry && (
+    <div className={styles.fieldRow}>
+        <label className={styles.fieldLabel}>Specify Country</label>
+        <input
+            type="text"
+            name="bankCountryName"
+            value={bankCountryName}
+            onChange={(e) => {
+                const onlyAlphabets = e.target.value.replace(/[^a-zA-Z]/g, "");
+                setBankCountryName(onlyAlphabets.toUpperCase());
+            }}
+            className={styles.fieldInput}
+            placeholder="Enter Country Name"
+            required
+            readOnly={isReadOnly}
+        />
+    </div>
+)}
 
+{/* Account Number */}
+<div className={styles.fieldRow}>
+    <label className={styles.fieldLabel}>
+        Account Number <span className={styles.requiredSymbol}>*</span>
+    </label>
+    <input
+        type="text"
+        name="account_number"
+        value={bankInfo.account_number || ""}
+        onChange={handleBankDetailsChange}
+        className={styles.fieldInput}
+        required
+        readOnly={isReadOnly}
+    />
+</div>
 
+{/* IFSC / SWIFT based on Transaction Type */}
+{(bankInfo.transactionType === "Domestic" || bankInfo.transactionType === "Domestic and International") && (
+    <div className={styles.fieldRow}>
+        <label className={styles.fieldLabel}>
+            IFSC Code <span className={styles.requiredSymbol}>*</span>
+        </label>
+        <input
+            type="text"
+            name="ifscCode"
+            value={bankInfo.ifscCode || ""}
+            onChange={(e) =>
+                setBankInfo((prev) => ({ ...prev, ifscCode: e.target.value.toUpperCase() }))
+            }
+            maxLength={11}
+            className={styles.fieldInput}
+        />
+    </div>
+)}
 
-                                        <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>Account Number
-                                                <span className={styles.requiredSymbol}>*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                name="account_number"
-                                                value={bankInfo.account_number}
-                                                onChange={handleBankDetailsChange}
-                                                className={styles.fieldInput}
-                                                required
-                                                readOnly={isReadOnly}
-                                            />
-                                        </div>
+{(bankInfo.transactionType === "International" || bankInfo.transactionType === "Domestic and International") && (
+    <div className={styles.fieldRow}>
+        <label className={styles.fieldLabel}>
+            SWIFT Code <span className={styles.requiredSymbol}>*</span>
+        </label>
+        <input
+            type="text"
+            name="swiftCode"
+            value={bankInfo.swiftCode || ""}
+            onChange={(e) =>
+                setBankInfo((prev) => ({ ...prev, swiftCode: e.target.value.toUpperCase() }))
+            }
+            maxLength={11}
+            className={styles.fieldInput}
+        />
+    </div>
+)}
 
-                                        {bankInfo.transactionType === "Domestic" && (
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>IFSC Code
-                                                    <span className={styles.requiredSymbol}>*</span></label>
-                                                <input
-                                                    type="text"
-                                                    name="ifscCode"
-                                                    value={bankInfo.ifscCode || ""}
-                                                    onChange={(e) =>
-                                                        setBankInfo((prev) => ({
-                                                            ...prev,
-                                                            ifscCode: e.target.value.toUpperCase(), // 🔠 force uppercase
-                                                        }))
-                                                    }
-                                                    maxLength={11}
-                                                    className={styles.fieldInput}
-                                                />
-                                            </div>
-                                        )}
-
-                                        {bankInfo.transactionType === "International" && (
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>SWIFT Code
-                                                    <span className={styles.requiredSymbol}>*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="swiftCode"
-                                                    value={bankInfo.swiftCode || ""}
-                                                    onChange={(e) =>
-                                                        setBankInfo((prev) => ({
-                                                            ...prev,
-                                                            swiftCode: e.target.value.toUpperCase(), // 🔠 force uppercase
-                                                        }))
-                                                    }
-                                                    maxLength={11}
-                                                    className={styles.fieldInput}
-                                                />
-                                            </div>
-                                        )}
-
-                                        {bankInfo.transactionType === "Domestic and International" && (
-                                            <>
-                                                <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>IFSC Code
-                                                        <span className={styles.requiredSymbol}>*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        name="ifscCode"
-                                                        value={bankInfo.ifscCode || ""}
-                                                        onChange={(e) =>
-                                                            setBankInfo((prev) => ({
-                                                                ...prev,
-                                                                ifscCode: e.target.value.toUpperCase(),
-                                                            }))
-                                                        }
-
-                                                        className={styles.fieldInput}
-                                                    />
-                                                </div>
-                                                <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>SWIFT Code
-                                                        <span className={styles.requiredSymbol}>*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        name="swiftCode"
-                                                        value={bankInfo.swiftCode || ""}
-                                                        onChange={(e) =>
-                                                            setBankInfo((prev) => ({
-                                                                ...prev,
-                                                                swiftCode: e.target.value.toUpperCase(),
-                                                            }))
-                                                        }
-
-                                                        className={styles.fieldInput}
-                                                    />
-                                                </div>
-                                            </>
-                                        )}
 
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>Beneficiary of the Account
@@ -3696,7 +3682,7 @@ const VmsRequest = () => {
                                                 <option value="">Select</option>
                                                 <option value="true">Yes</option>
                                                 <option value="false">No</option>
-                                                
+
                                             </select>
                                         </div>
 
