@@ -798,12 +798,12 @@ const VmsRequest = () => {
             cleaned = value.replace(/[^A-Za-z\s]/g, "").toUpperCase();
         }
 
-        // 🟢 CIN — uppercase alphanumeric, max 21 chars
+        //  CIN — uppercase alphanumeric, max 21 chars
         else if (name === "cin_number") {
             cleaned = value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 21);
         }
 
-        // 🟢 Registration / TAN / PAN / GST / UDYAM / NGO fields
+        //  Registration / TAN / PAN / GST / UDYAM / NGO fields
         else if (
             [
                 "reg_number",
@@ -1979,7 +1979,7 @@ const VmsRequest = () => {
                                                 onChange={(e) => {
                                                     let input = e.target.value;
 
-                                                    // ✅ allow letters + spaces while typing
+                                                    // allow letters + spaces while typing
                                                     // but don't immediately collapse or trim (to let typing feel natural)
                                                     if (/^[A-Za-z\s]*$/.test(input)) {
                                                         setCompanyInfo({
@@ -2775,14 +2775,24 @@ const VmsRequest = () => {
                                     <div className={styles.page}>
 
 
-                                        <div className={styles.fieldRow} >
-                                            <label className={styles.fieldLabel}>Type of Counterparty Business
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Type of Counterparty Business
                                                 <span className={styles.requiredSymbol}>*</span>
                                             </label>
+
                                             <select
                                                 name="type_of_counterparty"
-                                                value={goodsServices.type_of_counterparty}
-                                                onChange={(e) => handleGoodsServicesChange(e, 'goodsServices')}
+                                                value={goodsServices.type_of_counterparty || ""}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+
+                                                    setGoodsServices((prev) => ({
+                                                        ...prev,
+                                                        type_of_counterparty: value,
+                                                        others: "", // 🔥 reset Others field whenever dropdown changes
+                                                    }));
+                                                }}
                                                 className={styles.fieldInput}
                                                 required
                                                 disabled={isReadOnly}
@@ -2791,17 +2801,25 @@ const VmsRequest = () => {
                                                 <option value="Trading Entity">Trading Entity</option>
                                                 <option value="End-Use">End-Use</option>
                                                 <option value="Manufacturer">Manufacturer</option>
-                                                <option value="Service Provider">Service provider</option>
-                                                <option value="Third Party Payer / Reciever of funds">Third party payer/receiver of funds</option>
+                                                <option value="Service Provider">Service Provider</option>
+                                                <option value="Third Party Payer / Reciever of funds">
+                                                    Third Party Payer / Receiver of funds
+                                                </option>
                                                 <option value="Others">Others</option>
                                             </select>
 
-                                            {goodsServices.type_of_counterparty === 'Others' && (
+                                            {/* Show “Others” input only if selected */}
+                                            {goodsServices.type_of_counterparty === "Others" && (
                                                 <input
                                                     type="text"
                                                     name="others"
-                                                    value={goodsServices.others}
-                                                    onChange={(e) => handleGoodsServicesChange(e, 'goodsServices')}
+                                                    value={goodsServices.others || ""}
+                                                    onChange={(e) =>
+                                                        setGoodsServices((prev) => ({
+                                                            ...prev,
+                                                            others: e.target.value,
+                                                        }))
+                                                    }
                                                     placeholder="Please specify other business type"
                                                     className={styles.fieldInput}
                                                     required
@@ -2810,6 +2828,7 @@ const VmsRequest = () => {
                                             )}
                                         </div>
 
+
                                         <h3 style={{
                                             fontSize: "16px",
                                             fontWeight: 600,
@@ -2817,13 +2836,24 @@ const VmsRequest = () => {
                                         }}>Details of the Supplies<span className={styles.requiredSymbol}>*</span></h3>
 
                                         <div className={styles.fieldRow}>
-
                                             <select
                                                 name="type"
                                                 value={goodsServices.type}
-                                                onChange={(e) =>
-                                                    setGoodsServices((prev) => ({ ...prev, type: e.target.value }))
-                                                }
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+
+                                                    // Auto reset all related fields when dropdown changes
+                                                    setGoodsServices((prev) => ({
+                                                        ...prev,
+                                                        type: value,
+                                                    }));
+
+                                                    setGoods(Array(5).fill(""));                // reset goods[]
+                                                    setServices(Array(5).fill(""));             // reset services[]
+                                                    setGoodsAndServices(
+                                                        Array(5).fill({ goods: "", services: "" }) // reset goods & services combined
+                                                    );
+                                                }}
                                                 className={styles.fieldInput}
                                                 disabled={isReadOnly}
                                             >
@@ -2833,6 +2863,7 @@ const VmsRequest = () => {
                                                 <option value="Goods and Services">Goods and Services</option>
                                             </select>
                                         </div>
+
 
                                         {/* ======== GOODS ======== */}
                                         {goodsServices.type === "Goods" && (
@@ -2912,9 +2943,7 @@ const VmsRequest = () => {
 
                                         <h3 style={{ marginTop: "20px" }}>GST Registrations</h3>
 
-
-                                        {/* ✅ GST Applicable Toggle */}
-                                        {/* ✅ GST Applicable Toggle */}
+                                        {/* GST Applicable */}
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
                                                 Is GST Applicable? <span className={styles.requiredSymbol}>*</span>
@@ -2922,27 +2951,45 @@ const VmsRequest = () => {
 
                                             <select
                                                 name="gst_applicable"
-                                                value={gstApplicable} // will be "", "Yes", or "No"
-                                                onChange={(e) => setGstApplicable(e.target.value)}
+                                                value={gstApplicable}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+
+                                                    // --- SAME RESET LOGIC AS GOODS/SERVICES SELECT ---
+                                                    setGstApplicable(value);
+
+                                                    // reset number selection
+                                                    setCount(0);
+
+                                                    // reset all gst registration entries
+                                                    setgstFormData([]); //  correct setter name
+
+                                                    // reset meta info
+                                                    setGstMeta({
+                                                        reg_type: "",
+                                                        periodicity_gstr1: "",
+                                                    });
+                                                }}
                                                 className={styles.fieldInput}
                                                 required
                                                 disabled={isReadOnly}
                                             >
-                                                <option value="">-- Select --</option> {/* 🟢 Default option */}
+                                                <option value="">-- Select --</option>
                                                 <option value="Yes">Yes</option>
                                                 <option value="No">No</option>
                                             </select>
                                         </div>
 
-                                        {/* ✅ GST Fields visible only when checkbox is UNCHECKED */}
+                                        {/* Show only when GST Applicable = Yes */}
                                         {gstApplicable === "Yes" && (
                                             <>
-                                                {/* Number selection */}
+                                                {/* Number of GST Registrations */}
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>
                                                         Number of GST Registrations (max 28)
                                                         <span className={styles.requiredSymbol}>*</span>
                                                     </label>
+
                                                     <select
                                                         className={styles.fieldInput}
                                                         value={count}
@@ -2959,7 +3006,7 @@ const VmsRequest = () => {
                                                     </select>
                                                 </div>
 
-                                                {/* Dynamic registration fields */}
+                                                {/* Dynamic GST Registration Fields */}
                                                 {gstformData.map((item, i) => (
                                                     <div
                                                         key={i}
@@ -2975,11 +3022,10 @@ const VmsRequest = () => {
                                                             Registration {i + 1}
                                                         </h4>
 
+                                                        {/* State */}
                                                         <div className={styles.fieldRow}>
-                                                            <label className={styles.fieldLabel}>
-                                                                State Name
+                                                            <label className={styles.fieldLabel}>State Name</label>
 
-                                                            </label>
                                                             <select
                                                                 className={styles.fieldInput}
                                                                 value={item.state}
@@ -2990,6 +3036,7 @@ const VmsRequest = () => {
                                                                 disabled={isReadOnly}
                                                             >
                                                                 <option value="">Select State</option>
+
                                                                 {states.map((state) => (
                                                                     <option key={state.id} value={state.id}>
                                                                         {state.state}
@@ -2998,11 +3045,13 @@ const VmsRequest = () => {
                                                             </select>
                                                         </div>
 
+                                                        {/* GST Number */}
                                                         <div className={styles.fieldRow}>
                                                             <label className={styles.fieldLabel}>
                                                                 GST Number (15 digits)
                                                                 <span className={styles.requiredSymbol}>*</span>
                                                             </label>
+
                                                             <input
                                                                 type="text"
                                                                 maxLength={15}
@@ -3019,16 +3068,20 @@ const VmsRequest = () => {
                                                     </div>
                                                 ))}
 
-                                                {/* Registration Type Dropdown */}
+                                                {/* Registration Type */}
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>
                                                         Registration Type
                                                         <span className={styles.requiredSymbol}>*</span>
                                                     </label>
+
                                                     <select
                                                         value={gstMeta.reg_type}
                                                         onChange={(e) =>
-                                                            setGstMeta((prev) => ({ ...prev, reg_type: e.target.value }))
+                                                            setGstMeta((prev) => ({
+                                                                ...prev,
+                                                                reg_type: e.target.value,
+                                                            }))
                                                         }
                                                         className={styles.fieldInput}
                                                         required
@@ -3047,6 +3100,7 @@ const VmsRequest = () => {
                                                         GSTR Filing Type
                                                         <span className={styles.requiredSymbol}>*</span>
                                                     </label>
+
                                                     <select
                                                         value={gstMeta.periodicity_gstr1}
                                                         onChange={(e) =>
@@ -3066,6 +3120,7 @@ const VmsRequest = () => {
                                                 </div>
                                             </>
                                         )}
+
 
                                         <h3>Income Tax Details</h3>
 
@@ -3103,9 +3158,7 @@ const VmsRequest = () => {
                                                 </tr>
                                                 {/* Currency Type Row */}
                                                 <tr>
-                                                    <td>
-                                                        Currency Type
-                                                    </td>
+                                                    <td>Currency Type</td>
 
                                                     {[1, 2].map((i) => (
                                                         <td key={i}>
@@ -3113,14 +3166,14 @@ const VmsRequest = () => {
                                                                 name={`currencyType${i}`}
                                                                 value={formData[`currencyType${i}`] || ""}
                                                                 onChange={(e) => {
-                                                                    handleIncomeChange(e);
-                                                                    // clear currency name if switched back to Rupees
-                                                                    if (e.target.value === "Rupees") {
-                                                                        setFormData((prev) => ({
-                                                                            ...prev,
-                                                                            [`currencyName${i}`]: "",
-                                                                        }));
-                                                                    }
+                                                                    const value = e.target.value;
+
+                                                                    // Update dropdown AND reset dependent currency name
+                                                                    setFormData((prev) => ({
+                                                                        ...prev,
+                                                                        [`currencyType${i}`]: value,
+                                                                        [`currencyName${i}`]: "", // 🔥 always reset on any change
+                                                                    }));
                                                                 }}
                                                                 required
                                                                 disabled={isReadOnly}
@@ -3134,7 +3187,7 @@ const VmsRequest = () => {
                                                     ))}
                                                 </tr>
 
-                                                {/* Currency Name Row (only shows if 'Others' selected) */}
+                                                {/* Currency Name Row — shows only if 'Others' selected */}
                                                 {["currencyType1", "currencyType2"].some(
                                                     (key) => formData[key] === "Others"
                                                 ) && (
@@ -3168,6 +3221,8 @@ const VmsRequest = () => {
                                                             ))}
                                                         </tr>
                                                     )}
+
+
                                                 <tr>
                                                     <td>
                                                         Turnover
@@ -3203,8 +3258,20 @@ const VmsRequest = () => {
                                                         <td key={i}>
                                                             <select
                                                                 name={`itrStatus${i}`}
-                                                                value={formData[`itrStatus${i}`]}
-                                                                onChange={handleIncomeChange}
+                                                                value={formData[`itrStatus${i}`] || ""}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+
+                                                                    setFormData((prev) => ({
+                                                                        ...prev,
+                                                                        [`itrStatus${i}`]: value,
+                                                                        // 🔥 Reset dependent fields when status changes
+                                                                        [`ackNo${i}`]: "",
+                                                                        [`itrDay${i}`]: "",
+                                                                        [`itrMonth${i}`]: "",
+                                                                        [`itrYear${i}`]: "",
+                                                                    }));
+                                                                }}
                                                                 required
                                                                 disabled={isReadOnly}
                                                                 className={styles.fieldInput}
@@ -3220,24 +3287,21 @@ const VmsRequest = () => {
                                                 {/* ITR Acknowledgment */}
                                                 {["itrStatus1", "itrStatus2"].some((key) => formData[key] === "Yes") && (
                                                     <tr>
-                                                        <td>
-                                                            ITR Acknowledgment No.
-
-                                                        </td>
+                                                        <td>ITR Acknowledgment No.</td>
                                                         {[1, 2].map((i) => (
                                                             <td key={i}>
                                                                 {formData[`itrStatus${i}`] === "Yes" ? (
                                                                     <input
                                                                         type="text"
                                                                         name={`ackNo${i}`}
-                                                                        value={formData[`ackNo${i}`]}
+                                                                        value={formData[`ackNo${i}`] || ""}
                                                                         onChange={handleIncomeChange}
                                                                         required
                                                                         readOnly={isReadOnly}
                                                                         className={styles.fieldInput}
                                                                     />
                                                                 ) : (
-                                                                    <div style={{ height: "30px" }}></div> // keeps alignment
+                                                                    <div style={{ height: "30px" }}></div>
                                                                 )}
                                                             </td>
                                                         ))}
@@ -3248,22 +3312,18 @@ const VmsRequest = () => {
                                                 {["itrStatus1", "itrStatus2"].some((key) => formData[key] === "Yes") && (
                                                     <tr>
                                                         <td>
-                                                            ITR Filed Date
-                                                            <span className={styles.requiredSymbol}>*</span>
+                                                            ITR Filed Date <span className={styles.requiredSymbol}>*</span>
                                                         </td>
-
                                                         {[1, 2].map((i) => {
                                                             const fy = formData[`fy${i}`];
                                                             const endYear = fy ? parseInt(fy.split("-")[1]) : new Date().getFullYear();
-
-                                                            // Generate last 5 years from end year
                                                             const itrYears = Array.from({ length: 5 }, (_, idx) => endYear - idx);
 
                                                             return (
                                                                 <td key={i}>
                                                                     {formData[`itrStatus${i}`] === "Yes" ? (
-                                                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                                            {/* Year dropdown */}
+                                                                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                                                            {/* Year */}
                                                                             <select
                                                                                 className={styles.fieldInput}
                                                                                 value={formData[`itrYear${i}`] || ""}
@@ -3284,7 +3344,7 @@ const VmsRequest = () => {
                                                                                 ))}
                                                                             </select>
 
-                                                                            {/* Month dropdown */}
+                                                                            {/* Month */}
                                                                             <select
                                                                                 className={styles.fieldInput}
                                                                                 value={formData[`itrMonth${i}`] || ""}
@@ -3302,16 +3362,13 @@ const VmsRequest = () => {
                                                                                     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                                                                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
                                                                                 ].map((month, index) => (
-                                                                                    <option
-                                                                                        key={month}
-                                                                                        value={String(index + 1).padStart(2, "0")}
-                                                                                    >
+                                                                                    <option key={month} value={String(index + 1).padStart(2, "0")}>
                                                                                         {month}
                                                                                     </option>
                                                                                 ))}
                                                                             </select>
 
-                                                                            {/* Day dropdown */}
+                                                                            {/* Day */}
                                                                             <select
                                                                                 className={styles.fieldInput}
                                                                                 value={formData[`itrDay${i}`] || ""}
@@ -3341,6 +3398,8 @@ const VmsRequest = () => {
                                                         })}
                                                     </tr>
                                                 )}
+
+
                                             </tbody>
                                         </table>
 
@@ -3399,139 +3458,139 @@ const VmsRequest = () => {
                                             />
                                         </div>
 
-                                       {/* Transaction Type */}
-<div className={styles.fieldRow}>
-    <label className={styles.fieldLabel}>
-        Transaction Type <span className={styles.requiredSymbol}>*</span>
-    </label>
-    <select
-        name="transactionType"
-        value={bankInfo.transactionType || ""}
-        onChange={(e) => {
-            const value = e.target.value;
+                                        {/* Transaction Type */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Transaction Type <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <select
+                                                name="transactionType"
+                                                value={bankInfo.transactionType || ""}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
 
-            setBankInfo((prev) => ({
-                ...prev,
-                transactionType: value,
-                ifscCode: "",  // 🔥 reset IFSC
-                swiftCode: "", // 🔥 reset SWIFT
-            }));
-        }}
-        className={styles.fieldInput}
-        required
-    >
-        <option value="">Select Transaction Type</option>
-        <option value="Domestic">Domestic</option>
-        <option value="International">International</option>
-        <option value="Domestic and International">Domestic and International</option>
-    </select>
-</div>
+                                                    setBankInfo((prev) => ({
+                                                        ...prev,
+                                                        transactionType: value,
+                                                        ifscCode: "",  // 🔥 reset IFSC
+                                                        swiftCode: "", // 🔥 reset SWIFT
+                                                    }));
+                                                }}
+                                                className={styles.fieldInput}
+                                                required
+                                            >
+                                                <option value="">Select Transaction Type</option>
+                                                <option value="Domestic">Domestic</option>
+                                                <option value="International">International</option>
+                                                <option value="Domestic and International">Domestic and International</option>
+                                            </select>
+                                        </div>
 
-{/* Country */}
-<div className={styles.fieldRow}>
-    <label className={styles.fieldLabel}>Country</label>
-    <select
-        name="country"
-        value={bankInfo.country || ""}
-        onChange={(e) => {
-            const selectedId = e.target.value;
-            const selectedCountry = countries.find((c) => c.id == selectedId);
-            const isOther = selectedCountry && selectedCountry.country.toLowerCase() !== "india";
+                                        {/* Country */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>Country</label>
+                                            <select
+                                                name="country"
+                                                value={bankInfo.country || ""}
+                                                onChange={(e) => {
+                                                    const selectedId = e.target.value;
+                                                    const selectedCountry = countries.find((c) => c.id == selectedId);
+                                                    const isOther = selectedCountry && selectedCountry.country.toLowerCase() !== "india";
 
-            setBankInfo((prev) => ({
-                ...prev,
-                country: selectedId,
-                country_name: selectedCountry ? selectedCountry.country.toUpperCase() : "",
-            }));
+                                                    setBankInfo((prev) => ({
+                                                        ...prev,
+                                                        country: selectedId,
+                                                        country_name: selectedCountry ? selectedCountry.country.toUpperCase() : "",
+                                                    }));
 
-            setIsOtherBankCountry(isOther);
-            setBankCountryName(""); // 🔥 reset Specify Country
-        }}
-        className={styles.fieldInput}
-        required
-        disabled={isReadOnly}
-    >
-        <option value="">-- Select Country --</option>
-        {countries.map((country) => (
-            <option key={country.id} value={country.id}>
-                {country.country}
-            </option>
-        ))}
-    </select>
-</div>
+                                                    setIsOtherBankCountry(isOther);
+                                                    setBankCountryName(""); // 🔥 reset Specify Country
+                                                }}
+                                                className={styles.fieldInput}
+                                                required
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">-- Select Country --</option>
+                                                {countries.map((country) => (
+                                                    <option key={country.id} value={country.id}>
+                                                        {country.country}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
 
-{/* Specify Country if not India */}
-{isOtherBankCountry && (
-    <div className={styles.fieldRow}>
-        <label className={styles.fieldLabel}>Specify Country</label>
-        <input
-            type="text"
-            name="bankCountryName"
-            value={bankCountryName}
-            onChange={(e) => {
-                const onlyAlphabets = e.target.value.replace(/[^a-zA-Z]/g, "");
-                setBankCountryName(onlyAlphabets.toUpperCase());
-            }}
-            className={styles.fieldInput}
-            placeholder="Enter Country Name"
-            required
-            readOnly={isReadOnly}
-        />
-    </div>
-)}
+                                        {/* Specify Country if not India */}
+                                        {isOtherBankCountry && (
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>Specify Country</label>
+                                                <input
+                                                    type="text"
+                                                    name="bankCountryName"
+                                                    value={bankCountryName}
+                                                    onChange={(e) => {
+                                                        const onlyAlphabets = e.target.value.replace(/[^a-zA-Z]/g, "");
+                                                        setBankCountryName(onlyAlphabets.toUpperCase());
+                                                    }}
+                                                    className={styles.fieldInput}
+                                                    placeholder="Enter Country Name"
+                                                    required
+                                                    readOnly={isReadOnly}
+                                                />
+                                            </div>
+                                        )}
 
-{/* Account Number */}
-<div className={styles.fieldRow}>
-    <label className={styles.fieldLabel}>
-        Account Number <span className={styles.requiredSymbol}>*</span>
-    </label>
-    <input
-        type="text"
-        name="account_number"
-        value={bankInfo.account_number || ""}
-        onChange={handleBankDetailsChange}
-        className={styles.fieldInput}
-        required
-        readOnly={isReadOnly}
-    />
-</div>
+                                        {/* Account Number */}
+                                        <div className={styles.fieldRow}>
+                                            <label className={styles.fieldLabel}>
+                                                Account Number <span className={styles.requiredSymbol}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="account_number"
+                                                value={bankInfo.account_number || ""}
+                                                onChange={handleBankDetailsChange}
+                                                className={styles.fieldInput}
+                                                required
+                                                readOnly={isReadOnly}
+                                            />
+                                        </div>
 
-{/* IFSC / SWIFT based on Transaction Type */}
-{(bankInfo.transactionType === "Domestic" || bankInfo.transactionType === "Domestic and International") && (
-    <div className={styles.fieldRow}>
-        <label className={styles.fieldLabel}>
-            IFSC Code <span className={styles.requiredSymbol}>*</span>
-        </label>
-        <input
-            type="text"
-            name="ifscCode"
-            value={bankInfo.ifscCode || ""}
-            onChange={(e) =>
-                setBankInfo((prev) => ({ ...prev, ifscCode: e.target.value.toUpperCase() }))
-            }
-            maxLength={11}
-            className={styles.fieldInput}
-        />
-    </div>
-)}
+                                        {/* IFSC / SWIFT based on Transaction Type */}
+                                        {(bankInfo.transactionType === "Domestic" || bankInfo.transactionType === "Domestic and International") && (
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>
+                                                    IFSC Code <span className={styles.requiredSymbol}>*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="ifscCode"
+                                                    value={bankInfo.ifscCode || ""}
+                                                    onChange={(e) =>
+                                                        setBankInfo((prev) => ({ ...prev, ifscCode: e.target.value.toUpperCase() }))
+                                                    }
+                                                    maxLength={11}
+                                                    className={styles.fieldInput}
+                                                />
+                                            </div>
+                                        )}
 
-{(bankInfo.transactionType === "International" || bankInfo.transactionType === "Domestic and International") && (
-    <div className={styles.fieldRow}>
-        <label className={styles.fieldLabel}>
-            SWIFT Code <span className={styles.requiredSymbol}>*</span>
-        </label>
-        <input
-            type="text"
-            name="swiftCode"
-            value={bankInfo.swiftCode || ""}
-            onChange={(e) =>
-                setBankInfo((prev) => ({ ...prev, swiftCode: e.target.value.toUpperCase() }))
-            }
-            maxLength={11}
-            className={styles.fieldInput}
-        />
-    </div>
-)}
+                                        {(bankInfo.transactionType === "International" || bankInfo.transactionType === "Domestic and International") && (
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>
+                                                    SWIFT Code <span className={styles.requiredSymbol}>*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="swiftCode"
+                                                    value={bankInfo.swiftCode || ""}
+                                                    onChange={(e) =>
+                                                        setBankInfo((prev) => ({ ...prev, swiftCode: e.target.value.toUpperCase() }))
+                                                    }
+                                                    maxLength={11}
+                                                    className={styles.fieldInput}
+                                                />
+                                            </div>
+                                        )}
 
 
                                         <div className={styles.fieldRow}>
@@ -3602,18 +3661,24 @@ const VmsRequest = () => {
 
                                         {/* 🔹 GSTIN Upload Section */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>
-                                                GSTIN Available
-                                            </label>
+                                            <label className={styles.fieldLabel}>GSTIN Available</label>
+
                                             <select
                                                 name="gst_available"
                                                 value={documents.gst_available || ""}
-                                                onChange={(e) =>
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+
                                                     setDocuments((prev) => ({
                                                         ...prev,
-                                                        gst_available: e.target.value, // store as string
-                                                    }))
-                                                }
+                                                        gst_available: value,
+
+                                                        // Auto-reset GST document when dropdown changes
+                                                        gst: value === "true"
+                                                            ? prev.gst  // keep existing only if reselected Yes
+                                                            : null       // clear when user selects "No"
+                                                    }));
+                                                }}
                                                 className={styles.fieldInput}
                                                 required
                                                 disabled={isReadOnly}
@@ -3624,12 +3689,13 @@ const VmsRequest = () => {
                                             </select>
                                         </div>
 
-                                        {/* ✅ Show GSTIN upload only if “Yes” */}
+                                        {/* Show GSTIN upload only if YES */}
                                         {documents.gst_available === "true" && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>
                                                     GSTIN Certificate <span className={styles.requiredSymbol}>*</span>
                                                 </label>
+
                                                 <input
                                                     type="file"
                                                     accept=".jpg,.jpeg,.png,.pdf"
@@ -3638,11 +3704,12 @@ const VmsRequest = () => {
                                                     readOnly={isReadOnly}
                                                 />
 
-                                                {/* ✅ File name and View button inline (same as PAN) */}
+                                                {/* File name */}
                                                 {documents.gst?.fileName && (
                                                     <span className={styles.fileName}>📄 {documents.gst.fileName}</span>
                                                 )}
 
+                                                {/* View Button */}
                                                 {documents.gst?.url && (
                                                     <a
                                                         href={
@@ -3659,7 +3726,6 @@ const VmsRequest = () => {
                                                 )}
                                             </div>
                                         )}
-
 
 
                                         {/* MSME Registered? */}
@@ -3818,20 +3884,24 @@ const VmsRequest = () => {
                                             )}
                                         </div>
 
-                                        {/* 🔹 TDS Declaration */}
+                                        {/* TDS Declaration */}
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>
-                                                TDS Declaration
-                                            </label>
+                                            <label className={styles.fieldLabel}>TDS Declaration</label>
+
                                             <select
                                                 name="tds_declaration"
-                                                value={documents.tds_declaration || ""} // ✅ ensure string value
-                                                onChange={(e) =>
+                                                value={documents.tds_declaration || ""}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+
                                                     setDocuments((prev) => ({
                                                         ...prev,
-                                                        tds_declaration: e.target.value, // store as string
-                                                    }))
-                                                }
+                                                        tds_declaration: value,
+
+                                                        // Auto-reset uploaded file when user selects "No"
+                                                        tds: value === "true" ? prev.tds : null
+                                                    }));
+                                                }}
                                                 className={styles.fieldInput}
                                                 required
                                                 disabled={isReadOnly}
@@ -3842,12 +3912,13 @@ const VmsRequest = () => {
                                             </select>
                                         </div>
 
-                                        {/* ✅ Show TDS Upload if Yes */}
+                                        {/* Show upload only if YES */}
                                         {documents.tds_declaration === "true" && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>
                                                     Upload TDS Declaration <span className={styles.requiredSymbol}>*</span>
                                                 </label>
+
                                                 <input
                                                     type="file"
                                                     accept=".jpg,.jpeg,.png,.pdf"
@@ -3856,11 +3927,12 @@ const VmsRequest = () => {
                                                     readOnly={isReadOnly}
                                                 />
 
-                                                {/* File name and view button inline */}
+                                                {/* File Name */}
                                                 {documents.tds?.fileName && (
                                                     <span className={styles.fileName}>📄 {documents.tds.fileName}</span>
                                                 )}
 
+                                                {/* View Button */}
                                                 {documents.tds?.url && (
                                                     <a
                                                         href={
@@ -3879,7 +3951,6 @@ const VmsRequest = () => {
                                         )}
                                     </div>
                                 )}
-
                                 {/* STEP 6: Declaration & Confidentiality */}
                                 {currentPage === 6 && (
                                     <div className={styles.page}>
