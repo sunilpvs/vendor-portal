@@ -4,11 +4,11 @@ import Header from "../../components/Header";
 import styles from "./vms.module.css";
 import { Modal, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { addCompanyInfo, addCounterParty, getCompanyInfo, getCounterPartyInfo } from "../../services/vms/counterPartyService";
-import { addMsmeDetails, getMsmeDetails } from "../../services/vms/msmeService";
-import { addBankDetails, addComplianceDetails, getBankDetails } from "../../services/vms/bankDetailsService";
-import { addFinancialDetails, addGoodsAndServices, addGstDetails, addGstRegistrations, addIncomeTaxDetails, addNatureOfBusiness, getGoodsAndServices, getGstDetails, getGstRegistrations, getIncomeTaxDetails } from "../../services/vms/gstService";
-import { addDocuments, getDocumentDetails } from "../../services/vms/documentService";
+import { addCompanyInfo, updateCompanyInfo, getCompanyInfo, getCounterPartyInfo } from "../../services/vms/counterPartyService";
+import { addMsmeDetails, updateMsmeDetails, getMsmeDetails } from "../../services/vms/msmeService";
+import { addBankDetails, updateBankDetails, getBankDetails } from "../../services/vms/bankDetailsService";
+import { addGstRegistrations, updateGstRegistrations, addGoodsAndServices, updateGoodsAndServices, addIncomeTaxDetails, updateIncomeTaxDetails, getGstRegistrations, getIncomeTaxDetails, getGoodsAndServices } from "../../services/vms/gstService";
+import { addDocuments, updateDocuments, getDocumentDetails } from "../../services/vms/documentService";
 
 import { getPreviousComments } from "../../services/vms/commentsService";
 
@@ -282,6 +282,7 @@ const VmsRequest = () => {
         setDocuments((prev) => ({
             ...prev,
             [field]: {
+                ...prev[field], // 👈 Preserve existing properties like docId
                 file,
                 fileName: file.name,
                 url: URL.createObjectURL(file),
@@ -442,6 +443,8 @@ const VmsRequest = () => {
     const [formData, setFormData] = useState({
         fy1: "",
         fy2: "",
+        it1_id: null,
+        it2_id: null,
         currencyType1: "",
         currencyType2: "",
         currencyName1: "",
@@ -595,39 +598,42 @@ const VmsRequest = () => {
 
 
 
-    // Step 1: Company Info
+    // Step 1: Company Info | Counterparty information 
     const [companyInfo, setCompanyInfo] = useState({
         full_registered_name: "",
         business_entity_type: "",
+        reg_number: "",
+        tan_number: "",
         trading_name: "",
         company_email: "",
+        country_type: "",
+        country_id: null,
+        state_id: null,
+        country_text: "",
+        state_text: "",
         telephone: "",
         registered_address: "",
         business_address: "",
+        contact_person_title: "",
         contact_person_name: "",
         contact_person_email: "",
         contact_person_mobile: "",
-        website: "",
-        country_of_incorporation: "",
-        trade_license_number: "",
-        cin_number: "",
-        pan_number: "",
-        tan_number: "",
-        gst_vat_number: "",
+        accounts_person_title: "",
         accounts_person_name: "",
         accounts_person_contact_no: "",
         accounts_person_email: "",
-        reg_number: "", // Dynamic based on business entity type
+
         isOtherCountry: false,
     });
-    const isIndia = countries.find(c => c.id == companyInfo.country_of_incorporation)?.country?.toLowerCase() === "india";
-
+    const isIndia = countries.find(c => c.id == companyInfo.country_id)?.country?.toLowerCase() === "india";
 
     const selectedEntityType = companyInfo.business_entity_type;
     const showFullCompanyFields = companyTypesRequiringFullDetails.includes(selectedEntityType);
     const showBasicRegistrationField = entitiesRequiringBasicRegistration.includes(selectedEntityType);
 
-    // 🟢 Auto-set India for Sole Proprietorship & Partnership (non-editable)
+
+
+    //  Auto-set India for Sole Proprietorship & Partnership (non-editable)
     useEffect(() => {
         const isAutoIndiaType = ["Sole Proprietorship", "Partnership"].includes(
             companyInfo.business_entity_type
@@ -660,27 +666,35 @@ const VmsRequest = () => {
                 const normalized = {
                     full_registered_name: data.full_registered_name || "",
                     business_entity_type: data.business_entity_type || "",
+                    reg_number: data.reg_number || "",
+                    tan_number: data.tan_number || "",
                     trading_name: data.trading_name || "",
                     company_email: data.company_email || "",
+
+                    isOtherCountry: data.country_type === "Others",
+
+                    country_type: data.country_type || "",
+
+                    country_id: data.country_type === "India" ? data.country_id : null,
+                    state_id: data.country_type === "India" ? data.state_id : null,
+
+                    country_text: data.country_type === "Others" ? data.country_text : "",
+                    state_text: data.country_type === "Others" ? data.state_text : "",
                     telephone: data.telephone || "",
                     registered_address: data.registered_address || "",
                     business_address: data.business_address || "",
+                    contact_person_title: data.contact_person_title || "",
                     contact_person_name: data.contact_person_name || "",
                     contact_person_email: data.contact_person_email || "",
                     contact_person_mobile: data.contact_person_mobile || "",
-                    website: data.website || "",
-                    country_of_incorporation: data.country_id || "", //  use ID for dropdown
-                    state: data.state_id,
-                    trade_license_number: data.trade_license_number || "",
-                    cin_number: data.cin_number || "",
-                    pan_number: data.pan_number || "",
-                    tan_number: data.tan_number || "",
-                    gst_vat_number: data.gst_vat_number || "",
+                    accounts_person_title: data.accounts_person_title || "",
                     accounts_person_name: data.accounts_person_name || "",
                     accounts_person_contact_no: data.accounts_person_contact_no || "",
                     accounts_person_email: data.accounts_person_email || "",
-                    reg_number: data.reg_number || "",
+
                 };
+
+
 
                 setCompanyInfo((prev) => ({ ...prev, ...normalized }));
             } catch (error) {
@@ -692,52 +706,49 @@ const VmsRequest = () => {
     }, [referenceId]);
 
 
-
-
+    // submit company info add if its new else update
     const handleSubmitCompanyInfo = async (e) => {
 
+        // try {
+        //     const tanFormData = new FormData();
+        //     tanFormData.append("reference_id", referenceId);
+        //     tanFormData.append("tan_number", hasTan === "Yes" ? companyInfo.tan_number : "");
+        //     // if (hasTan === "No" && tanExemptionFile) {
+        //     //     tanFormData.append("tan_exemption_certificate", tanExemptionFile);
+        //     // }
+
+        //     await addCompanyInfo(referenceId, tanFormData);
+
+        //     toast.success("Company information added successfully!");
+        //     nextPage();
+        // } catch (error) {
+        //     console.error("Error adding company info:", error);
+        //     toast.error("Error occurred while saving company information.");
+        // }
+
+
+        // add if new else update
         try {
-            const tanFormData = new FormData();
-            tanFormData.append("reference_id", referenceId);
-            tanFormData.append("tan_number", hasTan === "Yes" ? companyInfo.tan_number : "");
-            if (hasTan === "No" && tanExemptionFile) {
-                tanFormData.append("tan_exemption_certificate", tanExemptionFile);
+            const existingResponse = await getCompanyInfo(referenceId);
+            if (existingResponse && existingResponse.status === 200 && existingResponse.data && Object.keys(existingResponse.data).length > 0) {
+                // Update existing
+                await updateCompanyInfo(referenceId, companyInfo);
+                toast.success("Company information updated successfully!");
+                nextPage();
             }
 
-            await addCompanyInfo(referenceId, tanFormData);
-
-            toast.success("Company information added successfully!");
-            nextPage();
         } catch (error) {
-            console.error("Error adding company info:", error);
-            toast.error("Error occurred while saving company information.");
-        }
-
-        // If CIN exists, ensure it's exactly 21 alphanumeric chars
-        if (companyInfo.cin_number) {
-            if (!/^[A-Z0-9]{21}$/.test(companyInfo.cin_number)) {
-                toast.error("CIN must be exactly 21 alphanumeric characters (A–Z, 0–9).");
-                return;
-            }
-        }
-
-
-        try {
-            // Send companyInfo state as payload
-            const response = await addCompanyInfo(referenceId, companyInfo);
-
-            if (response.status === 200 || response.status === 201) {
+            // Add new
+            try {
+                await addCompanyInfo(referenceId, companyInfo);
                 toast.success("Company information added successfully!");
                 nextPage();
-            } else {
-                toast.error("Failed to add company information. Please try again.");
-                nextPage();
+            } catch (err) {
+                console.error("Error adding company info:", err);
+                toast.error("Error occurred while saving company information.");
             }
-        } catch (error) {
-            console.error("Error adding counterparty info:", error);
-            toast.error("Error occurred while saving company information.");
-            nextPage();
         }
+
     };
 
 
@@ -783,9 +794,29 @@ const VmsRequest = () => {
     }, [companyInfo.business_entity_type]);
 
 
+    useEffect(() => {
+        if (companyInfo.tan_number && companyInfo.tan_number !== "") {
+            setTanStatus("yes");
+        } else {
+            setTanStatus("no");
+        }
+    }, [companyInfo.tan_number]);
+
+
+    // auto select the checkbox if registered address and business address are same
+    useEffect(() => {
+        if (companyInfo.registered_address === companyInfo.business_address && companyInfo.registered_address !== "") {
+            setSameAsRegistered(true);
+        } else {
+            setSameAsRegistered(false);
+        }
+    }, [companyInfo.registered_address, companyInfo.business_address]);
+
+
     const handleCompanyInfoChange = (e) => {
         const { name, value } = e.target;
         let cleaned = value;
+
 
         // 🟢 Name fields — only letters and spaces, uppercase
         const nameFields = [
@@ -798,10 +829,6 @@ const VmsRequest = () => {
             cleaned = value.replace(/[^A-Za-z\s]/g, "").toUpperCase();
         }
 
-        //  CIN — uppercase alphanumeric, max 21 chars
-        else if (name === "cin_number") {
-            cleaned = value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 21);
-        }
 
         //  Registration / TAN / PAN / GST / UDYAM / NGO fields
         else if (
@@ -835,9 +862,9 @@ const VmsRequest = () => {
             cleaned = value.toLowerCase();
         }
 
-        // 🟢 Phone numbers — digits only
+        // 🟢 Phone numbers — digits and +, -
         else if (["telephone", "contact_person_mobile", "accounts_person_contact_no"].includes(name)) {
-            cleaned = value.replace(/[^0-9]/g, "");
+            cleaned = value.replace(/[^0-9+\-]/g, "");
         }
 
         // 🟢 Dropdowns — keep as selected
@@ -939,6 +966,8 @@ const VmsRequest = () => {
         }));
     };
 
+
+    // add if new else update msme details
     const handleSaveMsmeInfo = async () => {
         try {
 
@@ -949,14 +978,160 @@ const VmsRequest = () => {
                 category: msmeInfo.category,
             };
 
-            await addMsmeDetails(referenceId, msmePayload); // vendor_id hardcoded as 3 (replace with dynamic)
-            toast.success("MSME Details saved successfully!");
-            nextPage();
-        } catch (err) {
-            console.error(err);
-            toast.error(err.response?.data?.error || "Failed to save Step 2");
+            const existingResponse = await getMsmeDetails(referenceId);
+            if (existingResponse && existingResponse.status === 200 && existingResponse.data && Object.keys(existingResponse.data).length > 0) {
+                // Update existing
+                await updateMsmeDetails(referenceId, msmePayload);
+                toast.success("MSME information updated successfully!");
+                nextPage();
+            }
+        } catch (error) {
+            // Add new
+            try {
+
+                const msmePayload = {
+                    type: "msme",
+                    registered_under_msme: msmeInfo.registered_under_msme === "true",
+                    udyam_registration_number: msmeInfo.udyam_registration_number,
+                    category: msmeInfo.category,
+                };
+
+                await addMsmeDetails(referenceId, msmePayload);
+                toast.success("MSME information added successfully!");
+                nextPage();
+            } catch (err) {
+                console.error("Error adding MSME info:", err);
+                toast.error("Error occurred while saving MSME information.");
+            }
         }
     };
+
+
+    const [goodsServices, setGoodsServices] = useState({
+        counterparty_id: null,
+        type_of_counterparty: "",
+        others: "",
+        items: [],
+        type: "",
+        description: "",
+    });
+
+
+
+    const [incomeTaxDetails, setIncomeTaxDetails] = useState({
+        fin_year: "",
+        turnover: "",
+        status_of_itr: "",
+        itr_ack_num: "",
+        itr_filed_date: "",
+    });
+
+    // get goods and services AND counterparty type
+
+    // api response
+    //  {
+    //     "goods_services": [
+    //         {
+    //             "gs_id": 3,
+    //             "reference_id": "RFI-VEN-00001",
+    //             "type": "Goods and Services",
+    //             "description": "This is newly added"
+    //         }
+    //     ],
+    //     "type_of_counterparty": {
+    //         "counterparty_id": 1,
+    //         "reference_id": "RFI-VEN-00001",
+    //         "type_of_counterparty": "Others",
+    //         "others": "Counterparty"
+    //     }
+    // }
+    useEffect(() => {
+        const fetchGoodsServices = async () => {
+            try {
+                const response = await getGoodsAndServices(referenceId);
+                const data = response?.data;
+
+                if (!data) return;
+
+                const goodsArr = [];
+                const servicesArr = [];
+                const goodsServicesArr = [];
+                const itemsArr = [];   // stores { gs_id, description }
+
+                data.goods_services.forEach(item => {
+                    itemsArr.push({
+                        gs_id: item.gs_id,
+                        description: item.description,
+                        type: item.type
+                    });
+
+                    if (item.type === "Goods") {
+                        goodsArr.push(item.description || "");
+                    }
+
+                    if (item.type === "Services") {
+                        servicesArr.push(item.description || "");
+                    }
+
+                    if (item.type === "Goods and Services") {
+                        const [g, s] = item.description.split(" & ");
+                        goodsServicesArr.push({
+                            goods: g || "",
+                            services: s || ""
+                        });
+                    }
+                });
+
+                // Set field arrays
+                setGoods(goodsArr);
+                setServices(servicesArr);
+                setGoodsAndServices(goodsServicesArr);
+
+                // Set meta object
+                setGoodsServices({
+                    type: data.goods_services[0].type || "",
+                    counterparty_id: data.type_of_counterparty?.counterparty_id || null,
+                    type_of_counterparty: data.type_of_counterparty?.type_of_counterparty || "",
+                    others: data.type_of_counterparty?.others || "",
+                    items: itemsArr   // <- IMPORTANT for update mode
+                });
+
+            } catch (error) {
+                console.error("Error fetching Goods and Services:", error);
+            }
+        };
+
+        if (referenceId) fetchGoodsServices();
+    }, [referenceId]);
+
+
+    // get gst registrations and gst type
+    // api response
+    // {
+    //     "gst_registrations": [
+    //         {
+    //             "gst_id": 1,
+    //             "reference_id": "RFI-VEN-00001",
+    //             "gst_applicable": 1,
+    //             "state": 5,
+    //             "gst_number": "9923LJDFKAS"
+    //         },
+    //         {
+    //             "gst_id": 2,
+    //             "reference_id": "RFI-VEN-00001",
+    //             "gst_applicable": 1,
+    //             "state": 2,
+    //             "gst_number": "27ABCDE1234F1Z5"
+    //         }
+    //     ],
+    //     "gst_type": {
+    //         "gst_type_id": 1,
+    //         "reference_id": "RFI-VEN-00001",
+    //         "reg_type": "Regular",
+    //         "gstr_filling_type": "Quarterly"
+    //     }
+    // }
+
 
 
     const [count, setCount] = useState(0);
@@ -973,97 +1148,49 @@ const VmsRequest = () => {
         setgstFormData(updatedData);
     };
 
-    const [goodsServices, setGoodsServices] = useState({
-        type_of_counterparty: "",
-        others: "",
-        items: [],
-        type: "",
-        description: "",
-    });
 
     const [gstMeta, setGstMeta] = useState({
+        gst_type_id: null,
         reg_type: "",
-        periodicity_gstr1: "",
+        gstr_filling_type: "",
+        gst_applicable: "",
     });
 
 
-    const [incomeTaxDetails, setIncomeTaxDetails] = useState({
-        fin_year: "",
-        turnover: "",
-        status_of_itr: "",
-        itr_ack_num: "",
-        itr_filed_date: "",
-    });
-
-    // get goods and services
-    useEffect(() => {
-        const fetchGoodsAndServices = async () => {
-            try {
-                const response = await getGoodsAndServices(referenceId);
-                const data = response?.data;
-
-                if (data && data.length > 0) {
-                    // Extract top-level info (shared for all)
-                    const type_of_counterparty = data[0].type_of_counterparty || "";
-                    const others = data[0].others || "";
-
-                    // Separate by type
-                    const goodsList = data
-                        .filter(item => item.type === "Goods")
-                        .map(item => item.description || "");
-
-                    const servicesList = data
-                        .filter(item => item.type === "Services")
-                        .map(item => item.description || "");
-
-                    const goodsAndServicesList = data
-                        .filter(item => item.type === "Goods and Services")
-                        .map(item => {
-                            const [goodsPart, servicesPart] = (item.description || "").split("&").map(str => str.trim());
-                            return { goods: goodsPart || "", services: servicesPart || "" };
-                        });
-
-                    setGoods(goodsList);
-                    setServices(servicesList);
-                    setGoodsAndServices(goodsAndServicesList);
-
-                    setGoodsServices({
-                        type_of_counterparty,
-                        others,
-                        items: data.map(item => ({
-                            type: item.type || "",
-                            description: item.description || ""
-                        }))
-                    });
-                }
-            } catch (error) {
-                console.error("Error fetching Goods and Services:", error);
-            }
-        };
-
-        if (referenceId) fetchGoodsAndServices();
-    }, [referenceId]);
-
-    // get gst registrations
     useEffect(() => {
         const fetchGstRegistrations = async () => {
             try {
                 const response = await getGstRegistrations(referenceId);
                 const data = response?.data;
-                if (data && data.length > 0) {
-                    setgstFormData(data.map(item => ({
+
+                if (data) {
+                    const gstItems = data.gst_registrations.map(item => ({
+                        gst_id: item.gst_id || null,
                         state: item.state || "",
                         gstNumber: item.gst_number || "",
                         regDate: item.reg_date || "",
-                    })));
-                    setGstMeta({
-                        reg_type: data[0].reg_type || "",
-                        periodicity_gstr1: data[0].periodicity_gstr1 || "",
-                    });
-                    setCount(data.length);
+                    }));
+
+                    setgstFormData(gstItems);
+
+                    if (data.gst_registrations.length > 0) {
+                        setGstApplicable(
+                            data.gst_registrations[0].gst_applicable === 1 ? "true" : "false"
+                        );
+                    }
+
+                    setCount(gstItems.length);
+
+                    if (data.gst_type) {
+                        setGstMeta({
+                            gst_type_id: data.gst_type.gst_type_id || null,
+                            reg_type: data.gst_type.reg_type || "",
+                            gstr_filling_type: data.gst_type.gstr_filling_type || "",
+                        });
+                    }
                 }
             } catch (error) {
-                console.error("Error fetching GST Registrations:", error);
+                console.error("Error:", error);
             }
         };
 
@@ -1072,6 +1199,51 @@ const VmsRequest = () => {
 
 
     // get income tax details
+    // api response
+    //     [
+    //     {
+    //         "it_id": 1,
+    //         "reference_id": "RFI-VEN-00001",
+    //         "fin_year": "2024-2025",
+    //         "currency_type": "Others",
+    //         "others": "akfk",
+    //         "turnover": "2000000.00000",
+    //         "status_of_itr": 0,
+    //         "itr_ack_num": null,
+    //         "itr_filed_date": null
+    //     },
+    //     {
+    //         "it_id": 2,
+    //         "reference_id": "RFI-VEN-00001",
+    //         "fin_year": "2023-2024",
+    //         "currency_type": "Rupees (INR)",
+    //         "others": null,
+    //         "turnover": "900000.00000",
+    //         "status_of_itr": 0,
+    //         "itr_ack_num": null,
+    //         "itr_filed_date": null
+    //     }
+    // ]
+
+
+    // const [formData, setFormData] = useState({
+    //     fy1: "",
+    //     fy2: "",
+    //     currencyType1: "",
+    //     currencyType2: "",
+    //     currencyName1: "",
+    //     currencyName2: "",
+    //     turnover1: "",
+    //     turnover2: "",
+    //     itrStatus1: "",
+    //     itrStatus2: "",
+    //     ackNo1: "",
+    //     ackNo2: "",
+    //     filedDate1: "",
+    //     filedDate2: "",
+
+    // });
+
 
 
     useEffect(() => {
@@ -1079,139 +1251,436 @@ const VmsRequest = () => {
             try {
                 const response = await getIncomeTaxDetails(referenceId);
                 const data = response?.data;
+                if (data && Array.isArray(data)) {
+                    const incomeTaxItems = {};
 
-                if (data && data.length > 0) {
-                    // Sort by year if needed, or assume API gives correct order
-                    const details = data.slice(0, 3); // limit to 3 FYs
+                    // Parse ITR filed date and extract year, month, day
+                    const parseItrDate = (dateStr) => {
+                        if (!dateStr) return { year: "", month: "", day: "" };
 
-                    setFormData({
-                        fy1: details[0]?.fin_year || "",
-                        fy2: details[1]?.fin_year || "",
+                        const date = new Date(dateStr);
+                        if (isNaN(date.getTime())) return { year: "", month: "", day: "" };
 
+                        return {
+                            year: date.getFullYear().toString(),
+                            month: String(date.getMonth() + 1).padStart(2, "0"),
+                            day: String(date.getDate()).padStart(2, "0")
+                        };
+                    };
 
-                        turnover1: details[0]?.turnover || "",
-                        turnover2: details[1]?.turnover || "",
-
-
-                        itrStatus1: details[0]?.status_of_itr || "",
-                        itrStatus2: details[1]?.status_of_itr || "",
-
-
-                        ackNo1: details[0]?.itr_ack_num || "",
-                        ackNo2: details[1]?.itr_ack_num || "",
-
-
-                        filedDate1: details[0]?.itr_filed_date || "",
-                        filedDate2: details[1]?.itr_filed_date || "",
-
+                    data.forEach(item => {
+                        if (item.fin_year) {
+                            if (item.fin_year === formData.fy1) {
+                                const itrDate1 = parseItrDate(item.itr_filed_date);
+                                incomeTaxItems.fy1 = {
+                                    it1_id: item.it_id || null,
+                                    fin_year: item.fin_year || "",
+                                    currencyType1: item.currency_type || "",
+                                    currencyName1: item.currency_type === "Others" ? item.others || "" : "",
+                                    turnover1: item.turnover || "",
+                                    itrStatus1: item.status_of_itr == 1 ? "true" : "false",
+                                    ackNo1: item.itr_ack_num || "",
+                                    filedDate1: item.itr_filed_date || "",
+                                    itrYear1: itrDate1.year,
+                                    itrMonth1: itrDate1.month,
+                                    itrDay1: itrDate1.day,
+                                };
+                            } else if (item.fin_year === formData.fy2) {
+                                const itrDate2 = parseItrDate(item.itr_filed_date);
+                                incomeTaxItems.fy2 = {
+                                    it2_id: item.it_id || null,
+                                    fin_year: item.fin_year || "",
+                                    currencyType2: item.currency_type || "",
+                                    currencyName2: item.currency_type === "Others" ? item.others || "" : "",
+                                    turnover2: item.turnover || "",
+                                    itrStatus2: item.status_of_itr == 1 ? "true" : "false",
+                                    ackNo2: item.itr_ack_num || "",
+                                    filedDate2: item.itr_filed_date || "",
+                                    itrYear2: itrDate2.year,
+                                    itrMonth2: itrDate2.month,
+                                    itrDay2: itrDate2.day,
+                                };
+                            }
+                        }
                     });
+
+                    setFormData((prev) => ({
+                        ...prev,
+                        ...incomeTaxItems.fy1,
+                        ...incomeTaxItems.fy2,
+                    }));
+
+                    console.log("Fetched Income Tax Details:", formData);
                 }
             } catch (error) {
                 console.error("Error fetching Income Tax Details:", error);
             }
         };
-
         if (referenceId) fetchIncomeTaxDetails();
-    }, [referenceId]);
-
+    }, [referenceId, formData.fy1, formData.fy2]);
 
 
 
     // save goods and services
-    const handleSaveGoodsServices = async () => {
+    // api payload
+    // post:
+    // {
+    //     "type_of_counterparty": "Trading Entity",
+    //         "others": "Counterparty",
+    //             "type": "goods",
+    //                 "descriptions": ["goods1", "goods2"]
+    // }
+
+    // put:
+    // {
+    //     "type": "Goods and services",
+    //         "type_of_counterparty": "Others",
+    //             "others": "Counterparty",
+    //                 "items": [
+    //                     { "gs_id": 1, "description": "Updated item" },
+    //                     { "gs_id": 2, "description": "Another updated item" },
+    //                     { "description": "This is newly added" }
+    //                 ]
+    // }
 
 
+
+    // add if new else update goods and services
+    const saveGoodsAndServices = async () => {
         try {
-            // Combine all goods/services entries
-            const items = [
-                ...goods.map(g => ({ type: "Goods", description: g })),
-                ...services.map(s => ({ type: "Services", description: s })),
-                ...goodsAndServices.map(gs => ({
-                    type: "Goods and Services",
-                    description: `${gs.goods}${gs.goods && gs.services ? " & " : ""}${gs.services}` || ""
-                }))
-            ];
+            // 1. Build new descriptions array
+            let newDescriptions = [];
 
-            let payload = {
-                type_of_counterparty: goodsServices.type_of_counterparty || "",
-                others: goodsServices.others || null,
-                items
-            };
-
-            // Validate
-            const hasValidItems = items.some(i => i.type && i.description);
-            if (!payload.type_of_counterparty || !hasValidItems) {
-                toast.error("Type of counterparty and at least one valid goods/service are required.");
-                return false;
+            if (goodsServices.type === "Goods") {
+                newDescriptions = goods.filter(x => x?.trim() !== "");
             }
 
-            await addGoodsAndServices(referenceId, payload);
-            toast.success("Goods & Services saved successfully!");
-            return true;
+            if (goodsServices.type === "Services") {
+                newDescriptions = services.filter(x => x?.trim() !== "");
+            }
+
+            if (goodsServices.type === "Goods and Services") {
+                newDescriptions = goodsAndServices
+                    .filter(x => x?.goods?.trim() || x?.services?.trim())
+                    .map(x => `${x.goods} & ${x.services}`);
+            }
+
+            const validDescriptions = newDescriptions.filter(desc => desc.trim() !== "");
+
+            const existingItems = goodsServices.items || [];
+            const updatedPayloadItems = [];
+
+            // 2. Match valid descriptions with existing items BY ORDER
+            validDescriptions.forEach((desc, i) => {
+                const existing = existingItems[i];
+
+                if (existing && existing.gs_id) {
+                    updatedPayloadItems.push({
+                        gs_id: existing.gs_id,
+                        description: desc
+                    });
+                } else {
+                    updatedPayloadItems.push({
+                        description: desc
+                    });
+                }
+            });
+
+            // 3. Determine update or add
+            // Check if we have existing items with gs_id OR if counterparty_id exists
+            const isUpdate = existingItems.some(item => item.gs_id) || goodsServices.counterparty_id;
+
+            const payload = isUpdate
+                ? {
+                    type: goodsServices.type,
+                    type_of_counterparty: goodsServices.type_of_counterparty,
+                    others: goodsServices.others,
+                    items: updatedPayloadItems
+                }
+                : {
+                    type: goodsServices.type,
+                    type_of_counterparty: goodsServices.type_of_counterparty,
+                    others: goodsServices.others,
+                    descriptions: validDescriptions
+                };
+
+            console.log("FINAL PAYLOAD:", payload);
+
+            if (isUpdate) {
+                await updateGoodsAndServices(referenceId, payload);
+            } else {
+                await addGoodsAndServices(referenceId, payload);
+            }
+
+            // Refresh the data after successful save instead of page reload
+            const response = await getGoodsAndServices(referenceId);
+            const data = response?.data;
+
+            if (data) {
+                const goodsArr = [];
+                const servicesArr = [];
+                const goodsServicesArr = [];
+                const itemsArr = [];
+
+                data.goods_services.forEach(item => {
+                    itemsArr.push({
+                        gs_id: item.gs_id,
+                        description: item.description,
+                        type: item.type
+                    });
+
+                    if (item.type === "Goods") {
+                        goodsArr.push(item.description || "");
+                    }
+
+                    if (item.type === "Services") {
+                        servicesArr.push(item.description || "");
+                    }
+
+                    if (item.type === "Goods and Services") {
+                        const [g, s] = item.description.split(" & ");
+                        goodsServicesArr.push({
+                            goods: g || "",
+                            services: s || ""
+                        });
+                    }
+                });
+
+                // Update state with fresh data including gs_id values
+                setGoods(goodsArr);
+                setServices(servicesArr);
+                setGoodsAndServices(goodsServicesArr);
+
+                setGoodsServices({
+                    type: data.goods_services[0]?.type || goodsServices.type,
+                    counterparty_id: data.type_of_counterparty?.counterparty_id || null,
+                    type_of_counterparty: data.type_of_counterparty?.type_of_counterparty || goodsServices.type_of_counterparty,
+                    others: data.type_of_counterparty?.others || goodsServices.others,
+                    items: itemsArr
+                });
+            }
+
+            nextPage();
 
         } catch (error) {
-            console.error("Error saving Goods/Services:", error);
-            toast.error("Failed to save Goods & Services.");
-            return false;
+            console.error("Save Goods & Services error:", error);
         }
     };
+
+
 
     // save gst registrations
-    const handleSaveGstRegistrations = async () => {
-
-
+    const saveGstRegistrations = async () => {
         try {
-            const payload = {
-                items: gstformData.map(entry => ({
-                    state: entry.state || "",
-                    gst_number: entry.gstNumber || "",
-                    reg_date: entry.regDate || "",
-                })),
+            const gstApplicableBool = gstApplicable === "true";
+
+            // base payload for PUT and POST
+            let payload = {
+                gst_applicable: gstApplicableBool,
                 reg_type: gstMeta.reg_type,
-                periodicity_gstr1: gstMeta.periodicity_gstr1,
+                gstr_filling_type: gstMeta.gstr_filling_type
             };
 
-            await addGstRegistrations(referenceId, payload);
-
-            toast.success("GST Registrations saved successfully!");
-            return true;
-        } catch (error) {
-            console.error("Error saving GST Registrations:", error);
-            toast.error("Failed to save GST Registrations.");
-            return false;
-        }
-    };
-
-    // save income tax details
-    const handleSaveIncomeTaxDetails = async () => {
-
-        try {
-            // Prepare payload for all 3 years
-            const payload = [1, 2, 3]
-                .map(i => ({
-                    fin_year: formData[`fy${i}`] || "",
-                    turnover: formData[`turnover${i}`] || "",
-                    status_of_itr: formData[`itrStatus${i}`] || "",
-                    itr_ack_num: formData[`ackNo${i}`] || "",
-                    itr_filed_date: formData[`filedDate${i}`] || "",
-                }))
-                .filter(entry => entry.fin_year); // only include filled rows
-
-            if (payload.length === 0) {
-                toast.error("Please fill at least one year's data before saving.");
-                return false;
+            // CASE: gst_applicable = false → only send { gst_applicable: false }
+            if (!gstApplicableBool) {
+                await updateGstRegistrations(referenceId, { gst_applicable: false });
+                return;
             }
 
-            await addIncomeTaxDetails(referenceId, { items: payload });
+            // Build items list
+            const items = gstformData.map(i => {
+                const base = {
+                    state: i.state,
+                    gst_number: i.gstNumber
+                };
 
-            toast.success("Income Tax Details saved successfully!");
-            return true;
+                // include gst_id ONLY if it exists → PUT update
+                if (i.gst_id) {
+                    base.gst_id = i.gst_id;
+                }
+
+                return base;
+            });
+
+            payload.items = items;
+
+            // Check if we have existing items with gst_id OR if gst_type_id exists
+            const hasExisting = gstformData.some(item => item.gst_id) || gstMeta.gst_type_id;
+
+            if (hasExisting) {
+                // PUT request
+                await updateGstRegistrations(referenceId, payload);
+            } else {
+                // POST request → remove gst_id completely
+                payload.items = payload.items.map(i => ({
+                    state: i.state,
+                    gst_number: i.gst_number
+                }));
+                await addGstRegistrations(referenceId, payload);
+            }
+
+            // Refresh the data after successful save
+            const response = await getGstRegistrations(referenceId);
+            const data = response?.data;
+
+            if (data) {
+                const gstItems = data.gst_registrations.map(item => ({
+                    gst_id: item.gst_id || null,
+                    state: item.state || "",
+                    gstNumber: item.gst_number || "",
+                    regDate: item.reg_date || "",
+                }));
+
+                setgstFormData(gstItems);
+
+                if (data.gst_registrations.length > 0) {
+                    setGstApplicable(
+                        data.gst_registrations[0].gst_applicable === 1 ? "true" : "false"
+                    );
+                }
+
+                setCount(gstItems.length);
+
+                if (data.gst_type) {
+                    setGstMeta({
+                        gst_type_id: data.gst_type.gst_type_id || null,
+                        reg_type: data.gst_type.reg_type || "",
+                        gstr_filling_type: data.gst_type.gstr_filling_type || "",
+                    });
+                }
+            }
+
         } catch (error) {
-            console.error("Error saving Income Tax Details:", error);
-            toast.error("Failed to save Income Tax Details.");
-            return false;
+            console.error("Save GST error:", error);
         }
     };
+
+
+    // save income tax details
+    const saveIncomeTaxDetails = async () => {
+        try {
+            // Build individual FY payloads
+            const buildPayload = (fyPrefix, idField, currencyTypeField, currencyNameField, turnoverField, itrStatusField, ackField) => {
+
+                const index = fyPrefix === "fy1" ? 1 : 2;
+
+                const year = formData[`itrYear${index}`];
+                const month = formData[`itrMonth${index}`];
+                const day = formData[`itrDay${index}`];
+
+                const formattedDate = (year && month && day)
+                    ? `${year}-${month}-${day}`
+                    : null;
+
+                return {
+                    ...(formData[idField] ? { it_id: formData[idField] } : {}),  // include it_id only for update
+                    fin_year: formData[`${fyPrefix}`],
+                    currency_type: formData[currencyTypeField],
+                    others: formData[currencyNameField] || null,
+                    turnover: formData[turnoverField],
+                    status_of_itr: formData[itrStatusField] === "true" ? true : false,
+                    itr_ack_num: formData[ackField] || null,
+                    itr_filed_date: formattedDate,
+                };
+            };
+
+            // Build FY1 + FY2 payloads
+            const fy1Payload = buildPayload(
+                "fy1", "it1_id", "currencyType1", "currencyName1",
+                "turnover1", "itrStatus1", "ackNo1",
+            );
+
+            const fy2Payload = buildPayload(
+                "fy2", "it2_id", "currencyType2", "currencyName2",
+                "turnover2", "itrStatus2", "ackNo2",
+            );
+
+            const requestBody = {
+                items: [fy1Payload, fy2Payload]
+            };
+
+            // Determine if both need update or create
+            const isUpdate = formData.it1_id !== null || formData.it2_id !== null;
+
+            if (isUpdate) {
+                // PUT request (update)
+                await updateIncomeTaxDetails(referenceId, requestBody);
+            } else {
+                // POST request (create)
+                console.log("Creating Income Tax Details with payload:", requestBody);
+                await addIncomeTaxDetails(referenceId, requestBody);
+            }
+
+            // Refresh the data after successful save
+            const response = await getIncomeTaxDetails(referenceId);
+            const data = response?.data;
+
+            if (data && Array.isArray(data)) {
+                const incomeTaxItems = {};
+
+                // Parse ITR filed date and extract year, month, day
+                const parseItrDate = (dateStr) => {
+                    if (!dateStr) return { year: "", month: "", day: "" };
+
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return { year: "", month: "", day: "" };
+
+                    return {
+                        year: date.getFullYear().toString(),
+                        month: String(date.getMonth() + 1).padStart(2, "0"),
+                        day: String(date.getDate()).padStart(2, "0")
+                    };
+                };
+
+                data.forEach(item => {
+                    if (item.fin_year) {
+                        if (item.fin_year === formData.fy1) {
+                            const itrDate1 = parseItrDate(item.itr_filed_date);
+                            incomeTaxItems.fy1 = {
+                                it1_id: item.it_id || null,
+                                fin_year: item.fin_year || "",
+                                currencyType1: item.currency_type || "",
+                                currencyName1: item.currency_type === "Others" ? item.others || "" : "",
+                                turnover1: item.turnover || "",
+                                itrStatus1: item.status_of_itr == 1 ? "true" : "false",
+                                ackNo1: item.itr_ack_num || "",
+                                filedDate1: item.itr_filed_date || "",
+                                itrYear1: itrDate1.year,
+                                itrMonth1: itrDate1.month,
+                                itrDay1: itrDate1.day,
+                            };
+                        } else if (item.fin_year === formData.fy2) {
+                            const itrDate2 = parseItrDate(item.itr_filed_date);
+                            incomeTaxItems.fy2 = {
+                                it2_id: item.it_id || null,
+                                fin_year: item.fin_year || "",
+                                currencyType2: item.currency_type || "",
+                                currencyName2: item.currency_type === "Others" ? item.others || "" : "",
+                                turnover2: item.turnover || "",
+                                itrStatus2: item.status_of_itr == 1 ? "true" : "false",
+                                ackNo2: item.itr_ack_num || "",
+                                filedDate2: item.itr_filed_date || "",
+                                itrYear2: itrDate2.year,
+                                itrMonth2: itrDate2.month,
+                                itrDay2: itrDate2.day,
+                            };
+                        }
+                    }
+                });
+
+                setFormData((prev) => ({
+                    ...prev,
+                    ...incomeTaxItems.fy1,
+                    ...incomeTaxItems.fy2,
+                }));
+            }
+
+        } catch (error) {
+            console.error("Save Income Tax error:", error);
+        }
+    };
+
+
 
 
     const handleGstFieldChange = (index, field, value) => {
@@ -1297,12 +1766,9 @@ const VmsRequest = () => {
 
     const handleSaveGstForm = async () => {
 
-        const goodsServicesSaved = await handleSaveGoodsServices();
-        if (!goodsServicesSaved) return;
-        const gstRegistrationsSaved = await handleSaveGstRegistrations();
-        if (!gstRegistrationsSaved) return;
-        const incomeTaxDetailsSaved = await handleSaveIncomeTaxDetails();
-        if (!incomeTaxDetailsSaved) return;
+        await saveGoodsAndServices();
+        await saveGstRegistrations();
+        await saveIncomeTaxDetails();
         toast.success("Gst Details saved successfully!");
         nextPage();
     };
@@ -1323,13 +1789,14 @@ const VmsRequest = () => {
         account_holder_name: "",
         bank_name: "",
         bank_address: "",
-        country: "",
+        transaction_type: "",
+        country_type: "",
+        country_id: null,
+        country_text: "",
         account_number: "",
         ifsc_code: "",
         swift_code: "",
         beneficiary_name: "",
-        involves_third_party: null,
-        subcontractor_in_sanctioned_country: null,
     });
 
     useEffect(() => {
@@ -1337,26 +1804,14 @@ const VmsRequest = () => {
             try {
                 const response = await getBankDetails(referenceId);
 
-                if (response?.data?.bank && response?.data?.compliance) {
-                    const compliance = response.data.compliance;
-
+                if (response?.data?.bank) {
                     setBankInfo((prev) => ({
                         ...prev,
                         ...response.data.bank,
-                        involves_third_party:
-                            compliance.involves_third_party === 1 ||
-                                compliance.involves_third_party === true
-                                ? "true"
-                                : "false",
-                        subcontractor_in_sanctioned_country:
-                            compliance.subcontractor_in_sanctioned_country === 1 ||
-                                compliance.subcontractor_in_sanctioned_country === true
-                                ? "true"
-                                : "false",
                     }));
                 }
             } catch (err) {
-                console.error("Failed to fetch bank and compliance details:", err);
+                console.error("Failed to fetch bank details:", err);
             }
         };
 
@@ -1392,12 +1847,6 @@ const VmsRequest = () => {
             cleaned = value.replace(/[^A-Za-z\s]/g, "").toUpperCase();
         }
 
-        // 🧾 Dropdown fields (Transaction type, third party, etc.) — keep as selected
-        else if (
-            ["transactionType", "involves_third_party", "subcontractor_in_sanctioned_country"].includes(name)
-        ) {
-            cleaned = value;
-        }
 
         // 🧠 Default fallback — uppercase text
         else {
@@ -1411,51 +1860,89 @@ const VmsRequest = () => {
     };
 
 
-
+    // add if new else update bank details
     const handleSaveBankDetails = async () => {
+        const bankPayload = {
+            account_holder_name: bankInfo.account_holder_name,
+            bank_name: bankInfo.bank_name,
+            bank_address: bankInfo.bank_address,
+            transaction_type: bankInfo.transaction_type,
+            country_type: bankInfo.country_type,
+            country_id: bankInfo.country_id,
+            country_text: bankInfo.country_text,
+            account_number: bankInfo.account_number,
+            ifsc_code: bankInfo.ifsc_code,
+            swift_code: bankInfo.swift_code,
+            beneficiary_name: bankInfo.beneficiary_name,
+        };
 
         try {
-            const bankPayload = {
-                type: "bank",
-                account_holder_name: bankInfo.account_holder_name,
-                bank_name: bankInfo.bank_name,
-                bank_address: bankInfo.bank_address,
-                country: bankInfo.country,
-                account_number: bankInfo.account_number,
-                ifsc_code: bankInfo.ifsc_code,
-                swift_code: bankInfo.swift_code,
-                beneficiary_name: bankInfo.beneficiary_name,
-            };
 
-            const compliancePayload = {
-                type: "compliance",
-                involves_third_party: bankInfo.involves_third_party === "true",
-                subcontractor_in_sanctioned_country:
-                    bankInfo.subcontractor_in_sanctioned_country === "true",
-            };
 
-            console.log("Bank Payload:", bankPayload);
-            console.log("Compliance Payload:", compliancePayload);
 
-            await addBankDetails(referenceId, bankPayload);
-            await addComplianceDetails(referenceId, compliancePayload);
-            toast.success("Bank Details saved successfully!");
-            nextPage();
+            const existingResponse = await getBankDetails(referenceId);
+            if (existingResponse && existingResponse.status === 200 && existingResponse.data && Object.keys(existingResponse.data).length > 0) {
+                // Update existing
+                await updateBankDetails(referenceId, bankPayload);
+                toast.success("Bank details updated successfully!");
+                nextPage();
+            }
         } catch (err) {
-            console.error(err);
-            toast.error(err.response?.data?.error || "Failed to save Bank Details");
+            // Add new
+            try {
+                await addBankDetails(referenceId, bankPayload);
+                toast.success("Bank details added successfully!");
+                nextPage();
+            } catch (error) {
+                console.error("Error adding bank details:", error);
+                toast.error("Error occurred while saving bank details.");
+
+            }
         }
     };
 
 
     useEffect(() => {
-        if (bankInfo.country && countries.length > 0) {
-            const selectedCountry = countries.find((c) => c.id == bankInfo.country);
+        if (bankInfo.country_id && countries.length > 0) {
+            const selectedCountry = countries.find((c) => c.id == bankInfo.country_id);
+
             const isOther = selectedCountry && selectedCountry.country.toLowerCase() !== "india";
             setIsOtherBankCountry(isOther);
-            setBankCountryName("");
+
+            if (isOther) {
+                setBankInfo((prev) => ({
+                    ...prev,
+                    country_text: prev.country_text || selectedCountry.country.toUpperCase(),
+                }));
+            } else {
+                setBankInfo((prev) => ({
+                    ...prev,
+                    country_text: "",
+                }));
+            }
         }
-    }, [bankInfo.country, countries]);
+    }, [bankInfo.country_id, countries]);
+
+
+    useEffect(() => {
+        if (bankInfo.country_type === "Others") {
+            setIsOtherBankCountry(true);
+
+            if (!bankInfo.country_text) {
+                setBankInfo(prev => ({
+                    ...prev,
+                    country_text: "",
+                }));
+            }
+        } else if (bankInfo.country_type === "India") {
+            setIsOtherBankCountry(false);
+            setBankInfo(prev => ({
+                ...prev,
+                country_text: "",
+            }));
+        }
+    }, [bankInfo.country_type]);
+
 
 
     const handleTransactionChange = (e) => {
@@ -1516,7 +2003,7 @@ const VmsRequest = () => {
                     const docs = {};
                     response.data.forEach(doc => {
                         docs[doc?.doc_type] = {
-                            id: doc?.doc_id,     // 👈 keep the id
+                            docId: doc?.doc_id,  // 👈 keep the document ID for updates
                             file: null,          // user hasn't selected new file yet
                             url: doc?.file_path  // stored file path
                         };
@@ -1536,37 +2023,67 @@ const VmsRequest = () => {
 
     const handleSaveDocuments = async () => {
         try {
-            const newFilesFormData = new FormData();
+            const formData = new FormData();
+            let hasAnyOperation = false;
 
-            const newFiles = Object.entries(documents).filter(([docType, value]) => value?.file);
+            // Process all document types in the documents state
+            Object.entries(documents).forEach(([docType, docData]) => {
+                if (!docData) return;
 
-            if (newFiles.length === 0) {
-                toast.error("No new files to upload. Please continue.");
+                const { file, docId } = docData;
+
+                if (file && docId) {
+                    // CASE 1: Update existing document (has both file and docId)
+                    formData.append("doc_ids[]", docId);
+                    formData.append("doc_types[]", docType);
+                    formData.append("files[]", file);
+                    hasAnyOperation = true;
+                } else if (file && !docId) {
+                    // CASE 2: Add new document (has file but no docId)
+                    formData.append("doc_types[]", docType);
+                    formData.append("files[]", file);
+                    hasAnyOperation = true;
+                } else if (!file && docId) {
+                    // CASE 3: Delete existing document (has docId but no file)
+                    formData.append("doc_ids[]", docId);
+                    hasAnyOperation = true;
+                }
+                // CASE 4: No operation (no file, no docId) - skip
+            });
+
+            // Check if there are any operations to perform
+            if (!hasAnyOperation) {
+                toast.error("No document changes to save. Please continue.");
                 nextPage();
                 return;
             }
 
-            for (const [docType, value] of newFiles) {
-                newFilesFormData.append("files[]", value.file);
-                newFilesFormData.append("doc_types[]", docType);
+            console.log("Request FormData entries:");
+            for (let pair of formData.entries()) {
+                console.log(pair);
             }
 
-            const response = await addDocuments(referenceId, newFilesFormData); // same endpoint
+            // Always use the same endpoint (addDocuments) as per updated API
+            const response = await addDocuments(referenceId, formData);
 
-            if (response?.data?.message?.includes("success")) {
+            if (response?.data?.message?.includes("success") || response.status === 200) {
                 toast.success("Documents saved successfully!");
 
-                // 🔄 re-fetch updated documents
-                const refreshed = await getDocumentDetails(8);
+                // 🔄 re-fetch updated documents with correct referenceId
+                const refreshed = await getDocumentDetails(referenceId);
                 if (refreshed?.data) {
-                    const documents = {};
+                    const updatedDocuments = {};
                     refreshed.data.forEach(doc => {
-                        documents[doc?.doc_type] = {
+                        updatedDocuments[doc?.doc_type] = {
                             file: null,
-                            url: doc?.file_path
+                            url: doc?.file_path,
+                            docId: doc?.doc_id // Store the document ID for future updates
                         };
                     });
-                    setDocuments(documents);
+                    setDocuments(prev => ({
+                        ...prev,
+                        ...updatedDocuments
+                    }));
                 }
 
                 nextPage();
@@ -1574,7 +2091,7 @@ const VmsRequest = () => {
                 throw new Error(response?.data?.error || "Unknown error");
             }
         } catch (err) {
-            console.error(err);
+            console.error(err.response || err);
             toast.error("Failed to upload documents. Please try again.");
         }
     };
@@ -1976,12 +2493,13 @@ const VmsRequest = () => {
                                                 name="full_registered_name"
                                                 value={companyInfo.full_registered_name}
                                                 className={`${styles.fieldInput} ${styles.uppercaseInput}`}
+                                                maxLength={255}
                                                 onChange={(e) => {
                                                     let input = e.target.value;
 
-                                                    // allow letters + spaces while typing
-                                                    // but don't immediately collapse or trim (to let typing feel natural)
-                                                    if (/^[A-Za-z\s]*$/.test(input)) {
+                                                    // allow letters, numbers, spaces, and common company name characters
+                                                    // Allows: A-Z, a-z, 0-9, spaces, periods, hyphens, ampersands, parentheses, apostrophes
+                                                    if (/^[A-Za-z0-9\s.\-&()']*$/.test(input)) {
                                                         setCompanyInfo({
                                                             ...companyInfo,
                                                             full_registered_name: input.toUpperCase(),
@@ -2061,8 +2579,8 @@ const VmsRequest = () => {
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    name="firm_reg_number"
-                                                    value={companyInfo.firm_reg_number || ""}
+                                                    name="reg_number"
+                                                    value={companyInfo.reg_number || ""}
                                                     onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
@@ -2080,8 +2598,8 @@ const VmsRequest = () => {
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    name="llp_reg_number"
-                                                    value={companyInfo.llp_reg_number || ""}
+                                                    name="reg_number"
+                                                    value={companyInfo.reg_number || ""}
                                                     onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
@@ -2099,8 +2617,8 @@ const VmsRequest = () => {
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    name="plc_reg_number"
-                                                    value={companyInfo.plc_reg_number || ""}
+                                                    name="reg_number"
+                                                    value={companyInfo.reg_number || ""}
                                                     onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
@@ -2118,8 +2636,8 @@ const VmsRequest = () => {
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    name="pulc_reg_number"
-                                                    value={companyInfo.pulc_reg_number || ""}
+                                                    name="reg_number"
+                                                    value={companyInfo.reg_number || ""}
                                                     onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
@@ -2137,8 +2655,8 @@ const VmsRequest = () => {
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    name="opc_reg_number"
-                                                    value={companyInfo.opc_reg_number || ""}
+                                                    name="reg_number"
+                                                    value={companyInfo.reg_number || ""}
                                                     onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
@@ -2156,8 +2674,8 @@ const VmsRequest = () => {
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    name="sc_reg_number"
-                                                    value={companyInfo.sc_reg_number || ""}
+                                                    name="reg_number"
+                                                    value={companyInfo.reg_number || ""}
                                                     onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
@@ -2176,8 +2694,8 @@ const VmsRequest = () => {
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    name="jvc_reg_number"
-                                                    value={companyInfo.jvc_reg_number || ""}
+                                                    name="reg_number"
+                                                    value={companyInfo.reg_number || ""}
                                                     onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
@@ -2196,8 +2714,8 @@ const VmsRequest = () => {
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    name="ngo_reg_number"
-                                                    value={companyInfo.ngo_reg_number || ""}
+                                                    name="reg_number"
+                                                    value={companyInfo.reg_number || ""}
                                                     onChange={handleCompanyInfoChange}
                                                     className={styles.fieldInput}
                                                     required
@@ -2207,6 +2725,8 @@ const VmsRequest = () => {
                                         )}
 
                                         <div className={styles.fieldRow}>
+
+
                                             <label className={styles.fieldLabel}>
                                                 Do you have a TAN Number? <span className={styles.requiredSymbol}>*</span>
                                             </label>
@@ -2287,128 +2807,115 @@ const VmsRequest = () => {
                                             <label className={styles.fieldLabel}>Country of Incorporation</label>
 
                                             <select
-                                                name="country_of_incorporation"
-                                                value={companyInfo.country_of_incorporation || ""}
+                                                name="country_type"
+                                                value={companyInfo.country_type}
                                                 onChange={(e) => {
-                                                    const selectedId = e.target.value;
+                                                    const selected = e.target.value;
 
-                                                    // Find country object
-                                                    const selectedCountry = countries.find((c) => c.id == selectedId);
+                                                    if (selected === "India") {
+                                                        const india = countries.find(c => c.country.toLowerCase() === "india");
 
-                                                    // Check if other country (not India)
-                                                    let isOther = false;
+                                                        setCompanyInfo((prev) => ({
+                                                            ...prev,
+                                                            country_type: "India",
+                                                            isOtherCountry: false,
 
-                                                    if (selectedCountry) {
-                                                        isOther = selectedCountry.country.toLowerCase() !== "india";
-                                                    }
+                                                            country_id: india?.id || null,
+                                                            country_text: "",
 
-                                                    // Reset dependent fields EVERY TIME selection changes
-                                                    setCompanyInfo((prev) => ({
-                                                        ...prev,
-                                                        country_of_incorporation: selectedId,
-                                                        isOtherCountry: isOther,
-                                                        country_of_incorporation_text: "",
-                                                        state: "",
-                                                        country_of_origin: "",
-                                                    }));
-
-                                                    // Set country code only for India
-                                                    if (selectedCountry && selectedCountry.country.toLowerCase() === "india") {
-                                                        setCountryCode(selectedCountry.code || "");
+                                                            state_id: "",
+                                                            state_text: "",
+                                                        }));
                                                     } else {
-                                                        setCountryCode("");
+                                                        setCompanyInfo((prev) => ({
+                                                            ...prev,
+                                                            country_type: "Others",
+                                                            isOtherCountry: true,
+
+                                                            country_id: null,
+                                                            state_id: null,
+
+                                                            country_text: "",
+                                                            state_text: "",
+                                                        }));
                                                     }
                                                 }}
+                                                disabled={isReadOnly || ["Sole Proprietorship", "Partnership"].includes(companyInfo.business_entity_type)}
                                                 className={styles.fieldInput}
-                                                required
-                                                disabled={
-                                                    isReadOnly ||
-                                                    ["Sole Proprietorship", "Partnership"].includes(
-                                                        companyInfo.business_entity_type
-                                                    )
-                                                }
                                             >
                                                 <option value="">-- Select Country --</option>
-                                                {countries.map((c) => (
-                                                    <option key={c.id} value={c.id}>
-                                                        {c.country}
-                                                    </option>
-                                                ))}
+                                                <option value="India">India</option>
+                                                <option value="Others">Others</option>
                                             </select>
                                         </div>
 
                                         {/* 🌍 Country ≠ India */}
-                                        {companyInfo.isOtherCountry && companyInfo.country_of_incorporation !== "" && (
+                                        {companyInfo.isOtherCountry && (
                                             <>
-                                                {/* 🏳️ Specify Country */}
+                                                {/* Country Text */}
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>Specify Country</label>
                                                     <input
                                                         type="text"
-                                                        name="country_of_incorporation_text"
-                                                        value={companyInfo.country_of_incorporation_text || ""}
+                                                        value={companyInfo.country_text}
                                                         onChange={(e) =>
                                                             setCompanyInfo((prev) => ({
                                                                 ...prev,
-                                                                country_of_incorporation_text: e.target.value
-                                                                    .replace(/[^A-Za-z\s]/g, "")
-                                                                    .toUpperCase(),
-                                                                country_of_origin: e.target.value.toUpperCase(),
+                                                                country_text: e.target.value.toUpperCase(),
                                                             }))
                                                         }
-                                                        className={styles.fieldInput}
-                                                        placeholder="Enter Country Name"
                                                         required
-                                                        readOnly={isReadOnly}
+                                                        className={styles.fieldInput}
                                                     />
                                                 </div>
 
-                                                {/* 🏙️ Other Country State */}
+                                                {/* State Text */}
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>State / Province</label>
                                                     <input
                                                         type="text"
-                                                        name="state"
-                                                        value={companyInfo.state || ""}
+                                                        value={companyInfo.state_text}
                                                         onChange={(e) =>
                                                             setCompanyInfo((prev) => ({
                                                                 ...prev,
-                                                                state: e.target.value.replace(/[^A-Za-z\s]/g, "").toUpperCase(),
+                                                                state_text: e.target.value.toUpperCase(),
                                                             }))
                                                         }
-                                                        className={styles.fieldInput}
-                                                        placeholder="Enter State or Province"
                                                         required
-                                                        readOnly={isReadOnly}
+                                                        className={styles.fieldInput}
                                                     />
                                                 </div>
                                             </>
                                         )}
 
+
                                         {/* 🇮🇳 India State Dropdown */}
-                                        {!companyInfo.isOtherCountry &&
-                                            companyInfo.country_of_incorporation !== "" && (
-                                                <div className={styles.fieldRow}>
-                                                    <label className={styles.fieldLabel}>State</label>
-                                                    <select
-                                                        name="state"
-                                                        value={companyInfo.state || ""}
-                                                        onChange={(e) =>
-                                                            setCompanyInfo((prev) => ({ ...prev, state: e.target.value }))
-                                                        }
-                                                        className={styles.fieldInput}
-                                                        required
-                                                        disabled={isReadOnly}
-                                                    >
-                                                        <option value="">-- Select State --</option>
-                                                        {states.map((s) => (
-                                                            <option key={s.id} value={s.id}>
-                                                                {s.state}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            )}
+                                        {!companyInfo.isOtherCountry && companyInfo.country_type === "India" && (
+                                            <div className={styles.fieldRow}>
+                                                <label className={styles.fieldLabel}>State</label>
+                                                <select
+                                                    name="state_id"
+                                                    value={companyInfo.state_id || ""}
+                                                    onChange={(e) =>
+                                                        setCompanyInfo((prev) => ({
+                                                            ...prev,
+                                                            state_id: e.target.value,
+                                                        }))
+                                                    }
+                                                    required
+                                                    disabled={isReadOnly}
+                                                    className={styles.fieldInput}
+                                                >
+                                                    <option value="">-- Select State --</option>
+                                                    {states.map((s) => (
+                                                        <option key={s.id} value={s.id}>
+                                                            {s.state}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
 
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
@@ -2974,14 +3481,20 @@ const VmsRequest = () => {
                                                 required
                                                 disabled={isReadOnly}
                                             >
-                                                <option value="">-- Select --</option>
-                                                <option value="Yes">Yes</option>
-                                                <option value="No">No</option>
+                                                <option value="">-- Select --</option> {/* 🟢 Default option */}
+                                                <option value="true">Yes</option>
+                                                <option value="false">No</option>
                                             </select>
                                         </div>
 
-                                        {/* Show only when GST Applicable = Yes */}
-                                        {gstApplicable === "Yes" && (
+                                        {/* ✅ GST Fields visible only when checkbox is UNCHECKED */}
+                                        {gstApplicable === "true" && (
+
+                                            // const payload = {
+                                            // gst_applicable: gstApplicable === "true" ? 1 : 0,
+                                            // ...other fields
+                                            // };
+
                                             <>
                                                 {/* Number of GST Registrations */}
                                                 <div className={styles.fieldRow}>
@@ -3102,11 +3615,11 @@ const VmsRequest = () => {
                                                     </label>
 
                                                     <select
-                                                        value={gstMeta.periodicity_gstr1}
+                                                        value={gstMeta.gstr_filling_type}
                                                         onChange={(e) =>
                                                             setGstMeta((prev) => ({
                                                                 ...prev,
-                                                                periodicity_gstr1: e.target.value,
+                                                                gstr_filling_type: e.target.value,
                                                             }))
                                                         }
                                                         className={styles.fieldInput}
@@ -3166,21 +3679,21 @@ const VmsRequest = () => {
                                                                 name={`currencyType${i}`}
                                                                 value={formData[`currencyType${i}`] || ""}
                                                                 onChange={(e) => {
-                                                                    const value = e.target.value;
-
-                                                                    // Update dropdown AND reset dependent currency name
-                                                                    setFormData((prev) => ({
-                                                                        ...prev,
-                                                                        [`currencyType${i}`]: value,
-                                                                        [`currencyName${i}`]: "", // 🔥 always reset on any change
-                                                                    }));
+                                                                    handleIncomeChange(e);
+                                                                    // clear currency name if switched back to Rupees
+                                                                    if (e.target.value === "Rupees (INR)") {
+                                                                        setFormData((prev) => ({
+                                                                            ...prev,
+                                                                            [`currencyName${i}`]: "",
+                                                                        }));
+                                                                    }
                                                                 }}
                                                                 required
                                                                 disabled={isReadOnly}
                                                                 className={styles.fieldInput}
                                                             >
                                                                 <option value="">-- Select Currency Type --</option>
-                                                                <option value="Rupees">Rupees (INR)</option>
+                                                                <option value="Rupees (INR)">Rupees (INR)</option>
                                                                 <option value="Others">Others</option>
                                                             </select>
                                                         </td>
@@ -3277,20 +3790,20 @@ const VmsRequest = () => {
                                                                 className={styles.fieldInput}
                                                             >
                                                                 <option value="">Select</option>
-                                                                <option value="Yes">Yes</option>
-                                                                <option value="No">No</option>
+                                                                <option value="true">Yes</option>
+                                                                <option value="false">No</option>
                                                             </select>
                                                         </td>
                                                     ))}
                                                 </tr>
 
                                                 {/* ITR Acknowledgment */}
-                                                {["itrStatus1", "itrStatus2"].some((key) => formData[key] === "Yes") && (
+                                                {["itrStatus1", "itrStatus2"].some((key) => formData[key] === "true") && (
                                                     <tr>
                                                         <td>ITR Acknowledgment No.</td>
                                                         {[1, 2].map((i) => (
                                                             <td key={i}>
-                                                                {formData[`itrStatus${i}`] === "Yes" ? (
+                                                                {formData[`itrStatus${i}`] === "true" ? (
                                                                     <input
                                                                         type="text"
                                                                         name={`ackNo${i}`}
@@ -3309,7 +3822,8 @@ const VmsRequest = () => {
                                                 )}
 
                                                 {/* ITR Filed Date */}
-                                                {["itrStatus1", "itrStatus2"].some((key) => formData[key] === "Yes") && (
+                                                {["itrStatus1", "itrStatus2"].some((key) => formData[key] === "true") && (
+
                                                     <tr>
                                                         <td>
                                                             ITR Filed Date <span className={styles.requiredSymbol}>*</span>
@@ -3321,9 +3835,9 @@ const VmsRequest = () => {
 
                                                             return (
                                                                 <td key={i}>
-                                                                    {formData[`itrStatus${i}`] === "Yes" ? (
-                                                                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                                                            {/* Year */}
+                                                                    {formData[`itrStatus${i}`] === "true" ? (
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                                            {/* Year dropdown */}
                                                                             <select
                                                                                 className={styles.fieldInput}
                                                                                 value={formData[`itrYear${i}`] || ""}
@@ -3464,16 +3978,16 @@ const VmsRequest = () => {
                                                 Transaction Type <span className={styles.requiredSymbol}>*</span>
                                             </label>
                                             <select
-                                                name="transactionType"
-                                                value={bankInfo.transactionType || ""}
+                                                name="transaction_type"
+                                                value={bankInfo.transaction_type || ""}
                                                 onChange={(e) => {
                                                     const value = e.target.value;
 
                                                     setBankInfo((prev) => ({
                                                         ...prev,
-                                                        transactionType: value,
-                                                        ifscCode: "",  // 🔥 reset IFSC
-                                                        swiftCode: "", // 🔥 reset SWIFT
+                                                        transaction_type: value,
+                                                        ifsc_code: "",
+                                                        swift_code: "",
                                                     }));
                                                 }}
                                                 className={styles.fieldInput}
@@ -3490,53 +4004,67 @@ const VmsRequest = () => {
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>Country</label>
                                             <select
-                                                name="country"
-                                                value={bankInfo.country || ""}
+                                                name="country_type"
+                                                value={bankInfo.country_type}
                                                 onChange={(e) => {
-                                                    const selectedId = e.target.value;
-                                                    const selectedCountry = countries.find((c) => c.id == selectedId);
-                                                    const isOther = selectedCountry && selectedCountry.country.toLowerCase() !== "india";
+                                                    const selected = e.target.value;
 
-                                                    setBankInfo((prev) => ({
-                                                        ...prev,
-                                                        country: selectedId,
-                                                        country_name: selectedCountry ? selectedCountry.country.toUpperCase() : "",
-                                                    }));
+                                                    if (selected === "India") {
+                                                        const india = countries.find(c => c.country.toLowerCase() === "india");
 
-                                                    setIsOtherBankCountry(isOther);
-                                                    setBankCountryName(""); // 🔥 reset Specify Country
+                                                        setIsOtherBankCountry(false);   // ✅ FIX
+
+                                                        setBankInfo((prev) => ({
+                                                            ...prev,
+                                                            country_type: "India",
+                                                            country_id: india?.id || null,
+                                                            country_text: "",
+                                                            state_id: "",
+                                                            state_text: "",
+                                                        }));
+                                                    } else {
+                                                        setIsOtherBankCountry(true);    // ✅ FIX
+
+                                                        setBankInfo((prev) => ({
+                                                            ...prev,
+                                                            country_type: "Others",
+                                                            country_id: null,
+                                                            state_id: null,
+                                                            country_text: "",
+                                                            state_text: "",
+                                                        }));
+                                                    }
                                                 }}
                                                 className={styles.fieldInput}
-                                                required
-                                                disabled={isReadOnly}
                                             >
                                                 <option value="">-- Select Country --</option>
-                                                {countries.map((country) => (
-                                                    <option key={country.id} value={country.id}>
-                                                        {country.country}
-                                                    </option>
-                                                ))}
+                                                <option value="India">India</option>
+                                                <option value="Others">Others</option>
                                             </select>
                                         </div>
 
                                         {/* Specify Country if not India */}
                                         {isOtherBankCountry && (
-                                            <div className={styles.fieldRow}>
-                                                <label className={styles.fieldLabel}>Specify Country</label>
-                                                <input
-                                                    type="text"
-                                                    name="bankCountryName"
-                                                    value={bankCountryName}
-                                                    onChange={(e) => {
-                                                        const onlyAlphabets = e.target.value.replace(/[^a-zA-Z]/g, "");
-                                                        setBankCountryName(onlyAlphabets.toUpperCase());
-                                                    }}
-                                                    className={styles.fieldInput}
-                                                    placeholder="Enter Country Name"
-                                                    required
-                                                    readOnly={isReadOnly}
-                                                />
-                                            </div>
+                                            <>
+                                                {/* Country Text */}
+                                                <div className={styles.fieldRow}>
+                                                    <label className={styles.fieldLabel}>Specify Country</label>
+                                                    <input
+                                                        type="country_text"
+                                                        value={bankInfo.country_text}
+                                                        onChange={(e) =>
+                                                            setBankInfo((prev) => ({
+                                                                ...prev,
+                                                                country_text: e.target.value.toUpperCase(),
+                                                            }))
+                                                        }
+                                                        required
+                                                        className={styles.fieldInput}
+                                                    />
+                                                </div>
+
+
+                                            </>
                                         )}
 
                                         {/* Account Number */}
@@ -3556,17 +4084,17 @@ const VmsRequest = () => {
                                         </div>
 
                                         {/* IFSC / SWIFT based on Transaction Type */}
-                                        {(bankInfo.transactionType === "Domestic" || bankInfo.transactionType === "Domestic and International") && (
+                                        {(bankInfo.transaction_type === "Domestic" || bankInfo.transaction_type === "Domestic and International") && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>
                                                     IFSC Code <span className={styles.requiredSymbol}>*</span>
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    name="ifscCode"
-                                                    value={bankInfo.ifscCode || ""}
+                                                    name="ifsc_code"
+                                                    value={bankInfo.ifsc_code || ""}
                                                     onChange={(e) =>
-                                                        setBankInfo((prev) => ({ ...prev, ifscCode: e.target.value.toUpperCase() }))
+                                                        setBankInfo((prev) => ({ ...prev, ifsc_code: e.target.value.toUpperCase() }))
                                                     }
                                                     maxLength={11}
                                                     className={styles.fieldInput}
@@ -3574,17 +4102,17 @@ const VmsRequest = () => {
                                             </div>
                                         )}
 
-                                        {(bankInfo.transactionType === "International" || bankInfo.transactionType === "Domestic and International") && (
+                                        {(bankInfo.transaction_type === "International" || bankInfo.transaction_type === "Domestic and International") && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>
                                                     SWIFT Code <span className={styles.requiredSymbol}>*</span>
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    name="swiftCode"
-                                                    value={bankInfo.swiftCode || ""}
+                                                    name="swift_code"
+                                                    value={bankInfo.swift_code || ""}
                                                     onChange={(e) =>
-                                                        setBankInfo((prev) => ({ ...prev, swiftCode: e.target.value.toUpperCase() }))
+                                                        setBankInfo((prev) => ({ ...prev, swift_code: e.target.value.toUpperCase() }))
                                                     }
                                                     maxLength={11}
                                                     className={styles.fieldInput}
@@ -4208,19 +4736,19 @@ const VmsRequest = () => {
                                                             type="button"
                                                             onClick={() => {
                                                                 switch (currentPage) {
-                                                                    case 0:
+                                                                    case 1:
                                                                         handleSubmitCompanyInfo();
                                                                         break;
-                                                                    case 1:
+                                                                    case 2:
                                                                         handleSaveMsmeInfo();
                                                                         break;
-                                                                    case 2:
+                                                                    case 3:
                                                                         handleSaveGstForm();
                                                                         break;
-                                                                    case 3:
+                                                                    case 4:
                                                                         handleSaveBankDetails();
                                                                         break;
-                                                                    case 4:
+                                                                    case 5:
                                                                         handleSaveDocuments();
                                                                         break;
                                                                     default:
@@ -4370,7 +4898,7 @@ const VmsRequest = () => {
                                                         {renderValue("Type of Counterparty", goodsServices.type_of_counterparty)}
                                                         {renderValue("Other Type", goodsServices.others)}
                                                         {renderValue("Registration Type", gstMeta.reg_type)}
-                                                        {renderValue("Periodicity of GSTR-1", gstMeta.periodicity_gstr1)}
+                                                        {renderValue("GSTR Filing Type", gstMeta.gstr_filling_type)}
                                                     </>
                                                 ),
                                             },

@@ -8,3 +8,7 @@ export const addCompanyInfo = (reference_id,payload) => {
     return axiosInstance.post(`api/vms/counterparty?reference_id=${reference_id}`, payload);
 }
 
+export const updateCompanyInfo = (reference_id, payload) => {
+    return axiosInstance.put(`api/vms/counterparty?reference_id=${reference_id}`, payload);
+}
+
