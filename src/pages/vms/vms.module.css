@@ -1106,6 +1106,96 @@ color: #ff0000 !important;
   width: auto;                /* keeps natural size */
 }
 
+.reviewModalOverlay {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.6) !important;
+}
+
+.reviewModalWrapper {
+    background-color: #ffffff;
+    color: #1a1a1a;
+    border-radius: 14px;
+    padding: 30px 40px;
+    width: 90%;
+    max-width: 950px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 35px rgba(0, 0, 0, 0.3);
+}
+
+/********** SECTION **********/
+.reviewSection {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px 25px;
+    margin-bottom: 25px;
+}
+
+.reviewSectionTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0d47a1;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #e3f2fd;
+    padding-bottom: 4px;
+}
+
+/********** TABLE **********/
+.reviewTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 15px;
+}
+
+.reviewTable th {
+    background: #ffffff;
+    padding: 10px;
+    border-bottom: 2px solid #e0e0e0;
+    font-weight: 700;
+}
+
+.reviewTable td {
+    padding: 10px;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.reviewTable td:first-child {
+    font-weight: 600;
+    width: 32%;
+}
+
+.reviewTable tr:nth-child(even) td {
+    background: #fafafa;
+}
+
+.reviewDocLink {
+    color: #1976d2;
+    text-decoration: underline;
+}
+
+/********** BUTTONS **********/
+.reviewActions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 35px;
+}
+
+.reviewBtnConfirm {
+    background: #2e7d32 !important;
+    color: #fff !important;
+}
+
+.reviewBtnCancel {
+    border-color: #d32f2f !important;
+    color: #d32f2f !important;
+}
+
+
 
 
 
