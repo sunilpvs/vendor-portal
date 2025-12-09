@@ -1877,13 +1877,10 @@ const VmsRequest = () => {
             // ✅ When user selects "Goods and Services", initialize 5 empty rows
             if (name === "type" && cleaned === "Goods and Services") {
                 if (goodsAndServices.length === 0) {
-                    setGoodsAndServices([
-                        { goods: "", services: "" },
-                        { goods: "", services: "" },
-                        { goods: "", services: "" },
-                        { goods: "", services: "" },
-                        { goods: "", services: "" },
-                    ]);
+                    setGoodsAndServices(
+                        Array.from({ length: 5 }, () => ({ goods: "", services: "" }))
+                    );
+
                 }
             }
 
@@ -3424,7 +3421,21 @@ const VmsRequest = () => {
                                                         }));
 
                                                         return;
+                                                    }else {
+                                                        setCompanyInfo((prev) => ({
+                                                            ...prev,
+                                                            country_type: "Others",
+                                                            isOtherCountry: true,
+
+                                                            country_id: null,
+                                                            state_id: null,
+
+                                                            country_text: "",
+                                                            state_text: "",
+                                                        }));
                                                     }
+
+
 
                                                     // ---------------------------------------
                                                     // 🔵 Case 3: Others selected
@@ -3960,7 +3971,7 @@ const VmsRequest = () => {
                                                     setGoods(Array(5).fill(""));                // reset goods[]
                                                     setServices(Array(5).fill(""));             // reset services[]
                                                     setGoodsAndServices(
-                                                        Array(5).fill({ goods: "", services: "" }) // reset goods & services combined
+                                                        Array.from({ length: 5 }, () => ({ goods: "", services: "" })) // reset goods & services combined
                                                     );
                                                 }}
                                                 className={styles.fieldInput}
@@ -4076,7 +4087,7 @@ const VmsRequest = () => {
                                                     // reset meta info
                                                     setGstMeta({
                                                         reg_type: "",
-                                                        periodicity_gstr1: "",
+                                                        gstr_filling_type: "",
                                                     });
                                                 }}
                                                 className={styles.fieldInput}
