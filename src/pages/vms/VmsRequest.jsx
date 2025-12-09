@@ -1173,7 +1173,6 @@ const VmsRequest = () => {
                     }));
 
                     setgstFormData(gstItems);
-
                     if (data.gst_registrations.length > 0) {
                         setGstApplicable(
                             data.gst_registrations[0].gst_applicable === 1 ? "true" : "false"
