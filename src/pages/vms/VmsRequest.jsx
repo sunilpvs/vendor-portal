@@ -108,7 +108,8 @@ const VmsRequest = () => {
     const getStates = async () => {
         try {
             const response = await getStateCombo();
-            const statesResp = response?.data || [];  // Default to empty array if no data
+            //const statesResp = response?.data || [];  // Default to empty array if no data
+                const statesResp = Array.isArray(response?.data) ? response.data : [];
             setStates(statesResp);
         } catch (error) {
             console.error("Failed to fetch countries:", error);
@@ -1172,7 +1173,6 @@ const VmsRequest = () => {
                     }));
 
                     setgstFormData(gstItems);
-
                     if (data.gst_registrations.length > 0) {
                         setGstApplicable(
                             data.gst_registrations[0].gst_applicable === 1 ? "true" : "false"
