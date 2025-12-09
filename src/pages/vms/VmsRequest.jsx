@@ -108,8 +108,7 @@ const VmsRequest = () => {
     const getStates = async () => {
         try {
             const response = await getStateCombo();
-            //const statesResp = response?.data || [];  // Default to empty array if no data
-                const statesResp = Array.isArray(response?.data) ? response.data : [];
+            const statesResp = response?.data || [];  // Default to empty array if no data
             setStates(statesResp);
         } catch (error) {
             console.error("Failed to fetch countries:", error);
@@ -278,18 +277,44 @@ const VmsRequest = () => {
             return updated;
         });
     };
-    const handleDocumentChange = (field, file) => {
-        if (!file) return;
-        setDocuments((prev) => ({
-            ...prev,
-            [field]: {
-                ...prev[field], // 👈 Preserve existing properties like docId
-                file,
-                fileName: file.name,
-                url: URL.createObjectURL(file),
-            },
-        }));
-    };
+ const handleDocumentChange = (field, file) => {
+    if (!file) return;
+
+    // Allowed MIME types
+    const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "application/pdf"
+    ];
+
+    // ❌ Invalid file type
+    if (!allowedTypes.includes(file.type)) {
+        alert(
+            "Please verify and upload documents in JPG, JPEG, PNG, or PDF format."
+        );
+        return;
+    }
+
+    // ❌ Size > 5 MB
+    if (file.size > 5 * 1024 * 1024) {
+        alert(
+            "The maximum file size allowed is 5 MB."
+        );
+        return;
+    }
+
+    // ✅ Valid → store file
+    setDocuments((prev) => ({
+        ...prev,
+        [field]: {
+            ...prev[field],   // 👈 keeps docId, url from DB, etc.
+            file,
+            fileName: file.name,
+            url: URL.createObjectURL(file), // preview
+        },
+    }));
+};
 
 
     const handleValidatedFileChange = (e, fieldName) => {
@@ -710,6 +735,75 @@ const VmsRequest = () => {
     // submit company info add if its new else update
     const handleSubmitCompanyInfo = async (e) => {
 
+
+    let errors = [];
+
+    //REQUIRED FIELDS FOR STEP-1 ONLY (Except Country of Incorporation)
+
+    if (!companyInfo.business_entity_type)
+        errors.push("Nature of Business Entity is required");
+
+    if (!companyInfo.company_name)
+        errors.push("Registered Name (as per PAN) is required");
+
+    if (!companyInfo.pan_number)
+        errors.push("PAN Number is required");
+
+    if (!companyInfo.trading_name)
+        errors.push("Trading Name is required");
+
+    if (!tanStatus)
+        errors.push("TAN availability selection is required");
+
+    if (tanStatus === "yes" && !companyInfo.tan_number)
+        errors.push("TAN Number is required");
+
+    if (!companyInfo.telephone)
+        errors.push("Telephone Number is required");
+
+    if (!companyInfo.registered_address)
+        errors.push("Registered Address is required");
+
+    if (!companyInfo.business_address)
+        errors.push("Business Address is required");
+
+    // Contact Person
+    if (!companyInfo.contact_person_title)
+        errors.push("Contact Person Title is required");
+
+    if (!companyInfo.contact_person_name)
+        errors.push("Contact Person Name is required");
+
+    if (!companyInfo.contact_person_mobile)
+        errors.push("Contact Person Mobile Number is required");
+
+    if (!companyInfo.contact_person_email)
+        errors.push("Contact Person Email is required");
+
+    // Accounts Person
+    if (!companyInfo.accounts_person_title)
+        errors.push("Accounts Person Title is required");
+
+    if (!companyInfo.accounts_person_name)
+        errors.push("Accounts Person Name is required");
+
+    if (!companyInfo.accounts_person_contact_no)
+        errors.push("Accounts Person Contact Number is required");
+
+    if (!companyInfo.accounts_person_email)
+        errors.push("Accounts Person Email is required");
+
+
+    if (errors.length > 0) {
+        alert("Please fill all required fields:\n\n" + errors.join("\n"));
+        return;
+    }
+
+    // ✅ If all good → move to next page
+    nextPage();
+
+
+
         // try {
         //     const tanFormData = new FormData();
         //     tanFormData.append("reference_id", referenceId);
@@ -970,6 +1064,41 @@ const VmsRequest = () => {
 
     // add if new else update msme details
     const handleSaveMsmeInfo = async () => {
+
+
+     let errors = [];
+
+    // 1️⃣ MSME Registered selection required
+    if (!msmeInfo.registered_under_msme) {
+        errors.push("Please select whether MSME Registration is available.");
+    }
+
+    // 2️⃣ If MSME = Yes → validate Category + Udyam Number
+    if (msmeInfo.registered_under_msme === "true") {
+
+        if (!msmeInfo.msme_category || msmeInfo.msme_category.trim() === "") {
+            errors.push("MSME Category is required.");
+        }
+
+        if (!msmeInfo.udyam_number || msmeInfo.udyam_number.trim() === "") {
+            errors.push("Udyam Registration Number is required.");
+        }
+    }
+
+    // 3️⃣ If MSME = No → do NOT validate category or udyam
+    // (No extra validation here)
+
+    // ❌ If errors exist → block next page
+    if (errors.length > 0) {
+        alert("Please fill required MSME details:\n\n" + errors.join("\n"));
+        return;
+    }
+
+    // ✅ Everything OK → go to next step
+    nextPage();
+
+
+
         try {
 
             const msmePayload = {
@@ -1173,6 +1302,7 @@ const VmsRequest = () => {
                     }));
 
                     setgstFormData(gstItems);
+
                     if (data.gst_registrations.length > 0) {
                         setGstApplicable(
                             data.gst_registrations[0].gst_applicable === 1 ? "true" : "false"
@@ -1747,9 +1877,13 @@ const VmsRequest = () => {
             // ✅ When user selects "Goods and Services", initialize 5 empty rows
             if (name === "type" && cleaned === "Goods and Services") {
                 if (goodsAndServices.length === 0) {
-                    setGoodsAndServices(
-                        Array.from({ length: 5 }, () => ({ goods: "", services: "" }))
-                    );
+                    setGoodsAndServices([
+                        { goods: "", services: "" },
+                        { goods: "", services: "" },
+                        { goods: "", services: "" },
+                        { goods: "", services: "" },
+                        { goods: "", services: "" },
+                    ]);
                 }
             }
 
@@ -1762,10 +1896,136 @@ const VmsRequest = () => {
 
     const handleSaveGstForm = async () => {
 
+        let errors = [];
+
+    // ----------------------------------------------------
+    // 1️⃣ VALIDATE TYPE OF COUNTERPARTY
+    // ----------------------------------------------------
+    if (!goodsServices.type_of_counterparty) {
+        errors.push("Please select Type of Counterparty.");
+    }
+
+    if (goodsServices.type_of_counterparty === "Others") {
+        if (!goodsServices.others || goodsServices.others.trim() === "") {
+            errors.push("Please specify the 'Other' Counterparty Type.");
+        }
+    }
+
+    // ----------------------------------------------------
+    // 2️⃣ VALIDATE DETAILS OF SUPPLIES
+    // ----------------------------------------------------
+    if (!goodsServices.type) {
+        errors.push("Please select Details of Supplies Type (Goods / Services / Goods & Services).");
+    } else {
+        // GOODS
+        if (goodsServices.type === "Goods") {
+            const hasGoods = goods.some((g) => g.trim() !== "");
+            if (!hasGoods) errors.push("Please enter at least one Goods item.");
+        }
+
+        // SERVICES
+        if (goodsServices.type === "Services") {
+            const hasServices = services.some((s) => s.trim() !== "");
+            if (!hasServices) errors.push("Please enter at least one Service item.");
+        }
+
+        // GOODS & SERVICES
+        if (goodsServices.type === "Goods and Services") {
+            const hasGS = goodsAndServices.some(
+                (row) => row.goods.trim() !== "" || row.services.trim() !== ""
+            );
+            if (!hasGS) errors.push("Please enter at least one Goods or Service item.");
+        }
+    }
+
+    // ----------------------------------------------------
+    // 3️⃣ VALIDATE GST APPLICABLE
+    // ----------------------------------------------------
+    if (!gstApplicable) {
+        errors.push("Please select whether GST is applicable.");
+    }
+
+    // GST = NO → Finish validation here & go next step
+    if (gstApplicable === "false") {
+        nextPage();
+        return;
+    }
+
+    // ----------------------------------------------------
+    // 4️⃣ GST = YES → Validate all GST registration fields
+    // ----------------------------------------------------
+
+    // Number of GST Registrations
+    if (!count || count < 1) {
+        errors.push("Please select number of GST registrations.");
+    }
+
+    // GST registration list
+    gstformData.forEach((item, index) => {
+        if (!item.gstNumber || item.gstNumber.trim() === "") {
+            errors.push(`GST Number is required for Registration ${index + 1}.`);
+        }
+        // country & state NOT validated
+    });
+
+    // Registration Type
+    if (!gstMeta.reg_type) {
+        errors.push("Registration Type is required.");
+    }
+
+    // GSTR Filing Type
+    if (!gstMeta.gstr_filling_type) {
+        errors.push("GSTR Filing Type is required.");
+    }
+
+    ["1", "2"].forEach((i) => {
+    // Currency Type
+    if (!formData[`currencyType${i}`]) {
+        errors.push(`Currency Type for FY-${i} is required.`);
+    }
+
+    // Currency Name (only if Others selected)
+    if (formData[`currencyType${i}`] === "Others" && !formData[`currencyName${i}`]) {
+        errors.push(`Currency Name is required for FY-${i}.`);
+    }
+
+    // Turnover
+    if (!formData[`turnover${i}`] || formData[`turnover${i}`] <= 0) {
+        errors.push(`Turnover amount for FY-${i} is required.`);
+    }
+
+    // ITR Status
+    if (!formData[`itrStatus${i}`]) {
+        errors.push(`ITR Status for FY-${i} is required.`);
+    }
+
+    // If ITR = Yes → Acknowledgment + Date Required
+    if (formData[`itrStatus${i}`] === "true") {
+        if (!formData[`ackNo${i}`]) {
+            errors.push(`Acknowledgment No. for FY-${i} is required.`);
+        }
+
+        if (!formData[`itrYear${i}`] || !formData[`itrMonth${i}`] || !formData[`itrDay${i}`]) {
+            errors.push(`ITR Filed Date (DD/MM/YYYY) is required for FY-${i}.`);
+        }
+    }
+});
+
+    // ----------------------------------------------------
+    // 5️⃣ SHOW ERRORS IF ANY
+    // ----------------------------------------------------
+    if (errors.length > 0) {
+        alert("Please correct the following:\n\n" + errors.join("\n"));
+        return;
+    }
+
+
         await saveGoodsAndServices();
         await saveGstRegistrations();
         await saveIncomeTaxDetails();
         toast.success("Gst Details saved successfully!");
+
+
         nextPage();
     };
 
@@ -1818,27 +2078,27 @@ const VmsRequest = () => {
         const { name, value } = e.target;
         let cleaned = value;
 
-        // 🏦 Account Holder / Beneficiary / Bank / Branch — only letters + spaces, uppercase
+        // Account Holder / Beneficiary / Bank / Branch — only letters + spaces, uppercase
         if (["account_holder_name", "beneficiary_name", "bank_name", "branch_name", "bankCountryName"].includes(name)) {
             cleaned = value.replace(/[^A-Za-z\s]/g, "").toUpperCase();
         }
 
-        // 💳 Account Number — digits only
+        // Account Number — digits only
         else if (name === "account_number") {
             cleaned = value.replace(/[^0-9]/g, "");
         }
 
-        // 🔠 IFSC / SWIFT Codes — uppercase alphanumeric (no limit)
+        // IFSC / SWIFT Codes — uppercase alphanumeric (no limit)
         else if (["ifscCode", "swiftCode"].includes(name)) {
             cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
         }
 
-        // 🏠 Bank Address — keep as typed (case-sensitive)
+        // Bank Address — keep as typed (case-sensitive)
         else if (name === "bank_address") {
             cleaned = value;
         }
 
-        // 🌍 Country — only letters and spaces (uppercase)
+        // Country — only letters and spaces (uppercase)
         else if (name === "country") {
             cleaned = value.replace(/[^A-Za-z\s]/g, "").toUpperCase();
         }
@@ -1871,6 +2131,96 @@ const VmsRequest = () => {
             swift_code: bankInfo.swift_code,
             beneficiary_name: bankInfo.beneficiary_name,
         };
+
+          let errors = [];
+
+    // ---------------------------------------------
+    // 🔹 BASIC REQUIRED FIELDS
+    // ---------------------------------------------
+    if (!bankInfo.account_holder_name)
+        errors.push("Account Holder Name is required.");
+
+    if (!bankInfo.bank_name)
+        errors.push("Bank Name is required.");
+
+    if (!bankInfo.bank_address)
+        errors.push("Bank Address is required.");
+
+    if (!bankInfo.transaction_type)
+        errors.push("Transaction Type is required.");
+
+    // ---------------------------------------------
+    // 🔹 VALIDATE IFSC / SWIFT BASED ON TRANSACTION TYPE
+    // ---------------------------------------------
+    if (
+        bankInfo.transaction_type === "Domestic" ||
+        bankInfo.transaction_type === "Domestic and International"
+    ) {
+        if (!bankInfo.ifsc_code)
+            errors.push("IFSC Code is required for Domestic transactions.");
+
+        // IFSC Format (optional but recommended)
+        if (
+            bankInfo.ifsc_code &&
+            !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(bankInfo.ifsc_code)
+        ) {
+            errors.push("Invalid IFSC Code format.");
+        }
+    }
+
+    if (
+        bankInfo.transaction_type === "International" ||
+        bankInfo.transaction_type === "Domestic and International"
+    ) {
+        if (!bankInfo.swift_code)
+            errors.push("SWIFT Code is required for International transactions.");
+
+        // SWIFT Format (optional)
+        if (
+            bankInfo.swift_code &&
+            !/^[A-Z0-9]{8}(?:[A-Z0-9]{3})?$/i.test(bankInfo.swift_code)
+        ) {
+            errors.push("Invalid SWIFT Code format.");
+        }
+    }
+
+    // ---------------------------------------------
+    // 🔹 COUNTRY VALIDATION (ONLY check selection)
+    // ---------------------------------------------
+    if (!bankInfo.country_type)
+        errors.push("Please select Bank Country.");
+
+    // ---------------------------------------------
+    // 🔹 IF COUNTRY = Others → Require country_text & state_text
+    // ---------------------------------------------
+    if (bankInfo.country_type === "Others") {
+        if (!bankInfo.country_text)
+            errors.push("Specify Country is required.");
+
+        if (!bankInfo.state_text)
+            errors.push("Specify State/Province is required.");
+    }
+
+    // ---------------------------------------------
+    // 🔹 IF COUNTRY = India → Require state dropdown
+    // ---------------------------------------------
+    if (bankInfo.country_type === "India") {
+        if (!bankInfo.state_id)
+            errors.push("Bank State is required for India.");
+    }
+
+    // ---------------------------------------------
+    // 🔹 SHOW ERRORS (if any)
+    // ---------------------------------------------
+    if (errors.length > 0) {
+        alert("Please correct the following:\n\n" + errors.join("\n"));
+        return;
+    }
+
+    // ---------------------------------------------
+    // SUCCESS → Go to next page
+    // ---------------------------------------------
+    nextPage();
 
         try {
 
@@ -1999,7 +2349,7 @@ const VmsRequest = () => {
                     const docs = {};
                     response.data.forEach(doc => {
                         docs[doc?.doc_type] = {
-                            docId: doc?.doc_id,  // 👈 keep the document ID for updates
+                            docId: doc?.doc_id,  // keep the document ID for updates
                             file: null,          // user hasn't selected new file yet
                             url: doc?.file_path  // stored file path
                         };
@@ -2018,6 +2368,122 @@ const VmsRequest = () => {
 
 
     const handleSaveDocuments = async () => {
+        let errors = [];
+
+    // ---------------------------------------------
+    // 🔹 1. PAN — ALWAYS REQUIRED
+    // ---------------------------------------------
+    if (!documents.pan) {
+        errors.push("PAN document is required.");
+    }
+
+    // ---------------------------------------------
+    // 🔹 2. GST — Conditional
+    // ---------------------------------------------
+    if (!documents.gst_available) {
+        errors.push("Please select GSTIN Available (Yes/No).");
+    }
+
+    if (documents.gst_available === "true") {
+        if (!documents.gst) {
+            errors.push("GSTIN Certificate is required.");
+        }
+    }
+
+    // ---------------------------------------------
+    // 🔹 3. MSME — Conditional
+    // ---------------------------------------------
+    if (!msmeInfo.registered_under_msme) {
+        errors.push("Please select whether MSME Registration is available.");
+    }
+
+    if (msmeInfo.registered_under_msme === "true") {
+        if (!documents.msme) {
+            errors.push("MSME Certificate is required.");
+        }
+    }
+
+    // ---------------------------------------------
+    // 🔹 4. Cancelled Cheque — Optional
+    // (No validation required)
+    // ---------------------------------------------
+
+    // ---------------------------------------------
+    // 🔹 5. TAN Certificate / Exemption — REQUIRED
+    // ---------------------------------------------
+    if (!tanStatus) {
+        errors.push("Please select TAN status (Yes/No).");
+    }
+
+    if (tanStatus === "yes" && !documents.tanCertificate) {
+        errors.push("TAN Certificate is required.");
+    }
+
+    if (tanStatus === "no" && !documents.tanExemption) {
+        errors.push("TAN Exemption Certificate is required.");
+    }
+
+    // ---------------------------------------------
+    // 🔹 6. Registration Certificate — ALWAYS REQUIRED
+    // ---------------------------------------------
+    if (!documents.incorporation) {
+        errors.push("Registration Certificate is required.");
+    }
+
+    // ---------------------------------------------
+    // 🔹 7. TDS Declaration — Conditional
+    // ---------------------------------------------
+    if (!documents.tds_declaration) {
+        errors.push("Please select TDS Declaration (Yes/No).");
+    }
+
+    if (documents.tds_declaration === "true" && !documents.tds) {
+        errors.push("TDS Declaration document is required.");
+    }
+
+    // ---------------------------------------------
+    // 🔹 8. File Type + File Size Validation (5 MB)
+    // ---------------------------------------------
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    const allFiles = [
+        documents.pan,
+        documents.gst,
+        documents.msme,
+        documents.cheque,
+        documents.tanCertificate,
+        documents.tanExemption,
+        documents.incorporation,
+        documents.tds
+    ];
+
+    allFiles.forEach((fileObj) => {
+        if (fileObj?.file) {
+            const file = fileObj.file;
+
+            if (!allowedTypes.includes(file.type)) {
+                errors.push(`Invalid file format: ${file.name}. Allowed formats are JPG, JPEG, PNG, PDF.`);
+            }
+
+            if (file.size > maxSize) {
+                errors.push(`File too large: ${file.name}. Maximum allowed size is 5 MB.`);
+            }
+        }
+    });
+
+    // ---------------------------------------------
+    // ❗ Show Errors
+    // ---------------------------------------------
+    if (errors.length > 0) {
+        alert("Please correct the following:\n\n" + errors.join("\n"));
+        return;
+    }
+
+    // ---------------------------------------------
+    // SUCCESS → GO TO NEXT STEP
+    // ---------------------------------------------
+    nextPage();
         try {
             const formData = new FormData();
             let hasAnyOperation = false;
@@ -2157,6 +2623,79 @@ const VmsRequest = () => {
 
 
     const handleSaveDeclaration = async () => {
+
+        let errors = [];
+
+    // ========== Vendor Declaration Inputs ==========
+    if (!vendorDeclarationInfo.name?.trim()) {
+        errors.push("Vendor Name is required in Declaration paragraph.");
+    }
+
+    if (!vendorDeclarationInfo.organization?.trim()) {
+        errors.push("Vendor Organization is required in Declaration paragraph.");
+    }
+
+    if (!vendorDeclarationInfo.designation?.trim()) {
+        errors.push("Vendor Designation is required in Declaration paragraph.");
+    }
+
+    // ========== Vendor Declaration Checkbox ==========
+    if (!isDeclarationChecked) {
+        errors.push("You must agree to the Declaration.");
+    }
+
+    // ========== Country Party Inputs ==========
+    if (!countryPartyInfo.name?.trim()) {
+        errors.push("Country Party Name is required in Declaration paragraph.");
+    }
+
+    if (!countryPartyInfo.country?.trim()) {
+        errors.push("Country Party Country is required in Declaration paragraph.");
+    }
+
+    if (!countryPartyInfo.designation?.trim()) {
+        errors.push("Country Party Designation is required in Declaration paragraph.");
+    }
+
+    // ========== Country Party Checkbox ==========
+    if (!isCountryPartyChecked) {
+        errors.push("You must agree with Country Party Declaration.");
+    }
+
+    // ========== Extra Fields (If both checkboxes are checked) ==========
+    if (isDeclarationChecked && isCountryPartyChecked) {
+        if (!declarationDetails.place?.trim()) {
+            errors.push("Place is required.");
+        }
+
+        // Signature file required
+        if (!declarationDetails.sign?.file) {
+            errors.push("Signature file is required.");
+        } else {
+            const file = declarationDetails.sign.file;
+
+            // Validate file type
+            const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+            if (!allowedTypes.includes(file.type)) {
+                errors.push("Signature must be JPG, JPEG, or PNG.");
+            }
+
+            // Validate file size (1 MB)
+            if (file.size > 1024 * 1024) {
+                errors.push("Signature file size must be less than 1 MB.");
+            }
+        }
+    }
+
+    // ========== Display Errors ==========
+    if (errors.length > 0) {
+        alert("Please fix the following:\n\n" + errors.join("\n"));
+        return;
+    }
+
+    // ========== Everything is Valid ==========
+    nextPage();
+
         try {
             const formData = new FormData();
 
@@ -2519,17 +3058,56 @@ const VmsRequest = () => {
 
 
                                         <div className={styles.fieldRow}>
-                                            <label className={styles.fieldLabel}>Nature of Business Entity
-                                                <span className={styles.requiredSymbol}>*</span>
+                                            <label className={styles.fieldLabel}>
+                                                Nature of Business Entity <span className={styles.requiredSymbol}>*</span>
                                             </label>
+
                                             <select
                                                 name="business_entity_type"
                                                 value={companyInfo.business_entity_type}
-                                                onChange={handleCompanyInfoChange}
+                                                onChange={(e) => {
+                                                    handleCompanyInfoChange(e);  // keep your existing handling
+
+                                                    const selected = e.target.value;
+
+                                                    // Force India for these types:
+                                                    const forceIndia =
+                                                        selected === "Sole Proprietorship" ||
+                                                        selected === "Partnership";
+
+                                                    if (forceIndia) {
+                                                        const india = countries.find(
+                                                            c => c.country.toLowerCase() === "india"
+                                                        );
+
+                                                        setCompanyInfo(prev => ({
+                                                            ...prev,
+                                                            country_type: "India",
+                                                            isOtherCountry: false,
+                                                            country_id: india?.id || null,
+
+                                                            // reset these fields
+                                                            country_text: "",
+                                                            state_text: "",
+                                                            state_id: "",
+                                                        }));
+
+                                                    } else {
+                                                        // Reset country fields when switching to other entity types
+                                                        setCompanyInfo(prev => ({
+                                                            ...prev,
+                                                            country_type: "",
+                                                            isOtherCountry: false,
+                                                            country_id: null,
+                                                            state_id: "",
+                                                            country_text: "",
+                                                            state_text: "",
+                                                        }));
+                                                    }
+                                                }}
                                                 className={styles.fieldInput}
                                                 required
                                                 disabled={isReadOnly}
-
                                             >
                                                 <option value="">-- Select Business Entity Type --</option>
                                                 <option value="Sole Proprietorship">Sole Proprietorship</option>
@@ -2540,10 +3118,11 @@ const VmsRequest = () => {
                                                 <option value="One-Person Companies">One-Person Companies</option>
                                                 <option value="Section 8 Company">Section 8 Company</option>
                                                 <option value="Joint-Venture Company">Joint-Venture Company</option>
-                                                <option value="Non-Government Organization(NGO)">Non-Government Organization (NGO)</option>
+                                                <option value="Non-Government Organization(NGO)">
+                                                    Non-Government Organization (NGO)
+                                                </option>
                                             </select>
                                         </div>
-
 
 
                                         {/* 🟢 Sole Proprietorship → Registration Number */}
@@ -2798,46 +3377,68 @@ const VmsRequest = () => {
                                         </div>
 
 
-                                        {/* 🌎 Country of Incorporation */}
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>Country of Incorporation</label>
 
                                             <select
                                                 name="country_type"
                                                 value={companyInfo.country_type}
+                                                disabled={
+                                                    isReadOnly ||
+                                                    ["Sole Proprietorship", "Partnership"].includes(companyInfo.business_entity_type)
+                                                }
+                                                className={styles.fieldInput}
                                                 onChange={(e) => {
                                                     const selected = e.target.value;
 
+                                                    // ---------------------------------------
+                                                    // 🟡 Case 1: User selects blank option
+                                                    // ---------------------------------------
+                                                    if (selected === "") {
+                                                        setCompanyInfo(prev => ({
+                                                            ...prev,
+                                                            country_type: "",
+                                                            isOtherCountry: false, // prevent auto Others
+                                                            country_id: null,
+                                                            state_id: "",
+                                                            country_text: "",
+                                                            state_text: "",
+                                                        }));
+                                                        return;
+                                                    }
+
+                                                    // ---------------------------------------
+                                                    // 🟢 Case 2: India selected
+                                                    // ---------------------------------------
                                                     if (selected === "India") {
                                                         const india = countries.find(c => c.country.toLowerCase() === "india");
 
-                                                        setCompanyInfo((prev) => ({
+                                                        setCompanyInfo(prev => ({
                                                             ...prev,
                                                             country_type: "India",
                                                             isOtherCountry: false,
-
                                                             country_id: india?.id || null,
                                                             country_text: "",
-
+                                                            state_text: "",
                                                             state_id: "",
-                                                            state_text: "",
                                                         }));
-                                                    } else {
-                                                        setCompanyInfo((prev) => ({
-                                                            ...prev,
-                                                            country_type: "Others",
-                                                            isOtherCountry: true,
 
-                                                            country_id: null,
-                                                            state_id: null,
-
-                                                            country_text: "",
-                                                            state_text: "",
-                                                        }));
+                                                        return;
                                                     }
+
+                                                    // ---------------------------------------
+                                                    // 🔵 Case 3: Others selected
+                                                    // ---------------------------------------
+                                                    setCompanyInfo(prev => ({
+                                                        ...prev,
+                                                        country_type: "Others",
+                                                        isOtherCountry: true,
+                                                        country_id: null,
+                                                        state_id: "",
+                                                        country_text: "",
+                                                        state_text: "",
+                                                    }));
                                                 }}
-                                                disabled={isReadOnly || ["Sole Proprietorship", "Partnership"].includes(companyInfo.business_entity_type)}
-                                                className={styles.fieldInput}
                                             >
                                                 <option value="">-- Select Country --</option>
                                                 <option value="India">India</option>
@@ -2845,7 +3446,10 @@ const VmsRequest = () => {
                                             </select>
                                         </div>
 
-                                        {/* 🌍 Country ≠ India */}
+
+                                        {/* ============================
+    🌎 OTHERS → COUNTRY + STATE
+=============================== */}
                                         {companyInfo.isOtherCountry && (
                                             <>
                                                 {/* Country Text */}
@@ -2855,13 +3459,13 @@ const VmsRequest = () => {
                                                         type="text"
                                                         value={companyInfo.country_text}
                                                         onChange={(e) =>
-                                                            setCompanyInfo((prev) => ({
+                                                            setCompanyInfo(prev => ({
                                                                 ...prev,
                                                                 country_text: e.target.value.toUpperCase(),
                                                             }))
                                                         }
-                                                        required
                                                         className={styles.fieldInput}
+                                                        required
                                                     />
                                                 </div>
 
@@ -2872,20 +3476,22 @@ const VmsRequest = () => {
                                                         type="text"
                                                         value={companyInfo.state_text}
                                                         onChange={(e) =>
-                                                            setCompanyInfo((prev) => ({
+                                                            setCompanyInfo(prev => ({
                                                                 ...prev,
                                                                 state_text: e.target.value.toUpperCase(),
                                                             }))
                                                         }
-                                                        required
                                                         className={styles.fieldInput}
+                                                        required
                                                     />
                                                 </div>
                                             </>
                                         )}
 
 
-                                        {/* 🇮🇳 India State Dropdown */}
+                                        {/* ============================
+    🇮🇳 INDIA — STATE DROPDOWN
+=============================== */}
                                         {!companyInfo.isOtherCountry && companyInfo.country_type === "India" && (
                                             <div className={styles.fieldRow}>
                                                 <label className={styles.fieldLabel}>State</label>
@@ -2893,7 +3499,7 @@ const VmsRequest = () => {
                                                     name="state_id"
                                                     value={companyInfo.state_id || ""}
                                                     onChange={(e) =>
-                                                        setCompanyInfo((prev) => ({
+                                                        setCompanyInfo(prev => ({
                                                             ...prev,
                                                             state_id: e.target.value,
                                                         }))
@@ -3354,7 +3960,7 @@ const VmsRequest = () => {
                                                     setGoods(Array(5).fill(""));                // reset goods[]
                                                     setServices(Array(5).fill(""));             // reset services[]
                                                     setGoodsAndServices(
-                                                        Array.from({ length: 5 }, () => ({ goods: "", services: "" })) // reset goods & services combined
+                                                        Array(5).fill({ goods: "", services: "" }) // reset goods & services combined
                                                     );
                                                 }}
                                                 className={styles.fieldInput}
@@ -3470,7 +4076,7 @@ const VmsRequest = () => {
                                                     // reset meta info
                                                     setGstMeta({
                                                         reg_type: "",
-                                                        gstr_filling_type: "",
+                                                        periodicity_gstr1: "",
                                                     });
                                                 }}
                                                 className={styles.fieldInput}
@@ -4321,17 +4927,28 @@ const VmsRequest = () => {
                                             <input
                                                 type="file"
                                                 accept=".pdf,.jpg,.jpeg,.png"
-                                                onChange={(e) => handleValidatedFileChange(e, "cheque")}
+                                                onChange={(e) => handleDocumentChange(e, "cheque")}
                                                 className={styles.fieldInput}
                                                 disabled={isReadOnly}
                                             />
 
+                                            {/* ✅ Show uploaded file name */}
+                                            {documents.cheque?.fileName && (
+                                                <span className={styles.fileName}>📄 {documents.cheque.fileName}</span>
+                                            )}
+
+
+                                            {/* View Button */}
                                             {documents.cheque?.url && (
                                                 <a
-                                                    href={documents.cheque.url}
+                                                    href={
+                                                        documents.cheque.url.startsWith("blob:")
+                                                            ? documents.cheque.url
+                                                            : `${process.env.REACT_APP_API_BASE_URL}/${documents.cheque.url}`
+                                                    }
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className={styles.fileLink}
+                                                    className={styles.viewButton}
                                                 >
                                                     View
                                                 </a>
@@ -4349,6 +4966,7 @@ const VmsRequest = () => {
                                                 <span className={styles.requiredSymbol}>*</span>
                                             </label>
 
+                                            {/* File Upload */}
                                             <input
                                                 type="file"
                                                 accept=".jpg,.jpeg,.png,.pdf"
@@ -4363,18 +4981,59 @@ const VmsRequest = () => {
                                                 readOnly={isReadOnly}
                                             />
 
-                                            {(tanStatus === "yes" && documents.tanCertificate?.fileName) && (
-                                                <span className={styles.fileName}>
-                                                    📄 {documents.tanCertificate.fileName}
-                                                </span>
+                                            {/* ============================ */}
+                                            {/* TAN Certificate (Yes) */}
+                                            {/* ============================ */}
+                                            {tanStatus === "yes" && documents.tanCertificate?.fileName && (
+                                                <>
+                                                    <span className={styles.fileName}>
+                                                        📄 {documents.tanCertificate.fileName}
+                                                    </span>
+
+                                                    {documents.tanCertificate?.url && (
+                                                        <a
+                                                            href={
+                                                                documents.tanCertificate.url.startsWith("blob:")
+                                                                    ? documents.tanCertificate.url
+                                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanCertificate.url}`
+                                                            }
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={styles.viewButton}
+                                                        >
+                                                            View
+                                                        </a>
+                                                    )}
+                                                </>
                                             )}
 
-                                            {(tanStatus === "no" && documents.tanExemption?.fileName) && (
-                                                <span className={styles.fileName}>
-                                                    📄 {documents.tanExemption.fileName}
-                                                </span>
+                                            {/* ============================ */}
+                                            {/* TAN Exemption (No) */}
+                                            {/* ============================ */}
+                                            {tanStatus === "no" && documents.tanExemption?.fileName && (
+                                                <>
+                                                    <span className={styles.fileName}>
+                                                        📄 {documents.tanExemption.fileName}
+                                                    </span>
+
+                                                    {documents.tanExemption?.url && (
+                                                        <a
+                                                            href={
+                                                                documents.tanExemption.url.startsWith("blob:")
+                                                                    ? documents.tanExemption.url
+                                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanExemption.url}`
+                                                            }
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={styles.viewButton}
+                                                        >
+                                                            View
+                                                        </a>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
+
 
 
                                         {/* Certificate of Incorporation / Firm Registration */}
@@ -4436,6 +5095,8 @@ const VmsRequest = () => {
                                             </select>
                                         </div>
 
+
+
                                         {/* Show upload only if YES */}
                                         {documents.tds_declaration === "true" && (
                                             <div className={styles.fieldRow}>
@@ -4479,7 +5140,58 @@ const VmsRequest = () => {
                                 {currentPage === 6 && (
                                     <div className={styles.page}>
                                         <h3>Declaration and Acknowledgement</h3>
-                                        {/* 🧾 Checkbox first */}
+
+                                        <p
+                                            className={styles.declarationText}
+                                            style={{ margin: "10px 0", lineHeight: "1.6", textAlign: "justify" }}
+                                        >
+                                            I/We{" "}
+                                            <input
+                                                type="text"
+                                                value={vendorDeclarationInfo.name}
+                                                onChange={(e) =>
+                                                    setVendorDeclarationInfo((prev) => ({
+                                                        ...prev,
+                                                        name: e.target.value.toUpperCase(),
+                                                    }))
+                                                }
+                                                className={styles.inlineInput}
+                                                placeholder="Enter Name"
+                                                disabled={isReadOnly}
+                                            />{" "}
+                                            of{" "}
+                                            <input
+                                                type="text"
+                                                value={vendorDeclarationInfo.organization}
+                                                onChange={(e) =>
+                                                    setVendorDeclarationInfo((prev) => ({
+                                                        ...prev,
+                                                        organization: e.target.value.toUpperCase(),
+                                                    }))
+                                                }
+                                                className={styles.inlineInput}
+                                                placeholder="Enter Organization"
+                                                disabled={isReadOnly}
+                                            />{" "}
+                                            designated as{" "}
+                                            <input
+                                                type="text"
+                                                value={vendorDeclarationInfo.designation}
+                                                onChange={(e) =>
+                                                    setVendorDeclarationInfo((prev) => ({
+                                                        ...prev,
+                                                        designation: e.target.value.toUpperCase(),
+                                                    }))
+                                                }
+                                                className={styles.inlineInput}
+                                                placeholder="Enter Designation"
+                                                disabled={isReadOnly}
+                                            />{" "}
+                                            declare that the information provided in this document is true and accurate in
+                                            all respects and that we have performed such procedures and inquiries as
+                                            necessary to verify the answers.
+                                        </p>
+
                                         <div className={styles.checkboxRow}>
                                             <label>
                                                 <input
@@ -4489,21 +5201,7 @@ const VmsRequest = () => {
                                                         const checked = e.target.checked;
                                                         setIsDeclarationChecked(checked);
 
-                                                        // 🟢 when checked, auto-fill the fields
-                                                        if (checked) {
-                                                            setVendorDeclarationInfo({
-                                                                name: "John Doe", // replace with actual form data or variables
-                                                                organization: "ABC Pvt Ltd",
-                                                                designation: "Manager",
-                                                            });
-                                                        } else {
-                                                            // when unchecked, clear the auto-filled data
-                                                            setVendorDeclarationInfo({
-                                                                name: "",
-                                                                organization: "",
-                                                                designation: "",
-                                                            });
-                                                        }
+
                                                     }}
                                                     disabled={isReadOnly}
                                                     style={{ marginRight: "8px" }}
@@ -4512,20 +5210,59 @@ const VmsRequest = () => {
                                             </label>
                                         </div>
 
-                                        {/* ✅ Declaration paragraph always visible */}
+
+
                                         <p
                                             className={styles.declarationText}
                                             style={{ margin: "10px 0", lineHeight: "1.6", textAlign: "justify" }}
                                         >
-                                            I/We <strong>{vendorDeclarationInfo.name || "________"}</strong> of{" "}
-                                            <strong>{vendorDeclarationInfo.organization || "________"}</strong> designated as{" "}
-                                            <strong>{vendorDeclarationInfo.designation || "________"}</strong> declare that
-                                            the information provided in this document is true and accurate in all respects
-                                            and that we have performed such procedures and inquiries as necessary to verify
-                                            the answers.
+                                            I/We{" "}
+                                            <input
+                                                type="text"
+                                                value={countryPartyInfo.name}
+                                                onChange={(e) =>
+                                                    setCountryPartyInfo((prev) => ({
+                                                        ...prev,
+                                                        name: e.target.value.toUpperCase(),
+                                                    }))
+                                                }
+                                                className={styles.inlineInput}
+                                                placeholder="Enter Name"
+                                                disabled={isReadOnly}
+                                            />{" "}
+                                            representing the country{" "}
+                                            <input
+                                                type="text"
+                                                value={countryPartyInfo.country}
+                                                onChange={(e) =>
+                                                    setCountryPartyInfo((prev) => ({
+                                                        ...prev,
+                                                        country: e.target.value.toUpperCase(),
+                                                    }))
+                                                }
+                                                className={styles.inlineInput}
+                                                placeholder="Enter Country"
+                                                disabled={isReadOnly}
+                                            />{" "}
+                                            designated as{" "}
+                                            <input
+                                                type="text"
+                                                value={countryPartyInfo.designation}
+                                                onChange={(e) =>
+                                                    setCountryPartyInfo((prev) => ({
+                                                        ...prev,
+                                                        designation: e.target.value.toUpperCase(),
+                                                    }))
+                                                }
+                                                className={styles.inlineInput}
+                                                placeholder="Enter Designation"
+                                                disabled={isReadOnly}
+                                            />
+                                            , hereby declare that all information provided by our organization is accurate
+                                            and complies with the regulations of our respective country.
                                         </p>
 
-                                        {/* 🌍 Country Party Declaration Section */}
+                                        {/* Country Party Declaration Section */}
                                         <div className={styles.checkboxRow}>
                                             <label>
                                                 <input
@@ -4535,21 +5272,7 @@ const VmsRequest = () => {
                                                         const checked = e.target.checked;
                                                         setIsCountryPartyChecked(checked);
 
-                                                        // 🟢 Auto-fill when checked
-                                                        if (checked) {
-                                                            setCountryPartyInfo({
-                                                                name: "John Smith", // Replace with your dynamic data
-                                                                country: "India",
-                                                                designation: "Country Representative",
-                                                            });
-                                                        } else {
-                                                            // Clear fields when unchecked
-                                                            setCountryPartyInfo({
-                                                                name: "",
-                                                                country: "",
-                                                                designation: "",
-                                                            });
-                                                        }
+
                                                     }}
                                                     disabled={isReadOnly}
                                                     style={{ marginRight: "8px" }}
@@ -4557,18 +5280,6 @@ const VmsRequest = () => {
                                                 I agree with Country Party Declaration
                                             </label>
                                         </div>
-
-                                        {/* ✅ Always visible paragraph */}
-                                        <p
-                                            className={styles.declarationText}
-                                            style={{ margin: "10px 0", lineHeight: "1.6", textAlign: "justify" }}
-                                        >
-                                            I/We <strong>{countryPartyInfo.name || "________"}</strong> representing the
-                                            country <strong>{countryPartyInfo.country || "________"}</strong>, designated as{" "}
-                                            <strong>{countryPartyInfo.designation || "________"}</strong>, hereby declare
-                                            that all information provided by our organization is accurate and complies with
-                                            the regulations of our respective country.
-                                        </p>
 
                                         {/* ✅ Show these 3 fields only when BOTH checkboxes are ticked */}
                                         {isDeclarationChecked && isCountryPartyChecked && (
@@ -4730,27 +5441,18 @@ const VmsRequest = () => {
                                                     {currentPage < totalSteps - 1 ? (
                                                         <button
                                                             type="button"
-                                                            onClick={() => {
-                                                                switch (currentPage) {
-                                                                    case 1:
-                                                                        handleSubmitCompanyInfo();
-                                                                        break;
-                                                                    case 2:
-                                                                        handleSaveMsmeInfo();
-                                                                        break;
-                                                                    case 3:
-                                                                        handleSaveGstForm();
-                                                                        break;
-                                                                    case 4:
-                                                                        handleSaveBankDetails();
-                                                                        break;
-                                                                    case 5:
-                                                                        handleSaveDocuments();
-                                                                        break;
-                                                                    default:
-                                                                        nextPage();
-                                                                }
-                                                            }}
+                                                            onClick={() => { switch (currentPage) { 
+                                                                case 1: handleSubmitCompanyInfo(); 
+                                                                break; 
+                                                                case 2: handleSaveMsmeInfo(); 
+                                                                break; 
+                                                                case 3: handleSaveGstForm(); 
+                                                                break; 
+                                                                case 4: handleSaveBankDetails(); 
+                                                                break; 
+                                                                case 5: handleSaveDocuments(); 
+                                                                break; 
+                                                                default: nextPage(); } }}
                                                             style={{
                                                                 backgroundColor: "#007bff",
                                                                 color: "white",
@@ -4812,45 +5514,11 @@ const VmsRequest = () => {
                                     onClose={handleCloseModal}
                                     aria-labelledby="confirm-modal-title"
                                     aria-describedby="confirm-modal-description"
-                                    sx={{
-                                        position: "fixed",
-                                        top: 0,
-                                        left: 0,
-                                        width: "100vw",
-                                        height: "100vh",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        backgroundColor: "rgba(0, 0, 0, 0.6)",
-                                        zIndex: 2000,
-                                    }}
+                                    className={styles.reviewModalOverlay}
                                 >
-                                    <Box
-                                        sx={{
-                                            backgroundColor: "#fff",
-                                            color: "#1a1a1a",
-                                            borderRadius: "14px",
-                                            padding: "30px 40px",
-                                            width: "90%",
-                                            maxWidth: "950px",
-                                            maxHeight: "90vh",
-                                            overflowY: "auto",
-                                            fontFamily: "'Segoe UI', Roboto, sans-serif",
-                                            boxShadow: "0 8px 35px rgba(0,0,0,0.4)",
-                                            position: "relative",
-                                        }}
-                                    >
-                                        {/* Header */}
-                                        <h2
-                                            id="confirm-modal-title"
-                                            style={{
-                                                textAlign: "center",
-                                                marginBottom: "25px",
-                                                fontSize: "26px",
-                                                fontWeight: "700",
-                                                color: "#0d47a1",
-                                            }}
-                                        >
+                                    <Box className={styles.reviewModalWrapper}>
+
+                                        <h2 className={styles.reviewModalTitle}>
                                             🧾 Review All Details Before Final Submission —{" "}
                                             {new Date().toLocaleDateString("en-GB", {
                                                 day: "2-digit",
@@ -4859,154 +5527,813 @@ const VmsRequest = () => {
                                             })}
                                         </h2>
 
-                                        {/* --- Step Sections --- */}
-                                        {[
-                                            {
-                                                title: "1️⃣ Business Entity Details",
-                                                content: (
-                                                    <>
-                                                        {renderValue("Full Registered Name", companyInfo.full_registered_name)}
-                                                        {renderValue("Business Entity Type", companyInfo.business_entity_type)}
-                                                        {renderValue("Trading Name", companyInfo.trading_name)}
-                                                        {renderValue("Telephone", companyInfo.telephone)}
-                                                        {renderValue("Country of Incorporation", countries.find(c => c.id == companyInfo.country_of_incorporation)?.country)}
-                                                        {renderValue("Registered Address", companyInfo.registered_address)}
-                                                        {renderValue("Business Address", companyInfo.business_address)}
-                                                        {renderValue("Contact Person Name", companyInfo.contact_person_name)}
-                                                        {renderValue("Contact Person Email", companyInfo.contact_person_email)}
-                                                    </>
-                                                ),
-                                            },
-                                            {
-                                                title: "2️⃣ MSME Details",
-                                                content: (
-                                                    <>
-                                                        {renderValue("Registered under MSME", msmeInfo.registered_under_msme === "true" ? "Yes" : "No")}
-                                                        {renderValue("Udyam Registration Number", msmeInfo.udyam_registration_number)}
-                                                        {renderValue("Category", msmeInfo.category)}
-                                                    </>
-                                                ),
-                                            },
-                                            {
-                                                title: "3️⃣ GST & Goods/Services Information",
-                                                content: (
-                                                    <>
-                                                        {renderValue("Type of Counterparty", goodsServices.type_of_counterparty)}
-                                                        {renderValue("Other Type", goodsServices.others)}
-                                                        {renderValue("Registration Type", gstMeta.reg_type)}
-                                                        {renderValue("GSTR Filing Type", gstMeta.gstr_filling_type)}
-                                                    </>
-                                                ),
-                                            },
-                                            {
-                                                title: "4️⃣ Bank Details",
-                                                content: (
-                                                    <>
-                                                        {renderValue("Account Holder Name", bankInfo.account_holder_name)}
-                                                        {renderValue("Bank Name", bankInfo.bank_name)}
-                                                        {renderValue("Account Number", bankInfo.account_number)}
-                                                        {renderValue("IFSC Code", bankInfo.ifsc_code)}
-                                                        {renderValue("SWIFT Code", bankInfo.swift_code)}
-                                                        {renderValue("Beneficiary Name", bankInfo.beneficiary_name)}
-                                                    </>
-                                                ),
-                                            },
-                                            {
-                                                title: "5️⃣ Documents Uploaded",
-                                                content: (
-                                                    <ul style={{ listStyle: "none", paddingLeft: "0" }}>
-                                                        {Object.entries(documents).map(([key, value]) => (
-                                                            <li key={key} style={{ marginBottom: "6px" }}>
-                                                                <b style={{ textTransform: "capitalize" }}>{key}</b> —{" "}
-                                                                {value?.url ? (
+                                        {/* BUSINESS ENTITY */}
+                                        <Box className={styles.reviewSection}>
+                                            <h3 className={styles.reviewSectionTitle}>1️⃣ Business Entity Details</h3>
+                                            <table className={styles.reviewTable}>
+                                                <tbody>
+                                                    <tr><td>Full Registered Name</td><td>{companyInfo.full_registered_name}</td></tr>
+                                                    <tr>
+                                                        <td>Nature of Business Entity</td>
+                                                        <td>{companyInfo?.business_entity_type || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Registration Number visible ONLY when business type is chosen */}
+                                                    {companyInfo?.business_entity_type && (
+                                                        <tr>
+                                                            <td>Registration Number</td>
+                                                            <td>{companyInfo?.reg_number || "Not Provided"}</td>
+                                                        </tr>
+                                                    )}
+                                                    {/* TAN Status */}
+                                                    <tr>
+                                                        <td>Do you have a TAN Number?</td>
+                                                        <td>{tanStatus === "yes" ? "Yes" : "No"}</td>
+                                                    </tr>
+
+                                                    {/* TAN Number — Only if Yes */}
+                                                    {tanStatus === "yes" && (
+                                                        <tr>
+                                                            <td>TAN Number</td>
+                                                            <td>{companyInfo?.tan_number || "Not Provided"}</td>
+                                                        </tr>
+                                                    )}
+
+                                                    {/* If No → show message */}
+                                                    {tanStatus === "no" && (
+                                                        <tr>
+                                                            <td>TAN Requirement</td>
+                                                            <td>Please upload your TDS Exemption Certificate in Step 5.</td>
+                                                        </tr>
+                                                    )}
+
+                                                    {/* Trading Name */}
+                                                    <tr>
+                                                        <td>Trading Name</td>
+                                                        <td>{companyInfo?.trading_name || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Country Type */}
+                                                    <tr>
+                                                        <td>Country of Incorporation</td>
+                                                        <td>{companyInfo?.country_type || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* If India → show dropdown country name */}
+                                                    {companyInfo?.country_type === "India" && (
+                                                        <tr>
+                                                            <td>Country</td>
+                                                            <td>
+                                                                {countries.find(c => c.id == companyInfo?.country_id)?.country || "India"}
+                                                            </td>
+                                                        </tr>
+                                                    )}
+
+                                                    {/* Other Country Input */}
+                                                    {companyInfo?.isOtherCountry && (
+                                                        <>
+                                                            <tr>
+                                                                <td>Specify Country</td>
+                                                                <td>{companyInfo?.country_text || "Not Provided"}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>State / Province</td>
+                                                                <td>{companyInfo?.state_text || "Not Provided"}</td>
+                                                            </tr>
+                                                        </>
+                                                    )}
+
+                                                    {/* State if India */}
+                                                    {companyInfo?.country_type === "India" && !companyInfo?.isOtherCountry && (
+                                                        <tr>
+                                                            <td>State</td>
+                                                            <td>
+                                                                {states.find(s => s.id == companyInfo?.state_id)?.state || "Not Provided"}
+                                                            </td>
+                                                        </tr>
+                                                    )}
+
+                                                    {/* Telephone */}
+                                                    <tr>
+                                                        <td>Telephone Number</td>
+                                                        <td>{companyInfo?.telephone || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Registered Address */}
+                                                    <tr>
+                                                        <td>Registered Address</td>
+                                                        <td>{companyInfo?.registered_address || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Business Address */}
+                                                    <tr>
+                                                        <td>Business Address</td>
+                                                        <td>{companyInfo?.business_address || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Contact Person */}
+                                                    <tr>
+                                                        <td>Contact Person</td>
+                                                        <td>
+                                                            {(companyInfo?.contact_person_title || "") +
+                                                                " " +
+                                                                (companyInfo?.contact_person_name || "Not Provided")}
+                                                        </td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td>Contact Person Mobile</td>
+                                                        <td>{companyInfo?.contact_person_mobile || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td>Contact Person Email</td>
+                                                        <td>{companyInfo?.contact_person_email || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Accounts Person */}
+                                                    <tr>
+                                                        <td>Accounts Person</td>
+                                                        <td>
+                                                            {(companyInfo?.accounts_person_title || "") +
+                                                                " " +
+                                                                (companyInfo?.accounts_person_name || "Not Provided")}
+                                                        </td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td>Accounts Person Contact Number</td>
+                                                        <td>{companyInfo?.accounts_person_contact_no || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td>Accounts Person Email</td>
+                                                        <td>{companyInfo?.accounts_person_email || "Not Provided"}</td>
+                                                    </tr>
+
+                                                </tbody>
+                                            </table>
+                                        </Box>
+
+                                        {/* ============================
+    2. MSME DETAILS (Category always visible)
+============================= */}
+                                        <Box className={styles.reviewSection}>
+                                            <h3 className={styles.reviewSectionTitle}>2️⃣ MSME Details</h3>
+
+                                            <table className={styles.reviewTable}>
+                                                <tbody>
+
+                                                    {/* Always show this */}
+                                                    <tr>
+                                                        <td>Registered under MSME Act</td>
+                                                        <td>{msmeInfo?.registered_under_msme === "true" ? "Yes" : "No"}</td>
+                                                    </tr>
+
+                                                    {/* Show Udyam Number only when YES */}
+                                                    {msmeInfo?.registered_under_msme === "true" && (
+                                                        <tr>
+                                                            <td>Udyam Registration Number</td>
+                                                            <td>{msmeInfo?.udyam_registration_number || "Not Provided"}</td>
+                                                        </tr>
+                                                    )}
+
+                                                    {/* Category MUST ALWAYS SHOW (YES or NO) */}
+                                                    <tr>
+                                                        <td>Category (Micro/Small/Medium)</td>
+                                                        <td>{msmeInfo?.category || "Not Provided"}</td>
+                                                    </tr>
+
+                                                </tbody>
+                                            </table>
+                                        </Box>
+
+                                        {/* ============================================
+   STEP 3 — GST & GOODS/SERVICES REVIEW SECTION
+============================================= */}
+                                        <Box className={styles.reviewSection}>
+                                            <h3 className={styles.reviewSectionTitle}>3️⃣ GST & Goods/Services Information</h3>
+
+                                            <table className={styles.reviewTable}>
+                                                <tbody>
+
+                                                    {/* Type of Counterparty */}
+                                                    <tr>
+                                                        <td>Type of Counterparty Business</td>
+                                                        <td>
+                                                            {goodsServices.type_of_counterparty}
+                                                            {goodsServices.type_of_counterparty === "Others" &&
+                                                                goodsServices.others &&
+                                                                ` — ${goodsServices.others}`}
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* Type of Supplies (Goods / Services / Both) */}
+                                                    <tr>
+                                                        <td>Details of Supplies Type</td>
+                                                        <td>{goodsServices.type || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* ===================== GOODS ONLY ===================== */}
+                                                    {goodsServices.type === "Goods" &&
+                                                        goods.some(g => g !== "") && (
+                                                            <tr>
+                                                                <td>Goods</td>
+                                                                <td>
+                                                                    <ul style={{ margin: 0, paddingLeft: "18px" }}>
+                                                                        {goods.filter(g => g !== "").map((g, i) => (
+                                                                            <li key={i}>{g}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+
+                                                    {/* ===================== SERVICES ONLY ===================== */}
+                                                    {goodsServices.type === "Services" &&
+                                                        services.some(s => s !== "") && (
+                                                            <tr>
+                                                                <td>Services</td>
+                                                                <td>
+                                                                    <ul style={{ margin: 0, paddingLeft: "18px" }}>
+                                                                        {services.filter(s => s !== "").map((s, i) => (
+                                                                            <li key={i}>{s}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+
+                                                    {/* ===================== GOODS & SERVICES BOTH ===================== */}
+                                                    {goodsServices.type === "Goods and Services" &&
+                                                        goodsAndServices.some(item => item.goods || item.services) && (
+                                                            <tr>
+                                                                <td>Goods & Services</td>
+                                                                <td>
+                                                                    <ul style={{ margin: 0, paddingLeft: "18px" }}>
+                                                                        {goodsAndServices.map((item, i) => {
+                                                                            if (!item.goods && !item.services) return null;
+                                                                            return (
+                                                                                <li key={i}>
+                                                                                    {item.goods && <b>Goods:</b>} {item.goods || ""}
+                                                                                    {item.services && (
+                                                                                        <>
+                                                                                            {" | "}
+                                                                                            <b>Service:</b> {item.services}
+                                                                                        </>
+                                                                                    )}
+                                                                                </li>
+                                                                            );
+                                                                        })}
+                                                                    </ul>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+
+                                                    {/* GST Applicable */}
+                                                    <tr>
+                                                        <td>Is GST Applicable?</td>
+                                                        <td>{gstApplicable === "true" ? "Yes" : "No"}</td>
+                                                    </tr>
+
+                                                    {/* ====================== GST YES DETAILS ======================= */}
+                                                    {gstApplicable === "true" && (
+                                                        <>
+                                                            {/* Number of GST Registrations */}
+                                                            <tr>
+                                                                <td>Number of GST Registrations</td>
+                                                                <td>{count}</td>
+                                                            </tr>
+
+                                                            {/* List all GST registration entries */}
+                                                            {gstformData.map((item, i) => (
+                                                                <tr key={i}>
+                                                                    <td>Registration {i + 1}</td>
+                                                                    <td>
+                                                                        <div><b>State:</b> {states.find(s => s.id == item.state)?.state || "-"}</div>
+                                                                        <div><b>GSTIN:</b> {item.gstNumber}</div>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+
+                                                            {/* Registration Type */}
+                                                            <tr>
+                                                                <td>Registration Type</td>
+                                                                <td>{gstMeta.reg_type}</td>
+                                                            </tr>
+
+                                                            {/* GSTR Filing Type */}
+                                                            <tr>
+                                                                <td>GSTR Filing Type</td>
+                                                                <td>{gstMeta.gstr_filling_type}</td>
+                                                            </tr>
+                                                        </>
+                                                    )}
+
+                                                </tbody>
+                                            </table>
+
+                                            {/* ============================== Income Tax Details ============================== */}
+                                            <h3 className={styles.reviewSectionTitle} style={{ marginTop: "20px" }}>Income Tax Details</h3>
+
+                                            <table className={styles.reviewTable}>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Particulars</th>
+                                                        <th>Financial Year - I</th>
+                                                        <th>Financial Year - II</th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody>
+                                                    <tr>
+                                                        <td>Financial Year</td>
+                                                        <td>{formData.fy1}</td>
+                                                        <td>{formData.fy2}</td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td>Currency Type</td>
+                                                        <td>{formData.currencyType1}</td>
+                                                        <td>{formData.currencyType2}</td>
+                                                    </tr>
+
+                                                    {(formData.currencyType1 === "Others" || formData.currencyType2 === "Others") && (
+                                                        <tr>
+                                                            <td>Currency Name</td>
+                                                            <td>{formData.currencyType1 === "Others" ? formData.currencyName1 : "-"}</td>
+                                                            <td>{formData.currencyType2 === "Others" ? formData.currencyName2 : "-"}</td>
+                                                        </tr>
+                                                    )}
+
+                                                    <tr>
+                                                        <td>Turnover</td>
+                                                        <td>{formData.turnover1}</td>
+                                                        <td>{formData.turnover2}</td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td>ITR Filed (Yes/No)</td>
+                                                        <td>{formData.itrStatus1 === "true" ? "Yes" : "No"}</td>
+                                                        <td>{formData.itrStatus2 === "true" ? "Yes" : "No"}</td>
+                                                    </tr>
+
+                                                    {(formData.itrStatus1 === "true" || formData.itrStatus2 === "true") && (
+                                                        <>
+                                                            <tr>
+                                                                <td>ITR Acknowledgment No.</td>
+                                                                <td>{formData.itrStatus1 === "true" ? formData.ackNo1 : "-"}</td>
+                                                                <td>{formData.itrStatus2 === "true" ? formData.ackNo2 : "-"}</td>
+                                                            </tr>
+
+                                                            <tr>
+                                                                <td>ITR Filed Date</td>
+                                                                <td>
+                                                                    {formData.itrStatus1 === "true"
+                                                                        ? `${formData.itrDay1}/${formData.itrMonth1}/${formData.itrYear1}`
+                                                                        : "-"}
+                                                                </td>
+                                                                <td>
+                                                                    {formData.itrStatus2 === "true"
+                                                                        ? `${formData.itrDay2}/${formData.itrMonth2}/${formData.itrYear2}`
+                                                                        : "-"}
+                                                                </td>
+                                                            </tr>
+                                                        </>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </Box>
+
+
+                                        {/* =====================================================
+    STEP 4 — BANKING INFORMATION (Review Modal)
+===================================================== */}
+                                        <Box className={styles.reviewSection}>
+                                            <h3 className={styles.reviewSectionTitle}>4️⃣ Banking Information</h3>
+
+                                            <table className={styles.reviewTable}>
+                                                <tbody>
+
+                                                    {/* Account Holder Name */}
+                                                    <tr>
+                                                        <td>Account Holder’s Name</td>
+                                                        <td>{bankInfo.account_holder_name || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Bank Name */}
+                                                    <tr>
+                                                        <td>Bank Name</td>
+                                                        <td>{bankInfo.bank_name || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Bank Address */}
+                                                    <tr>
+                                                        <td>Bank Address</td>
+                                                        <td>{bankInfo.bank_address || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Transaction Type */}
+                                                    <tr>
+                                                        <td>Transaction Type</td>
+                                                        <td>{bankInfo.transaction_type || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Country */}
+                                                    <tr>
+                                                        <td>Bank Country</td>
+                                                        <td>{bankInfo.country_type || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* If country == India → show dropdown country */}
+                                                    {bankInfo.country_type === "India" && (
+                                                        <tr>
+                                                            <td>Country</td>
+                                                            <td>
+                                                                {countries.find(c => c.id == bankInfo.country_id)?.country || "India"}
+                                                            </td>
+                                                        </tr>
+                                                    )}
+
+                                                    {/* If Other Country */}
+                                                    {bankInfo.country_type === "Others" && (
+                                                        <>
+                                                            <tr>
+                                                                <td>Specify Country</td>
+                                                                <td>{bankInfo.country_text || "Not Provided"}</td>
+                                                            </tr>
+
+                                                            <tr>
+                                                                <td>State / Province</td>
+                                                                <td>{bankInfo.state_text || "Not Provided"}</td>
+                                                            </tr>
+                                                        </>
+                                                    )}
+
+                                                    {/* If India → show State Dropdown */}
+                                                    {bankInfo.country_type === "India" && (
+                                                        <tr>
+                                                            <td>State</td>
+                                                            <td>
+                                                                {states.find(s => s.id == bankInfo.state_id)?.state || "Not Provided"}
+                                                            </td>
+                                                        </tr>
+                                                    )}
+
+                                                    {/* Account Number */}
+                                                    <tr>
+                                                        <td>Account Number</td>
+                                                        <td>{bankInfo.account_number || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* IFSC — only if domestic or both */}
+                                                    {(bankInfo.transaction_type === "Domestic" ||
+                                                        bankInfo.transaction_type === "Domestic and International") && (
+                                                            <tr>
+                                                                <td>IFSC Code</td>
+                                                                <td>{bankInfo.ifsc_code || "Not Provided"}</td>
+                                                            </tr>
+                                                        )}
+
+                                                    {/* SWIFT — only if international or both */}
+                                                    {(bankInfo.transaction_type === "International" ||
+                                                        bankInfo.transaction_type === "Domestic and International") && (
+                                                            <tr>
+                                                                <td>SWIFT Code</td>
+                                                                <td>{bankInfo.swift_code || "Not Provided"}</td>
+                                                            </tr>
+                                                        )}
+
+                                                    {/* Beneficiary Name */}
+                                                    <tr>
+                                                        <td>Beneficiary Name</td>
+                                                        <td>{bankInfo.beneficiary_name || "Not Provided"}</td>
+                                                    </tr>
+
+                                                </tbody>
+                                            </table>
+                                        </Box>
+
+
+                                        <Box className={styles.reviewSection}>
+                                            <h3 className={styles.reviewSectionTitle}>5️⃣ Documents Uploaded</h3>
+
+                                            <table className={styles.reviewTable}>
+                                                <tbody>
+
+                                                    {/* PAN */}
+                                                    <tr>
+                                                        <td>PAN</td>
+                                                        <td>
+                                                            {documents.pan?.fileName ? (
+                                                                <>
+                                                                    📄 {documents.pan.fileName} —
                                                                     <a
-                                                                        href={value.url}
+                                                                        href={documents.pan.url?.startsWith("blob:")
+                                                                            ? documents.pan.url
+                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${documents.pan.url}`}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
-                                                                        style={{ color: "#1976d2", textDecoration: "underline" }}
+                                                                        className={styles.reviewViewLink}
                                                                     >
                                                                         View
                                                                     </a>
+                                                                </>
+                                                            ) : "Not Uploaded"}
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* GST Available */}
+                                                    <tr>
+                                                        <td>GSTIN Available</td>
+                                                        <td>{documents.gst_available === "true" ? "Yes" : "No"}</td>
+                                                    </tr>
+
+                                                    {/* GST Document — only if Yes */}
+                                                    {documents.gst_available === "true" && (
+                                                        <tr>
+                                                            <td>GST Certificate</td>
+                                                            <td>
+                                                                {documents.gst?.fileName ? (
+                                                                    <>
+                                                                        📄 {documents.gst.fileName} —
+                                                                        <a
+                                                                            href={documents.gst.url?.startsWith("blob:")
+                                                                                ? documents.gst.url
+                                                                                : `${process.env.REACT_APP_API_BASE_URL}/${documents.gst.url}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className={styles.reviewViewLink}
+                                                                        >
+                                                                            View
+                                                                        </a>
+                                                                    </>
+                                                                ) : "Not Uploaded"}
+                                                            </td>
+                                                        </tr>
+                                                    )}
+
+                                                    {/* MSME Registered */}
+                                                    <tr>
+                                                        <td>Registered under MSME</td>
+                                                        <td>{msmeInfo.registered_under_msme === "true" ? "Yes" : "No"}</td>
+                                                    </tr>
+
+                                                    {/* MSME Certificate — only if Yes */}
+                                                    {msmeInfo.registered_under_msme === "true" && (
+                                                        <tr>
+                                                            <td>MSME Certificate</td>
+                                                            <td>
+                                                                {documents.msme?.fileName ? (
+                                                                    <>
+                                                                        📄 {documents.msme.fileName} —
+                                                                        <a
+                                                                            href={documents.msme.url?.startsWith("blob:")
+                                                                                ? documents.msme.url
+                                                                                : `${process.env.REACT_APP_API_BASE_URL}/${documents.msme.url}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className={styles.reviewViewLink}
+                                                                        >
+                                                                            View
+                                                                        </a>
+                                                                    </>
+                                                                ) : "Not Uploaded"}
+                                                            </td>
+                                                        </tr>
+                                                    )}
+
+                                                    {/* Cancelled Cheque */}
+                                                    <tr>
+                                                        <td>Cancelled Cheque</td>
+                                                        <td>
+                                                            {documents.cheque?.fileName ? (
+                                                                <>
+                                                                    📄 {documents.cheque.fileName} —
+                                                                    <a
+                                                                        href={documents.cheque.url?.startsWith("blob:")
+                                                                            ? documents.cheque.url
+                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${documents.cheque.url}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className={styles.reviewViewLink}
+                                                                    >
+                                                                        View
+                                                                    </a>
+                                                                </>
+                                                            ) : "Not Uploaded"}
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* TAN Certificate / Exemption */}
+                                                    <tr>
+                                                        <td>{tanStatus === "yes" ? "TAN Certificate" : "TAN Exemption Certificate"}</td>
+                                                        <td>
+                                                            {tanStatus === "yes" ? (
+                                                                documents.tanCertificate?.fileName ? (
+                                                                    <>
+                                                                        📄 {documents.tanCertificate.fileName} —
+                                                                        <a
+                                                                            href={documents.tanCertificate.url?.startsWith("blob:")
+                                                                                ? documents.tanCertificate.url
+                                                                                : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanCertificate.url}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className={styles.reviewViewLink}
+                                                                        >
+                                                                            View
+                                                                        </a>
+                                                                    </>
                                                                 ) : (
                                                                     "Not Uploaded"
-                                                                )}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                ),
-                                            },
-                                            {
-                                                title: "6️⃣ Declaration & Acknowledgement",
-                                                content: (
-                                                    <>
-                                                        {renderValue("Name", declarationInfo.name)}
-                                                        {renderValue("Organization", declarationInfo.organization)}
-                                                        {renderValue("Designation", declarationInfo.designation)}
-                                                        {renderValue("Date", declarationInfo.date)}
-                                                        {renderValue("Place", declarationInfo.place)}
-                                                    </>
-                                                ),
-                                            },
-                                        ].map((section, index) => (
-                                            <Box
-                                                key={index}
-                                                sx={{
-                                                    border: "1px solid #e0e0e0",
-                                                    borderRadius: "10px",
-                                                    padding: "20px 25px",
-                                                    mb: 3,
-                                                    backgroundColor: "#f9fbff",
-                                                }}
-                                            >
-                                                <h3
-                                                    style={{
-                                                        marginBottom: "10px",
-                                                        fontSize: "18px",
-                                                        fontWeight: "600",
-                                                        color: "#0d47a1",
-                                                        borderBottom: "2px solid #bbdefb",
-                                                        paddingBottom: "4px",
-                                                    }}
-                                                >
-                                                    {section.title}
-                                                </h3>
-                                                <div style={{ lineHeight: "1.6", fontSize: "15px", color: "#222" }}>{section.content}</div>
-                                            </Box>
-                                        ))}
+                                                                )
+                                                            ) : (
+                                                                documents.tanExemption?.fileName ? (
+                                                                    <>
+                                                                        📄 {documents.tanExemption.fileName} —
+                                                                        <a
+                                                                            href={documents.tanExemption.url?.startsWith("blob:")
+                                                                                ? documents.tanExemption.url
+                                                                                : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanExemption.url}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className={styles.reviewViewLink}
+                                                                        >
+                                                                            View
+                                                                        </a>
+                                                                    </>
+                                                                ) : (
+                                                                    "Not Uploaded"
+                                                                )
+                                                            )}
+                                                        </td>
+                                                    </tr>
 
-                                        {/* --- Action Buttons --- */}
-                                        <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 4 }}>
-                                            <Button
-                                                variant="contained"
-                                                color="success"
-                                                onClick={handleFinalSubmit}
-                                                sx={{
-                                                    px: 4,
-                                                    py: 1,
-                                                    fontWeight: "600",
-                                                    textTransform: "none",
-                                                    fontSize: "15px",
-                                                }}
-                                            >
+                                                    {/* Incorporation Certificate */}
+                                                    <tr>
+                                                        <td>Registration / Incorporation Certificate</td>
+                                                        <td>
+                                                            {documents.incorporation?.fileName ? (
+                                                                <>
+                                                                    📄 {documents.incorporation.fileName} —
+                                                                    <a
+                                                                        href={documents.incorporation.url?.startsWith("blob:")
+                                                                            ? documents.incorporation.url
+                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${documents.incorporation.url}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className={styles.reviewViewLink}
+                                                                    >
+                                                                        View
+                                                                    </a>
+                                                                </>
+                                                            ) : "Not Uploaded"}
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* TDS Declaration */}
+                                                    <tr>
+                                                        <td>TDS Declaration Submitted</td>
+                                                        <td>{documents.tds_declaration === "true" ? "Yes" : "No"}</td>
+                                                    </tr>
+
+                                                    {/* TDS Document — only if Yes */}
+                                                    {documents.tds_declaration === "true" && (
+                                                        <tr>
+                                                            <td>TDS Declaration Document</td>
+                                                            <td>
+                                                                {documents.tds?.fileName ? (
+                                                                    <>
+                                                                        📄 {documents.tds.fileName} —
+                                                                        <a
+                                                                            href={documents.tds.url?.startsWith("blob:")
+                                                                                ? documents.tds.url
+                                                                                : `${process.env.REACT_APP_API_BASE_URL}/${documents.tds.url}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className={styles.reviewViewLink}
+                                                                        >
+                                                                            View
+                                                                        </a>
+                                                                    </>
+                                                                ) : "Not Uploaded"}
+                                                            </td>
+                                                        </tr>
+                                                    )}
+
+                                                </tbody>
+                                            </table>
+                                        </Box>
+
+                                        {/* =====================================================
+    STEP 6 — DECLARATION & ACKNOWLEDGEMENT (Review Modal)
+===================================================== */}
+                                        <Box className={styles.reviewSection}>
+                                            <h3 className={styles.reviewSectionTitle}>6️⃣ Declaration & Acknowledgement</h3>
+
+                                            <table className={styles.reviewTable}>
+                                                <tbody>
+
+                                                    {/* Vendor Declaration */}
+                                                    <tr>
+                                                        <td>Declarant Name</td>
+                                                        <td>{vendorDeclarationInfo?.name || "Not Provided"}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Organization</td>
+                                                        <td>{vendorDeclarationInfo?.organization || "Not Provided"}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Designation</td>
+                                                        <td>{vendorDeclarationInfo?.designation || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Country Party Declaration */}
+                                                    <tr>
+                                                        <td>Country Party — Name</td>
+                                                        <td>{countryPartyInfo?.name || "Not Provided"}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Country Party — Country</td>
+                                                        <td>{countryPartyInfo?.country || "Not Provided"}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Country Party — Designation</td>
+                                                        <td>{countryPartyInfo?.designation || "Not Provided"}</td>
+                                                    </tr>
+
+                                                    {/* Show these fields only when BOTH agreed */}
+                                                    {(isDeclarationChecked && isCountryPartyChecked) && (
+                                                        <>
+                                                            {/* Place */}
+                                                            <tr>
+                                                                <td>Place</td>
+                                                                <td>{declarationDetails?.place || "Not Provided"}</td>
+                                                            </tr>
+
+                                                            {/* Date */}
+                                                            <tr>
+                                                                <td>Date</td>
+                                                                <td>
+                                                                    {declarationDetails?.date
+                                                                        ? declarationDetails.date
+                                                                        : new Date().toISOString().slice(0, 10)}
+                                                                </td>
+                                                            </tr>
+
+                                                            {/* Signature File */}
+                                                            <tr>
+                                                                <td>Signature (White Background)</td>
+                                                                <td>
+                                                                    {declarationDetails?.sign?.file?.name ? (
+                                                                        <>
+                                                                            📄 {declarationDetails.sign.file.name}
+                                                                            {declarationDetails.sign?.url && (
+                                                                                <>
+                                                                                    {" "}
+                                                                                    —{" "}
+                                                                                    <a
+                                                                                        href={declarationDetails.sign.url.startsWith("blob:")
+                                                                                            ? declarationDetails.sign.url
+                                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${declarationDetails.sign.url}`}
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        className={styles.reviewViewLink}
+                                                                                    >
+                                                                                        View
+                                                                                    </a>
+                                                                                </>
+                                                                            )}
+                                                                        </>
+                                                                    ) : (
+                                                                        "Not Uploaded"
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        </>
+                                                    )}
+
+                                                </tbody>
+                                            </table>
+                                        </Box>
+
+
+                                        {/* ACTION BUTTONS */}
+                                        <Box className={styles.reviewActions}>
+                                            <Button className={styles.reviewBtnConfirm} onClick={handleFinalSubmit}>
                                                 Confirm & Submit
                                             </Button>
-                                            <Button
-                                                variant="outlined"
-                                                color="error"
-                                                onClick={handleCloseModal}
-                                                sx={{
-                                                    px: 4,
-                                                    py: 1,
-                                                    fontWeight: "600",
-                                                    textTransform: "none",
-                                                    fontSize: "15px",
-                                                }}
-                                            >
+
+                                            <Button className={styles.reviewBtnCancel} onClick={handleCloseModal}>
                                                 Go Back
                                             </Button>
                                         </Box>
+
                                     </Box>
                                 </Modal>
+
+
+
 
                             </>
 
@@ -5025,7 +6352,4 @@ const VmsRequest = () => {
 
 
 
-
-
 export default VmsRequest;
- 
