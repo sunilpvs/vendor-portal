@@ -108,7 +108,8 @@ const VmsRequest = () => {
     const getStates = async () => {
         try {
             const response = await getStateCombo();
-            const statesResp = response?.data || [];  // Default to empty array if no data
+            //const statesResp = response?.data || [];  // Default to empty array if no data
+                const statesResp = Array.isArray(response?.data) ? response.data : [];
             setStates(statesResp);
         } catch (error) {
             console.error("Failed to fetch countries:", error);
@@ -3448,7 +3449,7 @@ const VmsRequest = () => {
 
 
                                         {/* ============================
-    🌎 OTHERS → COUNTRY + STATE
+    OTHERS → COUNTRY + STATE
 =============================== */}
                                         {companyInfo.isOtherCountry && (
                                             <>
