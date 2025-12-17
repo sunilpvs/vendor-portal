@@ -269,7 +269,7 @@ const VmsRequest = () => {
     };
 
 
-    // ✅ File change
+    // File change
     const handleFileChange = (index, file) => {
         setYearlyData(prev => {
             const updated = [...prev];
@@ -288,7 +288,7 @@ const VmsRequest = () => {
         "application/pdf"
     ];
 
-    // ❌ Invalid file type
+    // Invalid file type
     if (!allowedTypes.includes(file.type)) {
         alert(
             "Please verify and upload documents in JPG, JPEG, PNG, or PDF format."
@@ -296,7 +296,7 @@ const VmsRequest = () => {
         return;
     }
 
-    // ❌ Size > 5 MB
+    // Size > 5 MB
     if (file.size > 5 * 1024 * 1024) {
         alert(
             "The maximum file size allowed is 5 MB."
@@ -740,14 +740,8 @@ const VmsRequest = () => {
 
     //REQUIRED FIELDS FOR STEP-1 ONLY (Except Country of Incorporation)
 
-    if (!companyInfo.business_entity_type)
-        errors.push("Nature of Business Entity is required");
-
-    if (!companyInfo.company_name)
+     if (!companyInfo.full_registered_name)
         errors.push("Registered Name (as per PAN) is required");
-
-    if (!companyInfo.pan_number)
-        errors.push("PAN Number is required");
 
     if (!companyInfo.trading_name)
         errors.push("Trading Name is required");
@@ -767,9 +761,7 @@ const VmsRequest = () => {
     if (!companyInfo.business_address)
         errors.push("Business Address is required");
 
-    // Contact Person
-    if (!companyInfo.contact_person_title)
-        errors.push("Contact Person Title is required");
+
 
     if (!companyInfo.contact_person_name)
         errors.push("Contact Person Name is required");
@@ -779,10 +771,6 @@ const VmsRequest = () => {
 
     if (!companyInfo.contact_person_email)
         errors.push("Contact Person Email is required");
-
-    // Accounts Person
-    if (!companyInfo.accounts_person_title)
-        errors.push("Accounts Person Title is required");
 
     if (!companyInfo.accounts_person_name)
         errors.push("Accounts Person Name is required");
@@ -1040,7 +1028,7 @@ const VmsRequest = () => {
         const { name, value } = e.target;
         let cleaned = value;
 
-        // 🧾 Udyam Registration Number → uppercase alphanumeric only
+        //Udyam Registration Number → uppercase alphanumeric only
         if (name === "udyam_registration_number") {
             cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
         }
@@ -1083,12 +1071,21 @@ const VmsRequest = () => {
         if (!msmeInfo.udyam_number || msmeInfo.udyam_number.trim() === "") {
             errors.push("Udyam Registration Number is required.");
         }
+
     }
 
-    // 3️⃣ If MSME = No → do NOT validate category or udyam
+        if (msmeInfo.registered_under_msme === "false"){
+           if (!msmeInfo.msme_category || msmeInfo.msme_category.trim() === "") {
+            errors.push("MSME Category is required.");
+        } 
+        }
+
+
+
+    // If MSME = No → do NOT validate category or udyam
     // (No extra validation here)
 
-    // ❌ If errors exist → block next page
+    // If errors exist → block next page
     if (errors.length > 0) {
         alert("Please fill required MSME details:\n\n" + errors.join("\n"));
         return;
@@ -1895,8 +1892,8 @@ const VmsRequest = () => {
 
         let errors = [];
 
-    // ----------------------------------------------------
-    // 1️⃣ VALIDATE TYPE OF COUNTERPARTY
+   // ----------------------------------------------------
+    // 1️⃣ TYPE OF COUNTERPARTY
     // ----------------------------------------------------
     if (!goodsServices.type_of_counterparty) {
         errors.push("Please select Type of Counterparty.");
@@ -1909,104 +1906,106 @@ const VmsRequest = () => {
     }
 
     // ----------------------------------------------------
-    // 2️⃣ VALIDATE DETAILS OF SUPPLIES
+    // 2️⃣ DETAILS OF SUPPLIES
     // ----------------------------------------------------
     if (!goodsServices.type) {
-        errors.push("Please select Details of Supplies Type (Goods / Services / Goods & Services).");
+        errors.push("Please select Details of Supplies Type.");
     } else {
-        // GOODS
         if (goodsServices.type === "Goods") {
-            const hasGoods = goods.some((g) => g.trim() !== "");
-            if (!hasGoods) errors.push("Please enter at least one Goods item.");
+            if (!goods.some(g => g.trim() !== "")) {
+                errors.push("Please enter at least one Goods item.");
+            }
         }
 
-        // SERVICES
         if (goodsServices.type === "Services") {
-            const hasServices = services.some((s) => s.trim() !== "");
-            if (!hasServices) errors.push("Please enter at least one Service item.");
+            if (!services.some(s => s.trim() !== "")) {
+                errors.push("Please enter at least one Service item.");
+            }
         }
 
-        // GOODS & SERVICES
         if (goodsServices.type === "Goods and Services") {
-            const hasGS = goodsAndServices.some(
-                (row) => row.goods.trim() !== "" || row.services.trim() !== ""
-            );
-            if (!hasGS) errors.push("Please enter at least one Goods or Service item.");
+            if (
+                !goodsAndServices.some(
+                    row => row.goods.trim() !== "" || row.services.trim() !== ""
+                )
+            ) {
+                errors.push("Please enter at least one Goods or Service item.");
+            }
         }
     }
 
     // ----------------------------------------------------
-    // 3️⃣ VALIDATE GST APPLICABLE
+    // 3️⃣ GST APPLICABLE
     // ----------------------------------------------------
     if (!gstApplicable) {
         errors.push("Please select whether GST is applicable.");
     }
 
-    // GST = NO → Finish validation here & go next step
-    if (gstApplicable === "false") {
-        nextPage();
-        return;
-    }
-
     // ----------------------------------------------------
-    // 4️⃣ GST = YES → Validate all GST registration fields
+    // 4️⃣ GST REGISTRATION (ONLY IF GST = YES)
     // ----------------------------------------------------
+    if (gstApplicable === "true") {
 
-    // Number of GST Registrations
-    if (!count || count < 1) {
-        errors.push("Please select number of GST registrations.");
-    }
-
-    // GST registration list
-    gstformData.forEach((item, index) => {
-        if (!item.gstNumber || item.gstNumber.trim() === "") {
-            errors.push(`GST Number is required for Registration ${index + 1}.`);
+        if (!count || count < 1) {
+            errors.push("Please select number of GST registrations.");
         }
-        // country & state NOT validated
+
+        gstformData.forEach((item, index) => {
+            if (!item.gstNumber || item.gstNumber.trim() === "") {
+                errors.push(`GST Number is required for Registration ${index + 1}.`);
+            }
+        });
+
+        if (!gstMeta.reg_type) {
+            errors.push("Registration Type is required.");
+        }
+
+        if (!gstMeta.gstr_filling_type) {
+            errors.push("GSTR Filing Type is required.");
+        }
+    }
+
+    // ----------------------------------------------------
+    // 5️⃣ FINANCIAL DETAILS (ALWAYS REQUIRED)
+    // ----------------------------------------------------
+    ["1", "2"].forEach((i) => {
+
+        // Currency Type
+        if (!formData[`currencyType${i}`]) {
+            errors.push(`Currency Type for FY-${i} is required.`);
+        }
+
+        // Currency Name (if Others)
+        if (
+            formData[`currencyType${i}`] === "Others" &&
+            !formData[`currencyName${i}`]
+        ) {
+            errors.push(`Currency Name for FY-${i} is required.`);
+        }
+
+     
+
+        // ITR Status
+        if (!formData[`itrStatus${i}`]) {
+            errors.push(`ITR Status for FY-${i} is required.`);
+        }
+
+        // ITR Filed = YES
+        if (formData[`itrStatus${i}`] === "true") {
+
+        
+
+            if (
+                !formData[`itrDay${i}`] ||
+                !formData[`itrMonth${i}`] ||
+                !formData[`itrYear${i}`]
+            ) {
+                errors.push(`ITR Filed Date for FY-${i} is required.`);
+            }
+        }
     });
 
-    // Registration Type
-    if (!gstMeta.reg_type) {
-        errors.push("Registration Type is required.");
-    }
 
-    // GSTR Filing Type
-    if (!gstMeta.gstr_filling_type) {
-        errors.push("GSTR Filing Type is required.");
-    }
-
-    ["1", "2"].forEach((i) => {
-    // Currency Type
-    if (!formData[`currencyType${i}`]) {
-        errors.push(`Currency Type for FY-${i} is required.`);
-    }
-
-    // Currency Name (only if Others selected)
-    if (formData[`currencyType${i}`] === "Others" && !formData[`currencyName${i}`]) {
-        errors.push(`Currency Name is required for FY-${i}.`);
-    }
-
-    // Turnover
-    if (!formData[`turnover${i}`] || formData[`turnover${i}`] <= 0) {
-        errors.push(`Turnover amount for FY-${i} is required.`);
-    }
-
-    // ITR Status
-    if (!formData[`itrStatus${i}`]) {
-        errors.push(`ITR Status for FY-${i} is required.`);
-    }
-
-    // If ITR = Yes → Acknowledgment + Date Required
-    if (formData[`itrStatus${i}`] === "true") {
-        if (!formData[`ackNo${i}`]) {
-            errors.push(`Acknowledgment No. for FY-${i} is required.`);
-        }
-
-        if (!formData[`itrYear${i}`] || !formData[`itrMonth${i}`] || !formData[`itrDay${i}`]) {
-            errors.push(`ITR Filed Date (DD/MM/YYYY) is required for FY-${i}.`);
-        }
-    }
-});
 
     // ----------------------------------------------------
     // 5️⃣ SHOW ERRORS IF ANY
@@ -2387,13 +2386,7 @@ const VmsRequest = () => {
         }
     }
 
-    // ---------------------------------------------
-    // 🔹 3. MSME — Conditional
-    // ---------------------------------------------
-    if (!msmeInfo.registered_under_msme) {
-        errors.push("Please select whether MSME Registration is available.");
-    }
-
+  
     if (msmeInfo.registered_under_msme === "true") {
         if (!documents.msme) {
             errors.push("MSME Certificate is required.");
@@ -4932,13 +4925,12 @@ const VmsRequest = () => {
                                         <div className={styles.fieldRow}>
                                             <label className={styles.fieldLabel}>
                                                 Cancelled Cheque Leaf
-
                                             </label>
 
                                             <input
                                                 type="file"
                                                 accept=".pdf,.jpg,.jpeg,.png"
-                                                onChange={(e) => handleDocumentChange(e, "cheque")}
+                                                onChange={(e) => handleDocumentChange("cheque", e.target.files[0])}
                                                 className={styles.fieldInput}
                                                 disabled={isReadOnly}
                                             />
