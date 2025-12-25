@@ -277,44 +277,44 @@ const VmsRequest = () => {
             return updated;
         });
     };
- const handleDocumentChange = (field, file) => {
-    if (!file) return;
+    const handleDocumentChange = (field, file) => {
+        if (!file) return;
 
-    // Allowed MIME types
-    const allowedTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "application/pdf"
-    ];
+        // Allowed MIME types
+        const allowedTypes = [
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "application/pdf"
+        ];
 
-    // Invalid file type
-    if (!allowedTypes.includes(file.type)) {
-        alert(
-            "Please verify and upload documents in JPG, JPEG, PNG, or PDF format."
-        );
-        return;
-    }
+        // Invalid file type
+        if (!allowedTypes.includes(file.type)) {
+            alert(
+                "Please verify and upload documents in JPG, JPEG, PNG, or PDF format."
+            );
+            return;
+        }
 
-    // Size > 5 MB
-    if (file.size > 5 * 1024 * 1024) {
-        alert(
-            "The maximum file size allowed is 5 MB."
-        );
-        return;
-    }
+        // Size > 5 MB
+        if (file.size > 5 * 1024 * 1024) {
+            alert(
+                "The maximum file size allowed is 5 MB."
+            );
+            return;
+        }
 
-    // ✅ Valid → store file
-    setDocuments((prev) => ({
-        ...prev,
-        [field]: {
-            ...prev[field],   // 👈 keeps docId, url from DB, etc.
-            file,
-            fileName: file.name,
-            url: URL.createObjectURL(file), // preview
-        },
-    }));
-};
+        // ✅ Valid → store file
+        setDocuments((prev) => ({
+            ...prev,
+            [field]: {
+                ...prev[field],   // 👈 keeps docId, url from DB, etc.
+                file,
+                fileName: file.name,
+                url: URL.createObjectURL(file), // preview
+            },
+        }));
+    };
 
 
     const handleValidatedFileChange = (e, fieldName) => {
@@ -394,7 +394,6 @@ const VmsRequest = () => {
         });
     };
 
-
     const handleDeclarationChange = async (e) => {
         const { name, type, files, value } = e.target;
 
@@ -402,21 +401,18 @@ const VmsRequest = () => {
             const file = files[0];
             if (!file) return;
 
-            // 1️⃣ Check file type
             if (!ALLOWED_TYPES.includes(file.type)) {
                 toast.error("Only JPG, JPEG and PNG files are allowed.");
                 return;
             }
 
-            // 2️⃣ Check file size
             if (file.size > MAX_FILE_SIZE_BYTES) {
                 toast.error("File size must be less than 1MB.");
                 return;
             }
 
-            // 3️⃣ Check white background
             const validatingToastId = toast.loading("Checking background...");
-            const isWhite = await isMostlyWhiteBackground(file); // ✅ Works only inside async
+            const isWhite = await isMostlyWhiteBackground(file);
             toast.dismiss(validatingToastId);
 
             if (!isWhite) {
@@ -424,20 +420,19 @@ const VmsRequest = () => {
                 return;
             }
 
-            // ✅ Passed all checks
-            setDeclarationInfo((prev) => ({
-                ...prev,
-                [name]: { file, url: URL.createObjectURL(file) },
-            }));
+            const previewUrl = URL.createObjectURL(file);
 
-            toast.success("Signature uploaded successfully!");
-            setDeclarationInfo((prev) => ({
+            // ✅ SAVE TO BOTH STATES
+            setSignature(file);
+            setDeclarationInfo(prev => ({
                 ...prev,
                 [name]: {
                     file,
-                    url: URL.createObjectURL(file), // ✅ create local preview
+                    url: URL.createObjectURL(file),
                 },
             }));
+
+            toast.success("Signature uploaded successfully!");
         } else {
             setDeclarationInfo((prev) => ({
                 ...prev,
@@ -736,59 +731,59 @@ const VmsRequest = () => {
     const handleSubmitCompanyInfo = async (e) => {
 
 
-    let errors = [];
+        let errors = [];
 
-    //REQUIRED FIELDS FOR STEP-1 ONLY (Except Country of Incorporation)
+        //REQUIRED FIELDS FOR STEP-1 ONLY (Except Country of Incorporation)
 
-     if (!companyInfo.full_registered_name)
-        errors.push("Registered Name (as per PAN) is required");
+        if (!companyInfo.full_registered_name)
+            errors.push("Registered Name (as per PAN) is required");
 
-    if (!companyInfo.trading_name)
-        errors.push("Trading Name is required");
+        if (!companyInfo.trading_name)
+            errors.push("Trading Name is required");
 
-    if (!tanStatus)
-        errors.push("TAN availability selection is required");
+        if (!tanStatus)
+            errors.push("TAN availability selection is required");
 
-    if (tanStatus === "yes" && !companyInfo.tan_number)
-        errors.push("TAN Number is required");
+        if (tanStatus === "yes" && !companyInfo.tan_number)
+            errors.push("TAN Number is required");
 
-    if (!companyInfo.telephone)
-        errors.push("Telephone Number is required");
+        if (!companyInfo.telephone)
+            errors.push("Telephone Number is required");
 
-    if (!companyInfo.registered_address)
-        errors.push("Registered Address is required");
+        if (!companyInfo.registered_address)
+            errors.push("Registered Address is required");
 
-    if (!companyInfo.business_address)
-        errors.push("Business Address is required");
-
-
-
-    if (!companyInfo.contact_person_name)
-        errors.push("Contact Person Name is required");
-
-    if (!companyInfo.contact_person_mobile)
-        errors.push("Contact Person Mobile Number is required");
-
-    if (!companyInfo.contact_person_email)
-        errors.push("Contact Person Email is required");
-
-    if (!companyInfo.accounts_person_name)
-        errors.push("Accounts Person Name is required");
-
-    if (!companyInfo.accounts_person_contact_no)
-        errors.push("Accounts Person Contact Number is required");
-
-    if (!companyInfo.accounts_person_email)
-        errors.push("Accounts Person Email is required");
+        if (!companyInfo.business_address)
+            errors.push("Business Address is required");
 
 
-    if (errors.length > 0) {
-        alert("Please fill all required fields:\n\n" + errors.join("\n"));
-        return;
-    }
 
-    // ✅ If all good → move to next page
-    nextPage();
+        if (!companyInfo.contact_person_name)
+            errors.push("Contact Person Name is required");
+
+        if (!companyInfo.contact_person_mobile)
+            errors.push("Contact Person Mobile Number is required");
+
+        if (!companyInfo.contact_person_email)
+            errors.push("Contact Person Email is required");
+
+        if (!companyInfo.accounts_person_name)
+            errors.push("Accounts Person Name is required");
+
+        if (!companyInfo.accounts_person_contact_no)
+            errors.push("Accounts Person Contact Number is required");
+
+        if (!companyInfo.accounts_person_email)
+            errors.push("Accounts Person Email is required");
+
+
+        if (errors.length > 0) {
+            alert("Please fill all required fields:\n\n" + errors.join("\n"));
+            return;
+        }
+
+        // ✅ If all good → move to next page
+        nextPage();
 
 
 
@@ -1054,45 +1049,45 @@ const VmsRequest = () => {
     const handleSaveMsmeInfo = async () => {
 
 
-     let errors = [];
+        let errors = [];
 
-    // 1️⃣ MSME Registered selection required
-    if (!msmeInfo.registered_under_msme) {
-        errors.push("Please select whether MSME Registration is available.");
-    }
-
-    // 2️⃣ If MSME = Yes → validate Category + Udyam Number
-    if (msmeInfo.registered_under_msme === "true") {
-
-        if (!msmeInfo.msme_category || msmeInfo.msme_category.trim() === "") {
-            errors.push("MSME Category is required.");
+        // 1️⃣ MSME Registered selection required
+        if (!msmeInfo.registered_under_msme) {
+            errors.push("Please select whether MSME Registration is available.");
         }
 
-        if (!msmeInfo.udyam_number || msmeInfo.udyam_number.trim() === "") {
-            errors.push("Udyam Registration Number is required.");
+        // 2️⃣ If MSME = Yes → validate Category + Udyam Number
+        if (msmeInfo.registered_under_msme === "true") {
+
+            if (!msmeInfo.msme_category || msmeInfo.msme_category.trim() === "") {
+                errors.push("MSME Category is required.");
+            }
+
+            if (!msmeInfo.udyam_number || msmeInfo.udyam_number.trim() === "") {
+                errors.push("Udyam Registration Number is required.");
+            }
+
         }
 
-    }
-
-        if (msmeInfo.registered_under_msme === "false"){
-           if (!msmeInfo.msme_category || msmeInfo.msme_category.trim() === "") {
-            errors.push("MSME Category is required.");
-        } 
+        if (msmeInfo.registered_under_msme === "false") {
+            if (!msmeInfo.msme_category || msmeInfo.msme_category.trim() === "") {
+                errors.push("MSME Category is required.");
+            }
         }
 
 
 
-    // If MSME = No → do NOT validate category or udyam
-    // (No extra validation here)
+        // If MSME = No → do NOT validate category or udyam
+        // (No extra validation here)
 
-    // If errors exist → block next page
-    if (errors.length > 0) {
-        alert("Please fill required MSME details:\n\n" + errors.join("\n"));
-        return;
-    }
+        // If errors exist → block next page
+        if (errors.length > 0) {
+            alert("Please fill required MSME details:\n\n" + errors.join("\n"));
+            return;
+        }
 
-    // ✅ Everything OK → go to next step
-    nextPage();
+        // ✅ Everything OK → go to next step
+        nextPage();
 
 
 
@@ -1892,128 +1887,128 @@ const VmsRequest = () => {
 
         let errors = [];
 
-   // ----------------------------------------------------
-    // 1️⃣ TYPE OF COUNTERPARTY
-    // ----------------------------------------------------
-    if (!goodsServices.type_of_counterparty) {
-        errors.push("Please select Type of Counterparty.");
-    }
-
-    if (goodsServices.type_of_counterparty === "Others") {
-        if (!goodsServices.others || goodsServices.others.trim() === "") {
-            errors.push("Please specify the 'Other' Counterparty Type.");
+        // ----------------------------------------------------
+        // 1️⃣ TYPE OF COUNTERPARTY
+        // ----------------------------------------------------
+        if (!goodsServices.type_of_counterparty) {
+            errors.push("Please select Type of Counterparty.");
         }
-    }
 
-    // ----------------------------------------------------
-    // 2️⃣ DETAILS OF SUPPLIES
-    // ----------------------------------------------------
-    if (!goodsServices.type) {
-        errors.push("Please select Details of Supplies Type.");
-    } else {
-        if (goodsServices.type === "Goods") {
-            if (!goods.some(g => g.trim() !== "")) {
-                errors.push("Please enter at least one Goods item.");
+        if (goodsServices.type_of_counterparty === "Others") {
+            if (!goodsServices.others || goodsServices.others.trim() === "") {
+                errors.push("Please specify the 'Other' Counterparty Type.");
             }
         }
 
-        if (goodsServices.type === "Services") {
-            if (!services.some(s => s.trim() !== "")) {
-                errors.push("Please enter at least one Service item.");
+        // ----------------------------------------------------
+        // 2️⃣ DETAILS OF SUPPLIES
+        // ----------------------------------------------------
+        if (!goodsServices.type) {
+            errors.push("Please select Details of Supplies Type.");
+        } else {
+            if (goodsServices.type === "Goods") {
+                if (!goods.some(g => g.trim() !== "")) {
+                    errors.push("Please enter at least one Goods item.");
+                }
+            }
+
+            if (goodsServices.type === "Services") {
+                if (!services.some(s => s.trim() !== "")) {
+                    errors.push("Please enter at least one Service item.");
+                }
+            }
+
+            if (goodsServices.type === "Goods and Services") {
+                if (
+                    !goodsAndServices.some(
+                        row => row.goods.trim() !== "" || row.services.trim() !== ""
+                    )
+                ) {
+                    errors.push("Please enter at least one Goods or Service item.");
+                }
             }
         }
 
-        if (goodsServices.type === "Goods and Services") {
+        // ----------------------------------------------------
+        // 3️⃣ GST APPLICABLE
+        // ----------------------------------------------------
+        if (!gstApplicable) {
+            errors.push("Please select whether GST is applicable.");
+        }
+
+        // ----------------------------------------------------
+        // 4️⃣ GST REGISTRATION (ONLY IF GST = YES)
+        // ----------------------------------------------------
+        if (gstApplicable === "true") {
+
+            if (!count || count < 1) {
+                errors.push("Please select number of GST registrations.");
+            }
+
+            gstformData.forEach((item, index) => {
+                if (!item.gstNumber || item.gstNumber.trim() === "") {
+                    errors.push(`GST Number is required for Registration ${index + 1}.`);
+                }
+            });
+
+            if (!gstMeta.reg_type) {
+                errors.push("Registration Type is required.");
+            }
+
+            if (!gstMeta.gstr_filling_type) {
+                errors.push("GSTR Filing Type is required.");
+            }
+        }
+
+        // ----------------------------------------------------
+        // 5️⃣ FINANCIAL DETAILS (ALWAYS REQUIRED)
+        // ----------------------------------------------------
+        ["1", "2"].forEach((i) => {
+
+            // Currency Type
+            if (!formData[`currencyType${i}`]) {
+                errors.push(`Currency Type for FY-${i} is required.`);
+            }
+
+            // Currency Name (if Others)
             if (
-                !goodsAndServices.some(
-                    row => row.goods.trim() !== "" || row.services.trim() !== ""
-                )
+                formData[`currencyType${i}`] === "Others" &&
+                !formData[`currencyName${i}`]
             ) {
-                errors.push("Please enter at least one Goods or Service item.");
+                errors.push(`Currency Name for FY-${i} is required.`);
             }
-        }
-    }
 
-    // ----------------------------------------------------
-    // 3️⃣ GST APPLICABLE
-    // ----------------------------------------------------
-    if (!gstApplicable) {
-        errors.push("Please select whether GST is applicable.");
-    }
 
-    // ----------------------------------------------------
-    // 4️⃣ GST REGISTRATION (ONLY IF GST = YES)
-    // ----------------------------------------------------
-    if (gstApplicable === "true") {
 
-        if (!count || count < 1) {
-            errors.push("Please select number of GST registrations.");
-        }
+            // ITR Status
+            if (!formData[`itrStatus${i}`]) {
+                errors.push(`ITR Status for FY-${i} is required.`);
+            }
 
-        gstformData.forEach((item, index) => {
-            if (!item.gstNumber || item.gstNumber.trim() === "") {
-                errors.push(`GST Number is required for Registration ${index + 1}.`);
+            // ITR Filed = YES
+            if (formData[`itrStatus${i}`] === "true") {
+
+
+
+                if (
+                    !formData[`itrDay${i}`] ||
+                    !formData[`itrMonth${i}`] ||
+                    !formData[`itrYear${i}`]
+                ) {
+                    errors.push(`ITR Filed Date for FY-${i} is required.`);
+                }
             }
         });
 
-        if (!gstMeta.reg_type) {
-            errors.push("Registration Type is required.");
+
+
+        // ----------------------------------------------------
+        // 5️⃣ SHOW ERRORS IF ANY
+        // ----------------------------------------------------
+        if (errors.length > 0) {
+            alert("Please correct the following:\n\n" + errors.join("\n"));
+            return;
         }
-
-        if (!gstMeta.gstr_filling_type) {
-            errors.push("GSTR Filing Type is required.");
-        }
-    }
-
-    // ----------------------------------------------------
-    // 5️⃣ FINANCIAL DETAILS (ALWAYS REQUIRED)
-    // ----------------------------------------------------
-    ["1", "2"].forEach((i) => {
-
-        // Currency Type
-        if (!formData[`currencyType${i}`]) {
-            errors.push(`Currency Type for FY-${i} is required.`);
-        }
-
-        // Currency Name (if Others)
-        if (
-            formData[`currencyType${i}`] === "Others" &&
-            !formData[`currencyName${i}`]
-        ) {
-            errors.push(`Currency Name for FY-${i} is required.`);
-        }
-
-     
-
-        // ITR Status
-        if (!formData[`itrStatus${i}`]) {
-            errors.push(`ITR Status for FY-${i} is required.`);
-        }
-
-        // ITR Filed = YES
-        if (formData[`itrStatus${i}`] === "true") {
-
-        
-
-            if (
-                !formData[`itrDay${i}`] ||
-                !formData[`itrMonth${i}`] ||
-                !formData[`itrYear${i}`]
-            ) {
-                errors.push(`ITR Filed Date for FY-${i} is required.`);
-            }
-        }
-    });
-
-
-
-    // ----------------------------------------------------
-    // 5️⃣ SHOW ERRORS IF ANY
-    // ----------------------------------------------------
-    if (errors.length > 0) {
-        alert("Please correct the following:\n\n" + errors.join("\n"));
-        return;
-    }
 
 
         await saveGoodsAndServices();
@@ -2128,95 +2123,95 @@ const VmsRequest = () => {
             beneficiary_name: bankInfo.beneficiary_name,
         };
 
-          let errors = [];
+        let errors = [];
 
-    // ---------------------------------------------
-    // 🔹 BASIC REQUIRED FIELDS
-    // ---------------------------------------------
-    if (!bankInfo.account_holder_name)
-        errors.push("Account Holder Name is required.");
+        // ---------------------------------------------
+        // 🔹 BASIC REQUIRED FIELDS
+        // ---------------------------------------------
+        if (!bankInfo.account_holder_name)
+            errors.push("Account Holder Name is required.");
 
-    if (!bankInfo.bank_name)
-        errors.push("Bank Name is required.");
+        if (!bankInfo.bank_name)
+            errors.push("Bank Name is required.");
 
-    if (!bankInfo.bank_address)
-        errors.push("Bank Address is required.");
+        if (!bankInfo.bank_address)
+            errors.push("Bank Address is required.");
 
-    if (!bankInfo.transaction_type)
-        errors.push("Transaction Type is required.");
+        if (!bankInfo.transaction_type)
+            errors.push("Transaction Type is required.");
 
-    // ---------------------------------------------
-    // 🔹 VALIDATE IFSC / SWIFT BASED ON TRANSACTION TYPE
-    // ---------------------------------------------
-    if (
-        bankInfo.transaction_type === "Domestic" ||
-        bankInfo.transaction_type === "Domestic and International"
-    ) {
-        if (!bankInfo.ifsc_code)
-            errors.push("IFSC Code is required for Domestic transactions.");
-
-        // IFSC Format (optional but recommended)
+        // ---------------------------------------------
+        // 🔹 VALIDATE IFSC / SWIFT BASED ON TRANSACTION TYPE
+        // ---------------------------------------------
         if (
-            bankInfo.ifsc_code &&
-            !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(bankInfo.ifsc_code)
+            bankInfo.transaction_type === "Domestic" ||
+            bankInfo.transaction_type === "Domestic and International"
         ) {
-            errors.push("Invalid IFSC Code format.");
+            if (!bankInfo.ifsc_code)
+                errors.push("IFSC Code is required for Domestic transactions.");
+
+            // IFSC Format (optional but recommended)
+            if (
+                bankInfo.ifsc_code &&
+                !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(bankInfo.ifsc_code)
+            ) {
+                errors.push("Invalid IFSC Code format.");
+            }
         }
-    }
 
-    if (
-        bankInfo.transaction_type === "International" ||
-        bankInfo.transaction_type === "Domestic and International"
-    ) {
-        if (!bankInfo.swift_code)
-            errors.push("SWIFT Code is required for International transactions.");
-
-        // SWIFT Format (optional)
         if (
-            bankInfo.swift_code &&
-            !/^[A-Z0-9]{8}(?:[A-Z0-9]{3})?$/i.test(bankInfo.swift_code)
+            bankInfo.transaction_type === "International" ||
+            bankInfo.transaction_type === "Domestic and International"
         ) {
-            errors.push("Invalid SWIFT Code format.");
+            if (!bankInfo.swift_code)
+                errors.push("SWIFT Code is required for International transactions.");
+
+            // SWIFT Format (optional)
+            if (
+                bankInfo.swift_code &&
+                !/^[A-Z0-9]{8}(?:[A-Z0-9]{3})?$/i.test(bankInfo.swift_code)
+            ) {
+                errors.push("Invalid SWIFT Code format.");
+            }
         }
-    }
 
-    // ---------------------------------------------
-    // 🔹 COUNTRY VALIDATION (ONLY check selection)
-    // ---------------------------------------------
-    if (!bankInfo.country_type)
-        errors.push("Please select Bank Country.");
+        // ---------------------------------------------
+        // 🔹 COUNTRY VALIDATION (ONLY check selection)
+        // ---------------------------------------------
+        if (!bankInfo.country_type)
+            errors.push("Please select Bank Country.");
 
-    // ---------------------------------------------
-    // 🔹 IF COUNTRY = Others → Require country_text & state_text
-    // ---------------------------------------------
-    if (bankInfo.country_type === "Others") {
-        if (!bankInfo.country_text)
-            errors.push("Specify Country is required.");
+        // ---------------------------------------------
+        // 🔹 IF COUNTRY = Others → Require country_text & state_text
+        // ---------------------------------------------
+        if (bankInfo.country_type === "Others") {
+            if (!bankInfo.country_text)
+                errors.push("Specify Country is required.");
 
-        if (!bankInfo.state_text)
-            errors.push("Specify State/Province is required.");
-    }
+            if (!bankInfo.state_text)
+                errors.push("Specify State/Province is required.");
+        }
 
-    // ---------------------------------------------
-    // 🔹 IF COUNTRY = India → Require state dropdown
-    // ---------------------------------------------
-    if (bankInfo.country_type === "India") {
-        if (!bankInfo.state_id)
-            errors.push("Bank State is required for India.");
-    }
+        // ---------------------------------------------
+        // 🔹 IF COUNTRY = India → Require state dropdown
+        // ---------------------------------------------
+        if (bankInfo.country_type === "India") {
+            if (!bankInfo.state_id)
+                errors.push("Bank State is required for India.");
+        }
 
-    // ---------------------------------------------
-    // 🔹 SHOW ERRORS (if any)
-    // ---------------------------------------------
-    if (errors.length > 0) {
-        alert("Please correct the following:\n\n" + errors.join("\n"));
-        return;
-    }
+        // ---------------------------------------------
+        // 🔹 SHOW ERRORS (if any)
+        // ---------------------------------------------
+        if (errors.length > 0) {
+            alert("Please correct the following:\n\n" + errors.join("\n"));
+            return;
+        }
 
-    // ---------------------------------------------
-    // SUCCESS → Go to next page
-    // ---------------------------------------------
-    nextPage();
+        // ---------------------------------------------
+        // SUCCESS → Go to next page
+        // ---------------------------------------------
+        nextPage();
 
         try {
 
@@ -2366,114 +2361,114 @@ const VmsRequest = () => {
     const handleSaveDocuments = async () => {
         let errors = [];
 
-    // ---------------------------------------------
-    // 🔹 1. PAN — ALWAYS REQUIRED
-    // ---------------------------------------------
-    if (!documents.pan) {
-        errors.push("PAN document is required.");
-    }
-
-    // ---------------------------------------------
-    // 🔹 2. GST — Conditional
-    // ---------------------------------------------
-    if (!documents.gst_available) {
-        errors.push("Please select GSTIN Available (Yes/No).");
-    }
-
-    if (documents.gst_available === "true") {
-        if (!documents.gst) {
-            errors.push("GSTIN Certificate is required.");
+        // ---------------------------------------------
+        // 🔹 1. PAN — ALWAYS REQUIRED
+        // ---------------------------------------------
+        if (!documents.pan) {
+            errors.push("PAN document is required.");
         }
-    }
 
-  
-    if (msmeInfo.registered_under_msme === "true") {
-        if (!documents.msme) {
-            errors.push("MSME Certificate is required.");
+        // ---------------------------------------------
+        // 🔹 2. GST — Conditional
+        // ---------------------------------------------
+        if (!documents.gst_available) {
+            errors.push("Please select GSTIN Available (Yes/No).");
         }
-    }
 
-    // ---------------------------------------------
-    // 🔹 4. Cancelled Cheque — Optional
-    // (No validation required)
-    // ---------------------------------------------
-
-    // ---------------------------------------------
-    // 🔹 5. TAN Certificate / Exemption — REQUIRED
-    // ---------------------------------------------
-    if (!tanStatus) {
-        errors.push("Please select TAN status (Yes/No).");
-    }
-
-    if (tanStatus === "yes" && !documents.tanCertificate) {
-        errors.push("TAN Certificate is required.");
-    }
-
-    if (tanStatus === "no" && !documents.tanExemption) {
-        errors.push("TAN Exemption Certificate is required.");
-    }
-
-    // ---------------------------------------------
-    // 🔹 6. Registration Certificate — ALWAYS REQUIRED
-    // ---------------------------------------------
-    if (!documents.incorporation) {
-        errors.push("Registration Certificate is required.");
-    }
-
-    // ---------------------------------------------
-    // 🔹 7. TDS Declaration — Conditional
-    // ---------------------------------------------
-    if (!documents.tds_declaration) {
-        errors.push("Please select TDS Declaration (Yes/No).");
-    }
-
-    if (documents.tds_declaration === "true" && !documents.tds) {
-        errors.push("TDS Declaration document is required.");
-    }
-
-    // ---------------------------------------------
-    // 🔹 8. File Type + File Size Validation (5 MB)
-    // ---------------------------------------------
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
-    const maxSize = 5 * 1024 * 1024; // 5MB
-
-    const allFiles = [
-        documents.pan,
-        documents.gst,
-        documents.msme,
-        documents.cheque,
-        documents.tanCertificate,
-        documents.tanExemption,
-        documents.incorporation,
-        documents.tds
-    ];
-
-    allFiles.forEach((fileObj) => {
-        if (fileObj?.file) {
-            const file = fileObj.file;
-
-            if (!allowedTypes.includes(file.type)) {
-                errors.push(`Invalid file format: ${file.name}. Allowed formats are JPG, JPEG, PNG, PDF.`);
-            }
-
-            if (file.size > maxSize) {
-                errors.push(`File too large: ${file.name}. Maximum allowed size is 5 MB.`);
+        if (documents.gst_available === "true") {
+            if (!documents.gst) {
+                errors.push("GSTIN Certificate is required.");
             }
         }
-    });
 
-    // ---------------------------------------------
-    // ❗ Show Errors
-    // ---------------------------------------------
-    if (errors.length > 0) {
-        alert("Please correct the following:\n\n" + errors.join("\n"));
-        return;
-    }
 
-    // ---------------------------------------------
-    // SUCCESS → GO TO NEXT STEP
-    // ---------------------------------------------
-    nextPage();
+        if (msmeInfo.registered_under_msme === "true") {
+            if (!documents.msme) {
+                errors.push("MSME Certificate is required.");
+            }
+        }
+
+        // ---------------------------------------------
+        // 🔹 4. Cancelled Cheque — Optional
+        // (No validation required)
+        // ---------------------------------------------
+
+        // ---------------------------------------------
+        // 🔹 5. TAN Certificate / Exemption — REQUIRED
+        // ---------------------------------------------
+        if (!tanStatus) {
+            errors.push("Please select TAN status (Yes/No).");
+        }
+
+        if (tanStatus === "yes" && !documents.tanCertificate) {
+            errors.push("TAN Certificate is required.");
+        }
+
+        if (tanStatus === "no" && !documents.tanExemption) {
+            errors.push("TAN Exemption Certificate is required.");
+        }
+
+        // ---------------------------------------------
+        // 🔹 6. Registration Certificate — ALWAYS REQUIRED
+        // ---------------------------------------------
+        if (!documents.incorporation) {
+            errors.push("Registration Certificate is required.");
+        }
+
+        // ---------------------------------------------
+        // 🔹 7. TDS Declaration — Conditional
+        // ---------------------------------------------
+        if (!documents.tds_declaration) {
+            errors.push("Please select TDS Declaration (Yes/No).");
+        }
+
+        if (documents.tds_declaration === "true" && !documents.tds) {
+            errors.push("TDS Declaration document is required.");
+        }
+
+        // ---------------------------------------------
+        // 🔹 8. File Type + File Size Validation (5 MB)
+        // ---------------------------------------------
+        const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        const allFiles = [
+            documents.pan,
+            documents.gst,
+            documents.msme,
+            documents.cheque,
+            documents.tanCertificate,
+            documents.tanExemption,
+            documents.incorporation,
+            documents.tds
+        ];
+
+        allFiles.forEach((fileObj) => {
+            if (fileObj?.file) {
+                const file = fileObj.file;
+
+                if (!allowedTypes.includes(file.type)) {
+                    errors.push(`Invalid file format: ${file.name}. Allowed formats are JPG, JPEG, PNG, PDF.`);
+                }
+
+                if (file.size > maxSize) {
+                    errors.push(`File too large: ${file.name}. Maximum allowed size is 5 MB.`);
+                }
+            }
+        });
+
+        // ---------------------------------------------
+        // ❗ Show Errors
+        // ---------------------------------------------
+        if (errors.length > 0) {
+            alert("Please correct the following:\n\n" + errors.join("\n"));
+            return;
+        }
+
+        // ---------------------------------------------
+        // SUCCESS → GO TO NEXT STEP
+        // ---------------------------------------------
+        nextPage();
         try {
             const formData = new FormData();
             let hasAnyOperation = false;
@@ -2616,75 +2611,75 @@ const VmsRequest = () => {
 
         let errors = [];
 
-    // ========== Vendor Declaration Inputs ==========
-    if (!vendorDeclarationInfo.name?.trim()) {
-        errors.push("Vendor Name is required in Declaration paragraph.");
-    }
-
-    if (!vendorDeclarationInfo.organization?.trim()) {
-        errors.push("Vendor Organization is required in Declaration paragraph.");
-    }
-
-    if (!vendorDeclarationInfo.designation?.trim()) {
-        errors.push("Vendor Designation is required in Declaration paragraph.");
-    }
-
-    // ========== Vendor Declaration Checkbox ==========
-    if (!isDeclarationChecked) {
-        errors.push("You must agree to the Declaration.");
-    }
-
-    // ========== Country Party Inputs ==========
-    if (!countryPartyInfo.name?.trim()) {
-        errors.push("Country Party Name is required in Declaration paragraph.");
-    }
-
-    if (!countryPartyInfo.country?.trim()) {
-        errors.push("Country Party Country is required in Declaration paragraph.");
-    }
-
-    if (!countryPartyInfo.designation?.trim()) {
-        errors.push("Country Party Designation is required in Declaration paragraph.");
-    }
-
-    // ========== Country Party Checkbox ==========
-    if (!isCountryPartyChecked) {
-        errors.push("You must agree with Country Party Declaration.");
-    }
-
-    // ========== Extra Fields (If both checkboxes are checked) ==========
-    if (isDeclarationChecked && isCountryPartyChecked) {
-        if (!declarationDetails.place?.trim()) {
-            errors.push("Place is required.");
+        // ========== Vendor Declaration Inputs ==========
+        if (!vendorDeclarationInfo.name?.trim()) {
+            errors.push("Vendor Name is required in Declaration paragraph.");
         }
 
-        // Signature file required
-        if (!declarationDetails.sign?.file) {
-            errors.push("Signature file is required.");
-        } else {
-            const file = declarationDetails.sign.file;
+        if (!vendorDeclarationInfo.organization?.trim()) {
+            errors.push("Vendor Organization is required in Declaration paragraph.");
+        }
 
-            // Validate file type
-            const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
-            if (!allowedTypes.includes(file.type)) {
-                errors.push("Signature must be JPG, JPEG, or PNG.");
+        if (!vendorDeclarationInfo.designation?.trim()) {
+            errors.push("Vendor Designation is required in Declaration paragraph.");
+        }
+
+        // ========== Vendor Declaration Checkbox ==========
+        if (!isDeclarationChecked) {
+            errors.push("You must agree to the Declaration.");
+        }
+
+        // ========== Country Party Inputs ==========
+        if (!countryPartyInfo.name?.trim()) {
+            errors.push("Country Party Name is required in Declaration paragraph.");
+        }
+
+        if (!countryPartyInfo.country?.trim()) {
+            errors.push("Country Party Country is required in Declaration paragraph.");
+        }
+
+        if (!countryPartyInfo.designation?.trim()) {
+            errors.push("Country Party Designation is required in Declaration paragraph.");
+        }
+
+        // ========== Country Party Checkbox ==========
+        if (!isCountryPartyChecked) {
+            errors.push("You must agree with Country Party Declaration.");
+        }
+
+        // ========== Extra Fields (If both checkboxes are checked) ==========
+        if (isDeclarationChecked && isCountryPartyChecked) {
+            if (!declarationDetails.place?.trim()) {
+                errors.push("Place is required.");
             }
 
-            // Validate file size (1 MB)
-            if (file.size > 1024 * 1024) {
-                errors.push("Signature file size must be less than 1 MB.");
+            // Signature file required
+            if (!declarationInfo.signedFile?.file) {
+                errors.push("Signature file is required.");
+            } else {
+                const file = declarationInfo.signedFile.file;
+
+                // Validate file type
+                const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+                if (!allowedTypes.includes(file.type)) {
+                    errors.push("Signature must be JPG, JPEG, or PNG.");
+                }
+
+                // Validate file size (1 MB)
+                if (file.size > 1024 * 1024) {
+                    errors.push("Signature file size must be less than 1 MB.");
+                }
             }
         }
-    }
 
-    // ========== Display Errors ==========
-    if (errors.length > 0) {
-        alert("Please fix the following:\n\n" + errors.join("\n"));
-        return;
-    }
+        // ========== Display Errors ==========
+        if (errors.length > 0) {
+            alert("Please fix the following:\n\n" + errors.join("\n"));
+            return;
+        }
 
-    // ========== Everything is Valid ==========
-    nextPage();
+        // ========== Everything is Valid ==========
+        nextPage();
 
         try {
             const formData = new FormData();
@@ -3414,7 +3409,7 @@ const VmsRequest = () => {
                                                         }));
 
                                                         return;
-                                                    }else {
+                                                    } else {
                                                         setCompanyInfo((prev) => ({
                                                             ...prev,
                                                             country_type: "Others",
@@ -5325,18 +5320,33 @@ const VmsRequest = () => {
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>
                                                         Signature<br />
-                                                        (JPG, JPEG, PNG — white background only, max 1 MB) <span className={styles.requiredSymbol}>*</span>
+                                                        (JPG, JPEG, PNG — white background only, max 1 MB)
+                                                        <span className={styles.requiredSymbol}>*</span>
                                                     </label>
+
                                                     <input
                                                         type="file"
                                                         accept=".jpg,.jpeg,.png"
                                                         name="signedFile"
                                                         onChange={handleDeclarationChange}
                                                     />
-                                                    {declarationDetails.sign?.file?.name && (
+
+                                                    {/* File name */}
+                                                    {declarationInfo?.signedFile?.file?.name && (
                                                         <span className={styles.fileName}>
-                                                            📄 {declarationDetails.sign.file.name}
+                                                            📄 {declarationInfo.signedFile.file.name}
                                                         </span>
+                                                    )}
+
+                                                    {declarationInfo?.signedFile?.url && (
+                                                        <button
+                                                            type="button"
+                                                            className={styles.viewButton}
+                                                            onClick={() => window.open(declarationInfo.signedFile.url, "_blank")}
+
+                                                        >
+                                                            View
+                                                        </button>
                                                     )}
                                                 </div>
                                             </div>
@@ -5444,18 +5454,21 @@ const VmsRequest = () => {
                                                     {currentPage < totalSteps - 1 ? (
                                                         <button
                                                             type="button"
-                                                            onClick={() => { switch (currentPage) { 
-                                                                case 1: handleSubmitCompanyInfo(); 
-                                                                break; 
-                                                                case 2: handleSaveMsmeInfo(); 
-                                                                break; 
-                                                                case 3: handleSaveGstForm(); 
-                                                                break; 
-                                                                case 4: handleSaveBankDetails(); 
-                                                                break; 
-                                                                case 5: handleSaveDocuments(); 
-                                                                break; 
-                                                                default: nextPage(); } }}
+                                                            onClick={() => {
+                                                                switch (currentPage) {
+                                                                    case 1: handleSubmitCompanyInfo();
+                                                                        break;
+                                                                    case 2: handleSaveMsmeInfo();
+                                                                        break;
+                                                                    case 3: handleSaveGstForm();
+                                                                        break;
+                                                                    case 4: handleSaveBankDetails();
+                                                                        break;
+                                                                    case 5: handleSaveDocuments();
+                                                                        break;
+                                                                    default: nextPage();
+                                                                }
+                                                            }}
                                                             style={{
                                                                 backgroundColor: "#007bff",
                                                                 color: "white",
@@ -6288,17 +6301,17 @@ const VmsRequest = () => {
                                                             <tr>
                                                                 <td>Signature (White Background)</td>
                                                                 <td>
-                                                                    {declarationDetails?.sign?.file?.name ? (
+                                                                    {declarationInfo?.signedFile?.file?.name ? (
                                                                         <>
-                                                                            📄 {declarationDetails.sign.file.name}
-                                                                            {declarationDetails.sign?.url && (
+                                                                            📄 {declarationInfo.signedFile.file.name}
+                                                                            {declarationInfo.signedFile?.url && (
                                                                                 <>
                                                                                     {" "}
                                                                                     —{" "}
                                                                                     <a
-                                                                                        href={declarationDetails.sign.url.startsWith("blob:")
-                                                                                            ? declarationDetails.sign.url
-                                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${declarationDetails.sign.url}`}
+                                                                                        href={declarationInfo.signedFile.url.startsWith("blob:")
+                                                                                            ? declarationInfo.signedFile.url
+                                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${declarationInfo.signedFile.url}`}
                                                                                         target="_blank"
                                                                                         rel="noopener noreferrer"
                                                                                         className={styles.reviewViewLink}
