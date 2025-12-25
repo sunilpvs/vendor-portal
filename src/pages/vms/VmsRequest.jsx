@@ -398,7 +398,7 @@ const VmsRequest = () => {
         const { name, type, files, value } = e.target;
 
         if (type === "file") {
-            const file = files[0];
+            const file = files?.[0];
             if (!file) return;
 
             if (!ALLOWED_TYPES.includes(file.type)) {
@@ -422,13 +422,11 @@ const VmsRequest = () => {
 
             const previewUrl = URL.createObjectURL(file);
 
-            // ✅ SAVE TO BOTH STATES
-            setSignature(file);
-            setDeclarationInfo(prev => ({
+            setDeclarationInfo((prev) => ({
                 ...prev,
                 [name]: {
                     file,
-                    url: URL.createObjectURL(file),
+                    url: previewUrl,
                 },
             }));
 
@@ -440,6 +438,7 @@ const VmsRequest = () => {
             }));
         }
     };
+
 
 
     // ✅ Delete year section
@@ -2546,17 +2545,33 @@ const VmsRequest = () => {
 
     // Step 6: Declarations
 
+    /* Declaration Info Structure:
+
+    "declaration_id": 1,
+    "reference_id": "RFI-VEN-00001",
+    "primary_declarant_name": "tejass",
+    "primary_declarant_designation": "devoloper",
+    "country_declarant_name": "bobbyyy",
+    "country_declarant_designation": "testers",
+    "country_name": "indiaa",
+    "organisation_name": "pvs con",
+    "authorized_signatory": "uploads/vendor_reference/RFI-VEN-00001/declarations/declaration__Btech 2-1 MM.pdf",
+    "place": "kkdian",
+    "signed_date": "2025-12-26"
+
+    */
+
     const [declarationInfo, setDeclarationInfo] = useState({
         declaration_id: null,
-        name: '',
-        organization: '',
-        designation: '',
-        confidentiality_name: '',
-        confidentiality_org: '',
-        confidentiality_designation: '',
-        title: '',
-        date: '',
+        primary_declarant_name: '',
+        primary_declarant_designation: '',
+        country_declarant_name: '',
+        country_declarant_designation: '',
+        country_name: '',
+        organisation_name: '',
         place: '',
+        signed_date: '',
+        fileName: '',
         signedFile: null,
     });
 
@@ -2574,26 +2589,19 @@ const VmsRequest = () => {
                     const declaration = response?.data;
                     console.log("declaration:", declaration);
 
-                    const mainMatch = declaration?.declaration_text?.match(
-                        /I\/We\s+(.*?)\s+of\s+(.*?)\s+designated\s+as\s+(.*?)\s/i
-                    );
-
-                    const confMatch = declaration.confidentiality_ack?.match(
-                        /I\/We\s+(.*?)\s+of\s+(.*?)\s+designated/i
-                    );
 
                     setDeclarationInfo({
                         declaration_id: declaration.declaration_id || null,
-                        name: mainMatch?.[1]?.trim() || '',
-                        organization: mainMatch?.[2]?.trim() || '',
-                        designation: mainMatch?.[3]?.trim() || '',
-                        confidentiality_name: confMatch?.[1]?.trim() || '',
-                        confidentiality_org: confMatch?.[2]?.trim() || '',
-                        confidentiality_designation: declaration.designation || '',
-                        title: declaration.designation || '',
-                        date: declaration.signed_date || '',
+                        primary_declarant_name: declaration.primary_declarant_name || '',
+                        primary_declarant_designation: declaration.primary_declarant_designation || '',
+                        country_declarant_name: declaration.country_declarant_name || '',
+                        country_declarant_designation: declaration.country_declarant_designation || '',
+                        country_name: declaration.country_name || '',
+                        organisation_name: declaration.organisation_name || '',
+                        signed_date: declaration.signed_date || '',
                         place: declaration.place || '',
                         signedFile: declaration.authorized_signatory || null,
+                        fileName: declaration.file_name,
                     });
                 }
             } catch (err) {
@@ -2606,21 +2614,22 @@ const VmsRequest = () => {
 
 
 
-
+    // add or update declaration
+    // for update append _method = PUT in formdata
     const handleSaveDeclaration = async () => {
 
         let errors = [];
 
         // ========== Vendor Declaration Inputs ==========
-        if (!vendorDeclarationInfo.name?.trim()) {
+        if (!declarationInfo.primary_declarant_name?.trim()) {
             errors.push("Vendor Name is required in Declaration paragraph.");
         }
 
-        if (!vendorDeclarationInfo.organization?.trim()) {
+        if (!declarationInfo.organisation_name?.trim()) {
             errors.push("Vendor Organization is required in Declaration paragraph.");
         }
 
-        if (!vendorDeclarationInfo.designation?.trim()) {
+        if (!declarationInfo.primary_declarant_designation?.trim()) {
             errors.push("Vendor Designation is required in Declaration paragraph.");
         }
 
@@ -2630,15 +2639,15 @@ const VmsRequest = () => {
         }
 
         // ========== Country Party Inputs ==========
-        if (!countryPartyInfo.name?.trim()) {
+        if (!declarationInfo.country_declarant_name?.trim()) {
             errors.push("Country Party Name is required in Declaration paragraph.");
         }
 
-        if (!countryPartyInfo.country?.trim()) {
+        if (!declarationInfo.country_name?.trim()) {
             errors.push("Country Party Country is required in Declaration paragraph.");
         }
 
-        if (!countryPartyInfo.designation?.trim()) {
+        if (!declarationInfo.country_declarant_designation?.trim()) {
             errors.push("Country Party Designation is required in Declaration paragraph.");
         }
 
@@ -2649,7 +2658,7 @@ const VmsRequest = () => {
 
         // ========== Extra Fields (If both checkboxes are checked) ==========
         if (isDeclarationChecked && isCountryPartyChecked) {
-            if (!declarationDetails.place?.trim()) {
+            if (!declarationInfo.place?.trim()) {
                 errors.push("Place is required.");
             }
 
@@ -2684,25 +2693,19 @@ const VmsRequest = () => {
         try {
             const formData = new FormData();
 
-            formData.append(
-                'declaration_text',
-                `I/We ${declarationInfo.name} of ${declarationInfo.organization} designated as ${declarationInfo.designation} declare the information provided...`
-            );
-
-            formData.append(
-                'confidentiality_ack',
-                `I/We ${declarationInfo.confidentiality_name} of ${declarationInfo.confidentiality_org} designated as ${declarationInfo.confidentiality_designation} acknowledge the confidentiality...`
-            );
-
-            formData.append('designation', declarationInfo.title);
-            formData.append('place', declarationInfo.place);
-            formData.append('signed_date', declarationInfo.date);
-            formData.append('signed_file', declarationInfo.signedFile.file);
+            formData.append("primary_declarant_name", declarationInfo.primary_declarant_name);
+            formData.append("primary_declarant_designation", declarationInfo.primary_declarant_designation);
+            formData.append("country_declarant_name", declarationInfo.country_declarant_name);
+            formData.append("country_declarant_designation", declarationInfo.country_declarant_designation);
+            formData.append("country_name", declarationInfo.country_name);
+            formData.append("organisation_name", declarationInfo.organisation_name);
+            formData.append("place", declarationDetails.place);
+            formData.append("signed_date", declarationDetails.date);
+            formData.append("signed_file", declarationInfo.signedFile.file);
 
             console.log('signedFile:', declarationInfo.signedFile);
             console.log('signedFile type:', typeof declarationInfo.signedFile.file);
             console.log('FormData preview:');
-
             console.log("signedFile:", declarationInfo.signedFile);
             console.log("signedFile instanceof File:", declarationInfo.signedFile instanceof File);
 
@@ -2710,9 +2713,17 @@ const VmsRequest = () => {
                 console.log(pair[0], pair[1]);
             }
 
-            await addDeclarations(referenceId, formData); // replace 4 with actual vendor_id
+            if (isEditing) {
+                formData.append("_method", "PUT"); // for update
+                await updateDeclarations(referenceId, declarationInfo.declaration_id, formData);
+                toast.success("Declaration updated successfully!");
+            } else {
+                await addDeclarations(referenceId, formData);
+                toast.success("Declaration added successfully!");
+            }
+
             await handleSubmitRfq(); // submit RFQ after declaration
-            toast.success("Rfq Submitted successfully!");
+            toast.success("RFQ Submitted successfully!");
             navigate('/status'); // move to next step
         } catch (err) {
             console.error(err);
@@ -5146,11 +5157,11 @@ const VmsRequest = () => {
                                             I/We{" "}
                                             <input
                                                 type="text"
-                                                value={vendorDeclarationInfo.name}
+                                                value={declarationInfo.primary_declarant_name}
                                                 onChange={(e) =>
-                                                    setVendorDeclarationInfo((prev) => ({
+                                                    setDeclarationInfo((prev) => ({
                                                         ...prev,
-                                                        name: e.target.value.toUpperCase(),
+                                                        primary_declarant_name: e.target.value.toUpperCase(),
                                                     }))
                                                 }
                                                 className={styles.inlineInput}
@@ -5160,11 +5171,11 @@ const VmsRequest = () => {
                                             of{" "}
                                             <input
                                                 type="text"
-                                                value={vendorDeclarationInfo.organization}
+                                                value={declarationInfo.organisation_name}
                                                 onChange={(e) =>
-                                                    setVendorDeclarationInfo((prev) => ({
+                                                    setDeclarationInfo((prev) => ({
                                                         ...prev,
-                                                        organization: e.target.value.toUpperCase(),
+                                                        organisation_name: e.target.value.toUpperCase(),
                                                     }))
                                                 }
                                                 className={styles.inlineInput}
@@ -5174,11 +5185,11 @@ const VmsRequest = () => {
                                             designated as{" "}
                                             <input
                                                 type="text"
-                                                value={vendorDeclarationInfo.designation}
+                                                value={declarationInfo.primary_declarant_designation}
                                                 onChange={(e) =>
-                                                    setVendorDeclarationInfo((prev) => ({
+                                                    setDeclarationInfo((prev) => ({
                                                         ...prev,
-                                                        designation: e.target.value.toUpperCase(),
+                                                        primary_declarant_designation: e.target.value.toUpperCase(),
                                                     }))
                                                 }
                                                 className={styles.inlineInput}
@@ -5217,11 +5228,11 @@ const VmsRequest = () => {
                                             I/We{" "}
                                             <input
                                                 type="text"
-                                                value={countryPartyInfo.name}
+                                                value={declarationInfo.country_declarant_name}
                                                 onChange={(e) =>
-                                                    setCountryPartyInfo((prev) => ({
+                                                    setDeclarationInfo((prev) => ({
                                                         ...prev,
-                                                        name: e.target.value.toUpperCase(),
+                                                        country_declarant_name: e.target.value.toUpperCase(),
                                                     }))
                                                 }
                                                 className={styles.inlineInput}
@@ -5231,11 +5242,11 @@ const VmsRequest = () => {
                                             representing the country{" "}
                                             <input
                                                 type="text"
-                                                value={countryPartyInfo.country}
+                                                value={declarationInfo.country_name}
                                                 onChange={(e) =>
-                                                    setCountryPartyInfo((prev) => ({
+                                                    setDeclarationInfo((prev) => ({
                                                         ...prev,
-                                                        country: e.target.value.toUpperCase(),
+                                                        country_name: e.target.value.toUpperCase(),
                                                     }))
                                                 }
                                                 className={styles.inlineInput}
@@ -5245,11 +5256,11 @@ const VmsRequest = () => {
                                             designated as{" "}
                                             <input
                                                 type="text"
-                                                value={countryPartyInfo.designation}
+                                                value={declarationInfo.country_declarant_designation}
                                                 onChange={(e) =>
-                                                    setCountryPartyInfo((prev) => ({
+                                                    setDeclarationInfo((prev) => ({
                                                         ...prev,
-                                                        designation: e.target.value.toUpperCase(),
+                                                        country_declarant_designation: e.target.value.toUpperCase(),
                                                     }))
                                                 }
                                                 className={styles.inlineInput}
@@ -5279,16 +5290,16 @@ const VmsRequest = () => {
                                             </label>
                                         </div>
 
-                                        {/* ✅ Show these 3 fields only when BOTH checkboxes are ticked */}
+                                        {/* Show these 3 fields only when BOTH checkboxes are ticked */}
                                         {isDeclarationChecked && isCountryPartyChecked && (
                                             <div className={styles.declarationBox}>
                                                 <div className={styles.fieldRow}>
                                                     <label className={styles.fieldLabel}>Place <span className={styles.requiredSymbol}>*</span></label>
                                                     <input
                                                         type="text"
-                                                        value={declarationDetails.place}
+                                                        value={declarationInfo.place}
                                                         onChange={(e) =>
-                                                            setDeclarationDetails((prev) => ({
+                                                            setDeclarationInfo((prev) => ({
                                                                 ...prev,
                                                                 place: e.target.value
                                                                     .replace(/[^A-Za-z\s]/g, "")
@@ -5308,12 +5319,12 @@ const VmsRequest = () => {
                                                     <input
                                                         type="date"
                                                         value={
-                                                            declarationDetails.date ||
+                                                            declarationInfo.signed_date ||
                                                             new Date().toISOString().slice(0, 10) // today's date in yyyy-mm-dd
                                                         }
                                                         onChange={() => { }} // prevent typing
                                                         className={styles.fieldInput}
-                                                        readOnly // 🔒 makes it non-editable
+                                                        readOnly // makes it non-editable
                                                     />
                                                 </div>
 
@@ -5332,22 +5343,29 @@ const VmsRequest = () => {
                                                     />
 
                                                     {/* File name */}
-                                                    {declarationInfo?.signedFile?.file?.name && (
+                                                    {declarationInfo?.signedFile && (
                                                         <span className={styles.fileName}>
-                                                            📄 {declarationInfo.signedFile.file.name}
+                                                            📄{" "}
+                                                            {declarationInfo?.signedFile?.file
+                                                                ? declarationInfo.signedFile.file.name
+                                                                : declarationInfo.file_name}
                                                         </span>
                                                     )}
 
-                                                    {declarationInfo?.signedFile?.url && (
-                                                        <button
-                                                            type="button"
+                                                    {declarationInfo?.signedFile && (
+                                                        <a
+                                                            href={declarationInfo.signedFile.url
+                                                                ? declarationInfo.signedFile.url
+                                                                : `${process.env.REACT_APP_API_BASE_URL}/${declarationInfo.signedFile}`
+                                                            }
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
                                                             className={styles.viewButton}
-                                                            onClick={() => window.open(declarationInfo.signedFile.url, "_blank")}
-
                                                         >
                                                             View
-                                                        </button>
+                                                        </a>
                                                     )}
+
                                                 </div>
                                             </div>
                                         )}
@@ -6253,29 +6271,29 @@ const VmsRequest = () => {
                                                     {/* Vendor Declaration */}
                                                     <tr>
                                                         <td>Declarant Name</td>
-                                                        <td>{vendorDeclarationInfo?.name || "Not Provided"}</td>
+                                                        <td>{declarationInfo?.primary_declarant_name || "Not Provided"}</td>
                                                     </tr>
                                                     <tr>
                                                         <td>Organization</td>
-                                                        <td>{vendorDeclarationInfo?.organization || "Not Provided"}</td>
+                                                        <td>{declarationInfo?.organisation_name || "Not Provided"}</td>
                                                     </tr>
                                                     <tr>
                                                         <td>Designation</td>
-                                                        <td>{vendorDeclarationInfo?.designation || "Not Provided"}</td>
+                                                        <td>{declarationInfo?.primary_declarant_designation || "Not Provided"}</td>
                                                     </tr>
 
                                                     {/* Country Party Declaration */}
                                                     <tr>
                                                         <td>Country Party — Name</td>
-                                                        <td>{countryPartyInfo?.name || "Not Provided"}</td>
+                                                        <td>{declarationInfo?.country_declarant_name || "Not Provided"}</td>
                                                     </tr>
                                                     <tr>
                                                         <td>Country Party — Country</td>
-                                                        <td>{countryPartyInfo?.country || "Not Provided"}</td>
+                                                        <td>{declarationInfo?.country_name || "Not Provided"}</td>
                                                     </tr>
                                                     <tr>
                                                         <td>Country Party — Designation</td>
-                                                        <td>{countryPartyInfo?.designation || "Not Provided"}</td>
+                                                        <td>{declarationInfo?.country_declarant_designation || "Not Provided"}</td>
                                                     </tr>
 
                                                     {/* Show these fields only when BOTH agreed */}
@@ -6284,15 +6302,15 @@ const VmsRequest = () => {
                                                             {/* Place */}
                                                             <tr>
                                                                 <td>Place</td>
-                                                                <td>{declarationDetails?.place || "Not Provided"}</td>
+                                                                <td>{declarationInfo?.place || "Not Provided"}</td>
                                                             </tr>
 
                                                             {/* Date */}
                                                             <tr>
                                                                 <td>Date</td>
                                                                 <td>
-                                                                    {declarationDetails?.date
-                                                                        ? declarationDetails.date
+                                                                    {declarationInfo?.signed_date
+                                                                        ? declarationInfo.signed_date
                                                                         : new Date().toISOString().slice(0, 10)}
                                                                 </td>
                                                             </tr>
@@ -6301,17 +6319,18 @@ const VmsRequest = () => {
                                                             <tr>
                                                                 <td>Signature (White Background)</td>
                                                                 <td>
-                                                                    {declarationInfo?.signedFile?.file?.name ? (
+                                                                    {declarationInfo?.signedFile ? (
                                                                         <>
-                                                                            📄 {declarationInfo.signedFile.file.name}
-                                                                            {declarationInfo.signedFile?.url && (
+                                                                            📄 {declarationInfo.fileName}
+                                                                            {declarationInfo.signedFile && (
                                                                                 <>
                                                                                     {" "}
                                                                                     —{" "}
                                                                                     <a
-                                                                                        href={declarationInfo.signedFile.url.startsWith("blob:")
+                                                                                        href={declarationInfo.signedFile.url
                                                                                             ? declarationInfo.signedFile.url
-                                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${declarationInfo.signedFile.url}`}
+                                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${declarationInfo.signedFile}`
+                                                                                        }
                                                                                         target="_blank"
                                                                                         rel="noopener noreferrer"
                                                                                         className={styles.reviewViewLink}
