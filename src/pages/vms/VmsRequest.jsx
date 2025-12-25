@@ -6263,7 +6263,6 @@ const VmsRequest = () => {
     STEP 6 — DECLARATION & ACKNOWLEDGEMENT (Review Modal)
 ===================================================== */}
 
-{/* comment to test */}
                                         <Box className={styles.reviewSection}>
                                             <h3 className={styles.reviewSectionTitle}>6️⃣ Declaration & Acknowledgement</h3>
 
