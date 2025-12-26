@@ -1057,21 +1057,14 @@ const VmsRequest = () => {
 
         // 2️⃣ If MSME = Yes → validate Category + Udyam Number
         if (msmeInfo.registered_under_msme === "true") {
-
-            if (!msmeInfo.msme_category || msmeInfo.msme_category.trim() === "") {
-                errors.push("MSME Category is required.");
-            }
-
-            if (!msmeInfo.udyam_number || msmeInfo.udyam_number.trim() === "") {
+            if (!msmeInfo.udyam_number_registration || msmeInfo.udyam_number_registration.trim() === "") {
                 errors.push("Udyam Registration Number is required.");
             }
 
         }
 
-        if (msmeInfo.registered_under_msme === "false") {
-            if (!msmeInfo.msme_category || msmeInfo.msme_category.trim() === "") {
-                errors.push("MSME Category is required.");
-            }
+        if (!msmeInfo.category || msmeInfo.category.trim() === "") {
+            errors.push("MSME Category is required.");
         }
 
 
@@ -2148,14 +2141,6 @@ const VmsRequest = () => {
         ) {
             if (!bankInfo.ifsc_code)
                 errors.push("IFSC Code is required for Domestic transactions.");
-
-            // IFSC Format (optional but recommended)
-            if (
-                bankInfo.ifsc_code &&
-                !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(bankInfo.ifsc_code)
-            ) {
-                errors.push("Invalid IFSC Code format.");
-            }
         }
 
         if (
@@ -2165,13 +2150,7 @@ const VmsRequest = () => {
             if (!bankInfo.swift_code)
                 errors.push("SWIFT Code is required for International transactions.");
 
-            // SWIFT Format (optional)
-            if (
-                bankInfo.swift_code &&
-                !/^[A-Z0-9]{8}(?:[A-Z0-9]{3})?$/i.test(bankInfo.swift_code)
-            ) {
-                errors.push("Invalid SWIFT Code format.");
-            }
+
         }
 
         // ---------------------------------------------
@@ -2187,17 +2166,9 @@ const VmsRequest = () => {
             if (!bankInfo.country_text)
                 errors.push("Specify Country is required.");
 
-            if (!bankInfo.state_text)
-                errors.push("Specify State/Province is required.");
         }
 
-        // ---------------------------------------------
-        // 🔹 IF COUNTRY = India → Require state dropdown
-        // ---------------------------------------------
-        if (bankInfo.country_type === "India") {
-            if (!bankInfo.state_id)
-                errors.push("Bank State is required for India.");
-        }
+
 
         // ---------------------------------------------
         // 🔹 SHOW ERRORS (if any)
@@ -6059,16 +6030,13 @@ const VmsRequest = () => {
                                                     <tr>
                                                         <td>PAN</td>
                                                         <td>
-                                                            {documents.pan?.fileName ? (
+                                                            {documents?.pan?.file || documents?.pan?.url ? (
                                                                 <>
-                                                                    📄 {documents.pan.fileName} —
+                                                                    📄 {documents.pan.file?.name || "Uploaded PAN"} —
                                                                     <a
-                                                                        href={documents.pan.url?.startsWith("blob:")
-                                                                            ? documents.pan.url
-                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${documents.pan.url}`}
+                                                                        href={documents.pan.url.startsWith("blob:") ? documents.pan.url : `${process.env.REACT_APP_API_BASE_URL}/${documents.pan.url}`}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
-                                                                        className={styles.reviewViewLink}
                                                                     >
                                                                         View
                                                                     </a>
@@ -6083,21 +6051,18 @@ const VmsRequest = () => {
                                                         <td>{documents.gst_available === "true" ? "Yes" : "No"}</td>
                                                     </tr>
 
-                                                    {/* GST Document — only if Yes */}
+                                                    {/* GST Certificate */}
                                                     {documents.gst_available === "true" && (
                                                         <tr>
                                                             <td>GST Certificate</td>
                                                             <td>
-                                                                {documents.gst?.fileName ? (
+                                                                {documents?.gst?.file || documents?.gst?.url ? (
                                                                     <>
-                                                                        📄 {documents.gst.fileName} —
+                                                                        📄 {documents.gst.file?.name || "Uploaded GST"} —
                                                                         <a
-                                                                            href={documents.gst.url?.startsWith("blob:")
-                                                                                ? documents.gst.url
-                                                                                : `${process.env.REACT_APP_API_BASE_URL}/${documents.gst.url}`}
+                                                                            href={documents.gst.url.startsWith("blob:") ? documents.gst.url : `${process.env.REACT_APP_API_BASE_URL}/${documents.gst.url}`}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
-                                                                            className={styles.reviewViewLink}
                                                                         >
                                                                             View
                                                                         </a>
@@ -6107,50 +6072,36 @@ const VmsRequest = () => {
                                                         </tr>
                                                     )}
 
-                                                    {/* MSME Registered */}
+                                                    {/* MSME */}
                                                     <tr>
-                                                        <td>Registered under MSME</td>
-                                                        <td>{msmeInfo.registered_under_msme === "true" ? "Yes" : "No"}</td>
+                                                        <td>MSME Certificate</td>
+                                                        <td>
+                                                            {documents?.msme?.file || documents?.msme?.url ? (
+                                                                <>
+                                                                    📄 {documents.msme.file?.name || "Uploaded MSME"} —
+                                                                    <a
+                                                                        href={documents.msme.url.startsWith("blob:") ? documents.msme.url : `${process.env.REACT_APP_API_BASE_URL}/${documents.msme.url}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                    >
+                                                                        View
+                                                                    </a>
+                                                                </>
+                                                            ) : "Not Uploaded"}
+                                                        </td>
                                                     </tr>
-
-                                                    {/* MSME Certificate — only if Yes */}
-                                                    {msmeInfo.registered_under_msme === "true" && (
-                                                        <tr>
-                                                            <td>MSME Certificate</td>
-                                                            <td>
-                                                                {documents.msme?.fileName ? (
-                                                                    <>
-                                                                        📄 {documents.msme.fileName} —
-                                                                        <a
-                                                                            href={documents.msme.url?.startsWith("blob:")
-                                                                                ? documents.msme.url
-                                                                                : `${process.env.REACT_APP_API_BASE_URL}/${documents.msme.url}`}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className={styles.reviewViewLink}
-                                                                        >
-                                                                            View
-                                                                        </a>
-                                                                    </>
-                                                                ) : "Not Uploaded"}
-                                                            </td>
-                                                        </tr>
-                                                    )}
 
                                                     {/* Cancelled Cheque */}
                                                     <tr>
                                                         <td>Cancelled Cheque</td>
                                                         <td>
-                                                            {documents.cheque?.fileName ? (
+                                                            {documents?.cheque?.file || documents?.cheque?.url ? (
                                                                 <>
-                                                                    📄 {documents.cheque.fileName} —
+                                                                    📄 {documents.cheque.file?.name || "Uploaded Cheque"} —
                                                                     <a
-                                                                        href={documents.cheque.url?.startsWith("blob:")
-                                                                            ? documents.cheque.url
-                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${documents.cheque.url}`}
+                                                                        href={documents.cheque.url.startsWith("blob:") ? documents.cheque.url : `${process.env.REACT_APP_API_BASE_URL}/${documents.cheque.url}`}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
-                                                                        className={styles.reviewViewLink}
                                                                     >
                                                                         View
                                                                     </a>
@@ -6164,41 +6115,31 @@ const VmsRequest = () => {
                                                         <td>{tanStatus === "yes" ? "TAN Certificate" : "TAN Exemption Certificate"}</td>
                                                         <td>
                                                             {tanStatus === "yes" ? (
-                                                                documents.tanCertificate?.fileName ? (
+                                                                documents?.tanCertificate?.file || documents?.tanCertificate?.url ? (
                                                                     <>
-                                                                        📄 {documents.tanCertificate.fileName} —
+                                                                        📄 {documents.tanCertificate.file?.name || "Uploaded TAN"} —
                                                                         <a
-                                                                            href={documents.tanCertificate.url?.startsWith("blob:")
-                                                                                ? documents.tanCertificate.url
-                                                                                : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanCertificate.url}`}
+                                                                            href={documents.tanCertificate.url.startsWith("blob:") ? documents.tanCertificate.url : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanCertificate.url}`}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
-                                                                            className={styles.reviewViewLink}
                                                                         >
                                                                             View
                                                                         </a>
                                                                     </>
-                                                                ) : (
-                                                                    "Not Uploaded"
-                                                                )
+                                                                ) : "Not Uploaded"
                                                             ) : (
-                                                                documents.tanExemption?.fileName ? (
+                                                                documents?.tanExemption?.file || documents?.tanExemption?.url ? (
                                                                     <>
-                                                                        📄 {documents.tanExemption.fileName} —
+                                                                        📄 {documents.tanExemption.file?.name || "Uploaded TAN Exemption"} —
                                                                         <a
-                                                                            href={documents.tanExemption.url?.startsWith("blob:")
-                                                                                ? documents.tanExemption.url
-                                                                                : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanExemption.url}`}
+                                                                            href={documents.tanExemption.url.startsWith("blob:") ? documents.tanExemption.url : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanExemption.url}`}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
-                                                                            className={styles.reviewViewLink}
                                                                         >
                                                                             View
                                                                         </a>
                                                                     </>
-                                                                ) : (
-                                                                    "Not Uploaded"
-                                                                )
+                                                                ) : "Not Uploaded"
                                                             )}
                                                         </td>
                                                     </tr>
@@ -6207,16 +6148,13 @@ const VmsRequest = () => {
                                                     <tr>
                                                         <td>Registration / Incorporation Certificate</td>
                                                         <td>
-                                                            {documents.incorporation?.fileName ? (
+                                                            {documents?.incorporation?.file || documents?.incorporation?.url ? (
                                                                 <>
-                                                                    📄 {documents.incorporation.fileName} —
+                                                                    📄 {documents.incorporation.file?.name || "Uploaded Incorporation"} —
                                                                     <a
-                                                                        href={documents.incorporation.url?.startsWith("blob:")
-                                                                            ? documents.incorporation.url
-                                                                            : `${process.env.REACT_APP_API_BASE_URL}/${documents.incorporation.url}`}
+                                                                        href={documents.incorporation.url.startsWith("blob:") ? documents.incorporation.url : `${process.env.REACT_APP_API_BASE_URL}/${documents.incorporation.url}`}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
-                                                                        className={styles.reviewViewLink}
                                                                     >
                                                                         View
                                                                     </a>
@@ -6231,21 +6169,18 @@ const VmsRequest = () => {
                                                         <td>{documents.tds_declaration === "true" ? "Yes" : "No"}</td>
                                                     </tr>
 
-                                                    {/* TDS Document — only if Yes */}
+                                                    {/* TDS Document */}
                                                     {documents.tds_declaration === "true" && (
                                                         <tr>
                                                             <td>TDS Declaration Document</td>
                                                             <td>
-                                                                {documents.tds?.fileName ? (
+                                                                {documents?.tds?.file || documents?.tds?.url ? (
                                                                     <>
-                                                                        📄 {documents.tds.fileName} —
+                                                                        📄 {documents.tds.file?.name || "Uploaded TDS"} —
                                                                         <a
-                                                                            href={documents.tds.url?.startsWith("blob:")
-                                                                                ? documents.tds.url
-                                                                                : `${process.env.REACT_APP_API_BASE_URL}/${documents.tds.url}`}
+                                                                            href={documents.tds.url.startsWith("blob:") ? documents.tds.url : `${process.env.REACT_APP_API_BASE_URL}/${documents.tds.url}`}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
-                                                                            className={styles.reviewViewLink}
                                                                         >
                                                                             View
                                                                         </a>
@@ -6257,6 +6192,7 @@ const VmsRequest = () => {
 
                                                 </tbody>
                                             </table>
+
                                         </Box>
 
                                         {/* =====================================================
@@ -6352,7 +6288,7 @@ const VmsRequest = () => {
                                                 </tbody>
                                             </table>
                                         </Box>
-                                                      
+
 
                                         {/* ACTION BUTTONS */}
                                         <Box className={styles.reviewActions}>
