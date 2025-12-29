@@ -28,6 +28,7 @@ import VmsRequest from "./pages/vms/VmsRequest";
 import CostCenter from "./pages/costcenter/CostCenter";
 import StatusPage from "./pages/vms/StatusPage";
 import EntityRfqPage from "./pages/vms/EntityRfqPage";
+import RfiList from "./pages/vms/MyRfi";
 
 const App = () => {
   const [theme, colorMode] = useMode();
@@ -71,6 +72,7 @@ const AppRoutes = () => (
             <Route path={"request-vendor"} element={<VmsRequest />} />
             <Route path={"status"} element={<StatusPage />} />
             <Route path={"rfqpage"} element={<EntityRfqPage />} />
+            <Route path={"myrfi"} element={<RfiList />} />
         </Route>
 
         {/* Catch-all */}

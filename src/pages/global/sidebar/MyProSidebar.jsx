@@ -214,10 +214,18 @@ const MyProSidebar = () => {
                             setSelected={setSelected}
                         />
 
-                        <Item
+                       {/*<Item
                             title="My RFIs"
                             to="/request-vendor"
                             icon={<HowToRegIcon  />}
+                            selected={selected}
+                            setSelected={setSelected}
+                        /> */}
+
+                         <Item
+                            title="My RFIs"
+                            to="/myrfi"
+                            icon={<HowToRegIcon />}
                             selected={selected}
                             setSelected={setSelected}
                         />
@@ -237,6 +245,10 @@ const MyProSidebar = () => {
                             selected={selected}
                             setSelected={setSelected}
                         />
+
+                        
+
+                        
 
 
                     </Box>
