@@ -1060,7 +1060,6 @@ const VmsRequest = () => {
             if (!msmeInfo.udyam_number_registration || msmeInfo.udyam_number_registration.trim() === "") {
                 errors.push("Udyam Registration Number is required.");
             }
-
         }
 
         if (!msmeInfo.category || msmeInfo.category.trim() === "") {
