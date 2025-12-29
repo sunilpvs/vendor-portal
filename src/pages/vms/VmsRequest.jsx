@@ -3654,7 +3654,7 @@ const VmsRequest = () => {
                                                         cursor: "pointer",
                                                     }}
                                                     required
-                                                    readOnly={isReadOnly}
+                                                    disabled={isReadOnly}
                                                 >
 
                                                     <option value="Mr.">Mr.</option>
@@ -3741,7 +3741,7 @@ const VmsRequest = () => {
                                                         cursor: "pointer",
                                                     }}
                                                     required
-                                                    readOnly={isReadOnly}
+                                                    disabled={isReadOnly}
                                                 >
 
                                                     <option value="Mr.">Mr. </option>
@@ -4492,7 +4492,7 @@ const VmsRequest = () => {
                                                                                 ))}
                                                                             </select>
 
-                                                                            {/* Day */}
+                                                                            {/* Date */}
                                                                             <select
                                                                                 className={styles.fieldInput}
                                                                                 value={formData[`itrDay${i}`] || ""}
@@ -4502,6 +4502,7 @@ const VmsRequest = () => {
                                                                                     })
                                                                                 }
                                                                                 style={{ width: "65px", textAlign: "center" }}
+                                                                                disabled={isReadOnly}
                                                                             >
                                                                                 <option value="">DD</option>
                                                                                 {Array.from(
@@ -4602,6 +4603,7 @@ const VmsRequest = () => {
                                                 }}
                                                 className={styles.fieldInput}
                                                 required
+                                                disabled={isReadOnly}
                                             >
                                                 <option value="">Select Transaction Type</option>
                                                 <option value="Domestic">Domestic</option>
@@ -4646,6 +4648,7 @@ const VmsRequest = () => {
                                                     }
                                                 }}
                                                 className={styles.fieldInput}
+                                                disabled={isReadOnly}
                                             >
                                                 <option value="">-- Select Country --</option>
                                                 <option value="India">India</option>
@@ -4707,6 +4710,7 @@ const VmsRequest = () => {
                                                         setBankInfo((prev) => ({ ...prev, ifsc_code: e.target.value.toUpperCase() }))
                                                     }
                                                     className={styles.fieldInput}
+                                                    readOnly={isReadOnly}
                                                 />
                                             </div>
                                         )}
@@ -4770,7 +4774,7 @@ const VmsRequest = () => {
                                                 className={styles.fieldInput}
                                                 onChange={(e) => handleDocumentChange("pan", e.target.files[0])}
                                                 required
-                                                readOnly={isReadOnly}
+                                                disabled={isReadOnly}
                                             />
 
                                             {/* ✅ Show uploaded file name */}
@@ -4837,7 +4841,7 @@ const VmsRequest = () => {
                                                     accept=".jpg,.jpeg,.png,.pdf"
                                                     className={styles.fieldInput}
                                                     onChange={(e) => handleDocumentChange("gst", e.target.files[0])}
-                                                    readOnly={isReadOnly}
+                                                    disabled={isReadOnly}
                                                 />
 
                                                 {/* File name */}
@@ -4899,7 +4903,7 @@ const VmsRequest = () => {
                                                     accept=".jpg,.jpeg,.png,.pdf"
                                                     className={styles.fieldInput}
                                                     onChange={(e) => handleDocumentChange("msme", e.target.files[0])}
-                                                    readOnly={isReadOnly}
+                                                    disabled={isReadOnly}
                                                 />
                                                 {documents.msme?.fileName && (
                                                     <span className={styles.fileName}>📄 {documents.msme.fileName}</span>
@@ -4983,7 +4987,7 @@ const VmsRequest = () => {
                                                     )
                                                 }
                                                 required
-                                                readOnly={isReadOnly}
+                                                disabled={isReadOnly}
                                             />
 
                                             {/* ============================ */}
@@ -5048,7 +5052,7 @@ const VmsRequest = () => {
                                                 className={styles.fieldInput}
                                                 onChange={(e) => handleDocumentChange("incorporation", e.target.files[0])}
                                                 required
-                                                readOnly={isReadOnly}
+                                                disabled={isReadOnly}
                                             />
 
                                             {documents.incorporation?.fileName && (
@@ -5111,7 +5115,7 @@ const VmsRequest = () => {
                                                     accept=".jpg,.jpeg,.png,.pdf"
                                                     className={styles.fieldInput}
                                                     onChange={(e) => handleDocumentChange("tds", e.target.files[0])}
-                                                    readOnly={isReadOnly}
+                                                    disabled={isReadOnly}
                                                 />
 
                                                 {/* File Name */}
@@ -5333,6 +5337,7 @@ const VmsRequest = () => {
                                                         accept=".jpg,.jpeg,.png"
                                                         name="signedFile"
                                                         onChange={handleDeclarationChange}
+                                                        disabled={isReadOnly}
                                                     />
 
                                                     {/* File name */}
