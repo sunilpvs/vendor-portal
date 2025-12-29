@@ -2274,7 +2274,8 @@ const VmsRequest = () => {
         cheque: {},
         tds: {},
         tds_declaration: "",
-        gst_available: "", // ✅ add this
+        gst_available: "", 
+        tanExemption: {},
     });
 
     const [documentStatus, setDocumentStatus] = useState({
@@ -2305,6 +2306,7 @@ const VmsRequest = () => {
         const fetchDocuments = async () => {
             try {
                 const response = await getDocumentDetails(referenceId);
+                console.log("Fetched Documents:", response?.data);
                 if (response?.data) {
                     const docs = {};
                     response.data.forEach(doc => {
@@ -2314,9 +2316,23 @@ const VmsRequest = () => {
                             url: doc?.file_path  // stored file path
                         };
                     });
+
+                    // Extract dropdown values from fetched documents
+                    const updatedDocs = { ...docs };
+                    
+                    // Check if TDS document exists to pre-select dropdown
+                    if (docs?.tds) {
+                        updatedDocs.tds_declaration = "true";
+                    }
+                    
+                    // Check if GST document exists to pre-select dropdown
+                    if (docs?.gst) {
+                        updatedDocs.gst_available = "true";
+                    }
+                    
                     setDocuments(prev => ({
                         ...prev,
-                        ...docs
+                        ...updatedDocs
                     }));
                 }
             } catch (err) {
@@ -2573,6 +2589,14 @@ const VmsRequest = () => {
                         signedFile: declaration.authorized_signatory || null,
                         fileName: declaration.file_name,
                     });
+
+                    if(declaration.primary_declarant_name && declaration.organisation_name && declaration.primary_declarant_designation){
+                        setIsDeclarationChecked(true);
+                    }
+
+                    if(declaration.country_declarant_name && declaration.country_name && declaration.country_declarant_designation){
+                        setIsCountryPartyChecked(true);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch documents", err);
@@ -2669,8 +2693,8 @@ const VmsRequest = () => {
             formData.append("country_declarant_designation", declarationInfo.country_declarant_designation);
             formData.append("country_name", declarationInfo.country_name);
             formData.append("organisation_name", declarationInfo.organisation_name);
-            formData.append("place", declarationDetails.place);
-            formData.append("signed_date", declarationDetails.date);
+            formData.append("place", declarationInfo.place);
+            formData.append("signed_date", declarationInfo.signed_date);
             formData.append("signed_file", declarationInfo.signedFile.file);
 
             console.log('signedFile:', declarationInfo.signedFile);
@@ -2888,20 +2912,24 @@ const VmsRequest = () => {
     };
 
     useEffect(() => {
-        if (!declarationDetails.date) {
+        if (!declarationInfo.signed_date) {
             const today = new Date().toISOString().slice(0, 10);
-            setDeclarationDetails((prev) => ({ ...prev, date: today }));
+            setDeclarationInfo((prev) => ({ ...prev, signed_date: today }));
         }
-    }, [declarationDetails.date]);
+    }, [declarationInfo.signed_date]);
 
     useEffect(() => {
         const today = new Date().toISOString().slice(0, 10);
-        setDeclarationDetails((prev) => ({ ...prev, date: today }));
+        setDeclarationInfo((prev) => ({ ...prev, signed_date: today }));
     }, []); // runs once on mount
 
 
     // checkbox state
     const [isDeclarationChecked, setIsDeclarationChecked] = useState(false);
+
+    // handle checkbox toggle
+  
+
 
     // declaration info
     const [vendorDeclarationInfo, setVendorDeclarationInfo] = useState({
@@ -4678,7 +4706,6 @@ const VmsRequest = () => {
                                                     onChange={(e) =>
                                                         setBankInfo((prev) => ({ ...prev, ifsc_code: e.target.value.toUpperCase() }))
                                                     }
-                                                    maxLength={11}
                                                     className={styles.fieldInput}
                                                 />
                                             </div>
@@ -4696,7 +4723,6 @@ const VmsRequest = () => {
                                                     onChange={(e) =>
                                                         setBankInfo((prev) => ({ ...prev, swift_code: e.target.value.toUpperCase() }))
                                                     }
-                                                    maxLength={11}
                                                     className={styles.fieldInput}
                                                 />
                                             </div>
@@ -4964,52 +4990,49 @@ const VmsRequest = () => {
                                             {/* TAN Certificate (Yes) */}
                                             {/* ============================ */}
                                             {tanStatus === "yes" && documents.tanCertificate?.fileName && (
-                                                <>
-                                                    <span className={styles.fileName}>
-                                                        📄 {documents.tanCertificate.fileName}
-                                                    </span>
+                                                <span className={styles.fileName}>
+                                                    📄 {documents.tanCertificate.fileName}
+                                                </span>
+                                            )}
 
-                                                    {documents.tanCertificate?.url && (
-                                                        <a
-                                                            href={
-                                                                documents.tanCertificate.url.startsWith("blob:")
-                                                                    ? documents.tanCertificate.url
-                                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanCertificate.url}`
-                                                            }
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className={styles.viewButton}
-                                                        >
-                                                            View
-                                                        </a>
-                                                    )}
-                                                </>
+                                            {/* View Button */}
+                                            {tanStatus === "yes" && documents.tanCertificate?.url && (
+                                                <a
+                                                    href={
+                                                        documents.tanCertificate.url.startsWith("blob:")
+                                                            ? documents.tanCertificate.url
+                                                            : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanCertificate.url}`
+                                                    }
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.viewButton}
+                                                >
+                                                    View
+                                                </a>
                                             )}
 
                                             {/* ============================ */}
                                             {/* TAN Exemption (No) */}
                                             {/* ============================ */}
                                             {tanStatus === "no" && documents.tanExemption?.fileName && (
-                                                <>
-                                                    <span className={styles.fileName}>
-                                                        📄 {documents.tanExemption.fileName}
-                                                    </span>
+                                                <span className={styles.fileName}>
+                                                    📄 {documents.tanExemption.fileName}
+                                                </span>
+                                            )}
 
-                                                    {documents.tanExemption?.url && (
-                                                        <a
-                                                            href={
-                                                                documents.tanExemption.url.startsWith("blob:")
-                                                                    ? documents.tanExemption.url
-                                                                    : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanExemption.url}`
-                                                            }
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className={styles.viewButton}
-                                                        >
-                                                            View
-                                                        </a>
-                                                    )}
-                                                </>
+                                            {tanStatus === "no" && documents.tanExemption?.url && (
+                                                <a
+                                                    href={
+                                                        documents.tanExemption.url.startsWith("blob:")
+                                                            ? documents.tanExemption.url
+                                                            : `${process.env.REACT_APP_API_BASE_URL}/${documents.tanExemption.url}`
+                                                    }
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.viewButton}
+                                                >
+                                                    View
+                                                </a>
                                             )}
                                         </div>
 
@@ -6320,7 +6343,6 @@ const VmsRequest = () => {
         </Box>
     );
 };
-
 
 
 export default VmsRequest;
