@@ -1057,7 +1057,7 @@ const VmsRequest = () => {
 
         // 2️⃣ If MSME = Yes → validate Category + Udyam Number
         if (msmeInfo.registered_under_msme === "true") {
-            if (!msmeInfo.udyam_number_registration || msmeInfo.udyam_number_registration.trim() === "") {
+            if (!msmeInfo.udyam_registration_number || msmeInfo.udyam_registration_number.trim() === "") {
                 errors.push("Udyam Registration Number is required.");
             }
         }
