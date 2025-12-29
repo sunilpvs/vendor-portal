@@ -28,6 +28,7 @@ const VmsRequest = () => {
     const [rfqStatus, setRfqStatus] = useState(null);
     const readOnlyStatuses = [8, 9, 11, 12, 13, 14];
     const isReadOnly = readOnlyStatuses.includes(rfqStatus);
+    const enableSubmit = readOnlyStatuses.includes(rfqStatus) ? false : true;
     const [countries, setCountries] = useState([]);
     const [states, setStates] = useState([]);
     const [countryCode, setCountryCode] = useState("");
@@ -59,7 +60,6 @@ const VmsRequest = () => {
         setFirstTime(!hasAgreed); // true = first time
         setShowInstructions(true);
     };
-
 
 
 
@@ -2274,7 +2274,7 @@ const VmsRequest = () => {
         cheque: {},
         tds: {},
         tds_declaration: "",
-        gst_available: "", 
+        gst_available: "",
         tanExemption: {},
     });
 
@@ -2319,17 +2319,17 @@ const VmsRequest = () => {
 
                     // Extract dropdown values from fetched documents
                     const updatedDocs = { ...docs };
-                    
+
                     // Check if TDS document exists to pre-select dropdown
                     if (docs?.tds) {
                         updatedDocs.tds_declaration = "true";
                     }
-                    
+
                     // Check if GST document exists to pre-select dropdown
                     if (docs?.gst) {
                         updatedDocs.gst_available = "true";
                     }
-                    
+
                     setDocuments(prev => ({
                         ...prev,
                         ...updatedDocs
@@ -2575,6 +2575,9 @@ const VmsRequest = () => {
                     const declaration = response?.data;
                     console.log("declaration:", declaration);
 
+                    // Use today's date if form is Initiated (7) or Sent Back (10), otherwise use database date
+                    const today = new Date().toISOString().slice(0, 10);
+                    const shouldUseCurrentDate = rfqStatus === 7 || rfqStatus === 10;
 
                     setDeclarationInfo({
                         declaration_id: declaration.declaration_id || null,
@@ -2584,17 +2587,17 @@ const VmsRequest = () => {
                         country_declarant_designation: declaration.country_declarant_designation || '',
                         country_name: declaration.country_name || '',
                         organisation_name: declaration.organisation_name || '',
-                        signed_date: declaration.signed_date || '',
+                        signed_date: shouldUseCurrentDate ? today : (declaration.signed_date || today),
                         place: declaration.place || '',
                         signedFile: declaration.authorized_signatory || null,
                         fileName: declaration.file_name,
                     });
 
-                    if(declaration.primary_declarant_name && declaration.organisation_name && declaration.primary_declarant_designation){
+                    if (declaration.primary_declarant_name && declaration.organisation_name && declaration.primary_declarant_designation) {
                         setIsDeclarationChecked(true);
                     }
 
-                    if(declaration.country_declarant_name && declaration.country_name && declaration.country_declarant_designation){
+                    if (declaration.country_declarant_name && declaration.country_name && declaration.country_declarant_designation) {
                         setIsCountryPartyChecked(true);
                     }
                 }
@@ -2604,7 +2607,7 @@ const VmsRequest = () => {
         };
 
         fetchDeclarations();
-    }, [referenceId]);
+    }, [referenceId, rfqStatus]);
 
 
 
@@ -2656,10 +2659,11 @@ const VmsRequest = () => {
                 errors.push("Place is required.");
             }
 
-            // Signature file required
-            if (!declarationInfo.signedFile?.file) {
+            // Signature file required - check for new upload OR existing file path
+            if (!declarationInfo.signedFile) {
                 errors.push("Signature file is required.");
-            } else {
+            } else if (declarationInfo.signedFile?.file) {
+                // Only validate if a new file is being uploaded
                 const file = declarationInfo.signedFile.file;
 
                 // Validate file type
@@ -2668,11 +2672,12 @@ const VmsRequest = () => {
                     errors.push("Signature must be JPG, JPEG, or PNG.");
                 }
 
-                // Validate file size (1 MB)
+                // Validate file size (1 MB)    
                 if (file.size > 1024 * 1024) {
                     errors.push("Signature file size must be less than 1 MB.");
                 }
             }
+            // If signedFile is a string (existing file path), it's valid - no error
         }
 
         // ========== Display Errors ==========
@@ -2696,12 +2701,6 @@ const VmsRequest = () => {
             formData.append("place", declarationInfo.place);
             formData.append("signed_date", declarationInfo.signed_date);
             formData.append("signed_file", declarationInfo.signedFile.file);
-
-            console.log('signedFile:', declarationInfo.signedFile);
-            console.log('signedFile type:', typeof declarationInfo.signedFile.file);
-            console.log('FormData preview:');
-            console.log("signedFile:", declarationInfo.signedFile);
-            console.log("signedFile instanceof File:", declarationInfo.signedFile instanceof File);
 
             for (let pair of formData.entries()) {
                 console.log(pair[0], pair[1]);
@@ -2928,7 +2927,7 @@ const VmsRequest = () => {
     const [isDeclarationChecked, setIsDeclarationChecked] = useState(false);
 
     // handle checkbox toggle
-  
+
 
 
     // declaration info
@@ -5401,9 +5400,10 @@ const VmsRequest = () => {
                                         >
                                             <thead style={{ backgroundColor: "#eee" }}>
                                                 <tr>
-                                                    <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "center", color: "#000", width: "20%" }}>S.No</th>
-                                                    <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000", width: "20%" }}>Date</th>
-                                                    <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000", width: "60%" }}>Comment</th>
+                                                    <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "center", color: "#000", width: "10%" }}>S.No</th>
+                                                    <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000", width: "50%" }}>Comment</th>
+                                                    <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000", width: "25%" }}>Commented By</th>
+                                                    <th style={{ border: "1px solid #ddd", padding: "8px", color: "#000", width: "15%" }}>Date</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -5422,8 +5422,9 @@ const VmsRequest = () => {
                                                                 {index + 1}
                                                             </td>
                                                             <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.comment}</td>
-
+                                                            <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.commenter_name}</td>
                                                             <td style={{ border: "1px solid #ddd", padding: "8px", color: "#000" }}>{item.commented_on}</td>
+
                                                         </tr>
                                                     ))
                                                 ) : (
@@ -5465,7 +5466,7 @@ const VmsRequest = () => {
                                             )}
 
                                             {/* Right-side buttons */}
-                                            {rfqStatus !== 8 ? (
+                                            {enableSubmit ? (
                                                 <>
                                                     {currentPage < totalSteps - 1 ? (
                                                         <button
