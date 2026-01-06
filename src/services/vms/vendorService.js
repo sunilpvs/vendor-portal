@@ -16,3 +16,7 @@ export const getAllVendorsList = (page, limit) => {
     return axiosInstance.get(`api/vms/vendor-initiate?type=all-vendors&page=${page}&limit=${limit}`);
 }
 
+// get vendor rfqs
+export const getVendorRfqs = (vendor_code) => {
+    return axiosInstance.get(`api/vms/vendor-initiate?type=vendor-rfqs&vendor_code=${vendor_code}`);
+}

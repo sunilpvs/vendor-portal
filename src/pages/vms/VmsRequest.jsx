@@ -680,7 +680,7 @@ const VmsRequest = () => {
         const fetchCompanyInfo = async () => {
             try {
                 const response = await getCompanyInfo(referenceId);
-                const data = response?.data;
+                const data = response?.data?.counterparty;
                 if (!data) return;
 
                 const normalized = {
