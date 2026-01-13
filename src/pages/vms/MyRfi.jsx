@@ -2,7 +2,6 @@ import { Box } from "@mui/material";
 import Header from "../../components/Header";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getReferenceId } from "../../services/vms/referenceIdService";
 import { getVendorUserRfqs } from "../../services/vms/vendorService";
 
 function MyRfi() {
@@ -11,52 +10,55 @@ function MyRfi() {
   /* ---------------- STATE ---------------- */
   const [rfis, setRfis] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedEntity, setSelectedEntity] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  // const [caseType, setCaseType] = useState(null); // 'first_rfq' or 'multiple_rfis'
-  const [referenceData, setReferenceData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ---------------- FETCH REFERENCE DATA ON MOUNT ---------------- */
+  /* ---------------- FETCH RFIs ---------------- */
   useEffect(() => {
-    const fetchReferenceData = async () => {
+    const fetchRfis = async () => {
       try {
         setLoading(true);
-        const response = await getReferenceId();
-        const data = response?.data;
-
-        if (!data) {
-          setLoading(false);
-          return;
-        }
-
-        setReferenceData(data);
-
-        // 
-        if (
-          (Array.isArray(data.reference_ids) && data.reference_ids.length > 0)  || data.reference_id
-        ) {
-          const rfiResponse = await getVendorUserRfqs();
-          const rfiList = rfiResponse?.data?.rfqs || [];
-          setRfis(rfiList);
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Failed to fetch reference data:", error);
+        const res = await getVendorUserRfqs();
+        setRfis(res?.data?.rfqs || []);
+      } catch (err) {
+        console.error("Failed to load RFIs", err);
+        setRfis([]);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchReferenceData();
+    fetchRfis();
   }, []);
-  
-  /* Filter Results */
-  const filteredRfis = rfis.filter((rfi) =>
-    `${rfi.rfi_id} ${rfi.vendor_name} ${rfi.rfi_type} ${rfi.status}`
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+
+  /* ---------------- ENTITY OPTIONS ---------------- */
+  const entityOptions = [
+    ...new Set(
+      rfis.map((rfi) => rfi.entity_name).filter(Boolean)
+    ),
+  ];
+
+  /* ---------------- FILTER (SEARCH + ENTITY) ---------------- */
+  const filteredRfis = rfis.filter((rfi) => {
+    const searchText = `
+      ${rfi.reference_id || ""}
+      ${rfi.vendor_name || ""}
+      ${rfi.entity_name || ""}
+      ${rfi.status || ""}
+    `.toLowerCase();
+
+    const matchesSearch = searchText.includes(
+      searchTerm.toLowerCase()
+    );
+
+    const matchesEntity =
+      selectedEntity === "" ||
+      rfi.entity_name === selectedEntity;
+
+    return matchesSearch && matchesEntity;
+  });
 
   /* ---------------- PAGINATION ---------------- */
   const totalPages = Math.ceil(filteredRfis.length / itemsPerPage);
@@ -66,104 +68,116 @@ function MyRfi() {
     startIndex + itemsPerPage
   );
 
-
-  // RENDER 
+  /* ---------------- RENDER ---------------- */
   return (
     <Box m="20px">
-      {/* PAGE HEADER */}
       <Header title="My RFI" subtitle="Vendor / My RFIs" />
 
-      {/* LOADING STATE */}
+      {/* LOADING */}
       {loading && (
         <div className="container mt-4 p-3 bg-white rounded shadow-sm text-center">
-          <p className="text-muted">Loading RFI data...</p>
+          Loading RFIs...
         </div>
       )}
 
-      {/* NO DATA STATE */}
-      {!loading && rfis.length === 0 && (
-        <div className="container mt-4 p-3 bg-white rounded shadow-sm text-center">
-          <p className="text-muted">No RFIs found.</p>
-        </div>
-      )}
-      
-      {/* DATA TABLE */}
+      {/* TABLE */}
       {!loading && (
         <div className="container mt-4 p-3 bg-white rounded shadow-sm">
-          {/* SEARCH & LIMIT */}
-          <div className="d-flex align-items-center justify-content-between flex-wrap mb-3">
-            <div className="me-3 mb-2" style={{ flex: 1, minWidth: "200px" }}>
-              <input
-                type="text"
-                placeholder="Search..."
-                className="form-control"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
 
-            <div className="d-flex align-items-center mb-2">
-              <label className="form-label me-2 mb-0 text-body">
-                Items per page:
-              </label>
-              <select
-                className="form-select"
-                style={{ width: "200px" }}
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-              >
-                {[5, 10, 20, 50].map((num) => (
-                  <option key={num} value={num}>
-                    {num}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* SEARCH + ENTITY FILTER + LIMIT */}
+          <div className="d-flex align-items-center flex-wrap mb-3">
+            <input
+              className="form-control me-2"
+              style={{ maxWidth: "280px" }}
+              placeholder="Search RFI / Vendor / Status"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+
+            <select
+              className="form-select me-2"
+              style={{ width: "220px" }}
+              value={selectedEntity}
+              onChange={(e) => {
+                setSelectedEntity(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="">All Entities</option>
+              {entityOptions.map((entity) => (
+                <option key={entity} value={entity}>
+                  {entity}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="form-select"
+              style={{ width: "150px" }}
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+            >
+              {[5, 10, 20, 50].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* TABLE */}
           <div className="table-responsive">
-            <table className="table table-hover table-bordered align-middle text-center">
+            <table className="table table-bordered table-hover align-middle text-center">
               <thead className="table-dark">
                 <tr>
                   <th>RFI ID</th>
                   <th>Vendor Name</th>
                   <th>Entity Name</th>
                   <th>Expiry Date</th>
-                  <th>RFI Status</th>
-                  <th>Actions</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
 
               <tbody>
                 {paginatedRfis.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-muted">
+                    <td colSpan="6" className="text-muted">
                       No RFIs found
                     </td>
                   </tr>
                 ) : (
                   paginatedRfis.map((rfi) => (
-                    <tr key={rfi.id}>
+                    <tr key={rfi.reference_id}>
                       <td>{rfi.reference_id}</td>
                       <td>{rfi.vendor_name}</td>
                       <td>{rfi.entity_name}</td>
-                      <td>{rfi.expiry_date ? new Date(rfi.expiry_date).toLocaleDateString('en-GB') : 'N/A'}</td>
+                      <td>
+                        {rfi.expiry_date
+                          ? new Date(rfi.expiry_date).toLocaleDateString(
+                              "en-GB"
+                            )
+                          : "N/A"}
+                      </td>
                       <td>{rfi.status}</td>
                       <td>
                         <button
                           className="btn btn-sm btn-primary"
                           onClick={() =>
-                            navigate(`/request-vendor/refId=${rfi.reference_id}`)
+                            navigate(
+                              `/request-vendor?refId=${rfi.reference_id}`
+                            )
                           }
                         >
-                          {rfi.status_id === 7 || rfi.status_id === 10 ? "Fill RFI" : "View Details"}
+                          {rfi.status_id === 7 || rfi.status_id === 10
+                            ? "Fill RFI"
+                            : "View Details"}
                         </button>
                       </td>
                     </tr>
@@ -175,9 +189,10 @@ function MyRfi() {
 
           {/* PAGINATION */}
           <div className="d-flex justify-content-between align-items-center mt-3">
-            <span className="form-label mb-0 text-body">
-              Showing {paginatedRfis.length} of {filteredRfis.length} RFIs
+            <span className="text-muted">
+              Showing {paginatedRfis.length} of {filteredRfis.length}
             </span>
+
             <div>
               <button
                 className="btn btn-outline-secondary btn-sm me-1"
