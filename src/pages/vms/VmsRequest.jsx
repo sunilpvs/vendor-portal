@@ -21,17 +21,28 @@ import { toast } from "react-hot-toast";
 import { getStateCombo } from "../../services/admin/stateService";
 import InstructionsStep from "./Components/InstructionsPopup";
 import { FiBookOpen } from "react-icons/fi";
+import { getVendorUserRfqs } from "../../services/vms/vendorService";
 
 
 const VmsRequest = () => {
+
+    const { refId } = useParams();
     const [referenceId, setReferenceId] = useState(null);
+    const [selectedReferenceId, setSelectedReferenceId] = useState("");
     const [rfqStatus, setRfqStatus] = useState(null);
     const readOnlyStatuses = [8, 9, 11, 12, 13, 14];
     const isReadOnly = readOnlyStatuses.includes(rfqStatus);
+    const [rfqList, setRfqList] = useState([]);
+
+    // readonly flag for submit button
     const enableSubmit = readOnlyStatuses.includes(rfqStatus) ? false : true;
+
+    // dropdown data
     const [countries, setCountries] = useState([]);
     const [states, setStates] = useState([]);
     const [countryCode, setCountryCode] = useState("");
+
+    // form data states
     const [sameAsRegistered, setSameAsRegistered] = useState(false);
     const [transactionType, setTransactionType] = useState("");
     const [ifscCode, setIfscCode] = useState("");
@@ -39,9 +50,12 @@ const VmsRequest = () => {
     const [signature, setSignature] = useState(null);
     const [showConfirmPopup, setShowConfirmPopup] = useState(false);
 
+    // stepper states
     const [currentPage, setCurrentPage] = useState(0);
     const [showInstructions, setShowInstructions] = useState(false);
     const [firstTime, setFirstTime] = useState(false);
+
+
 
     const [gstApplicable, setGstApplicable] = useState("");
     const [tdsApplicable, setTdsApplicable] = useState(false);
@@ -69,7 +83,8 @@ const VmsRequest = () => {
         try {
             const response = await getReferenceId();
             const refId = response?.data?.reference_id || '';
-            setReferenceId(refId);
+            // setReferenceId(refId);
+            if (refId) setSelectedReferenceId(refId);
         } catch (error) {
             console.error("Failed to fetch reference ID:", error);
         }
@@ -77,6 +92,159 @@ const VmsRequest = () => {
 
     useEffect(() => {
         fetchAndSetReferenceId();
+    }, []);
+
+
+    useEffect(() => {
+        if (refId) {
+            setSelectedReferenceId(refId);
+            setReferenceId(refId);
+        }
+    }, [refId]);
+
+    const handleRfqChange = (e) => {
+        const value = e.target.value;
+        
+        // Reset all form states when switching RFQs
+        if (value !== selectedReferenceId) {
+            setCompanyInfo({
+                full_registered_name: "",
+                business_entity_type: "",
+                reg_number: "",
+                tan_number: "",
+                trading_name: "",
+                company_email: "",
+                country_type: "",
+                country_id: null,
+                state_id: null,
+                country_text: "",
+                state_text: "",
+                telephone: "",
+                registered_address: "",
+                business_address: "",
+                contact_person_title: "",
+                contact_person_name: "",
+                contact_person_email: "",
+                contact_person_mobile: "",
+                accounts_person_title: "",
+                accounts_person_name: "",
+                accounts_person_contact_no: "",
+                accounts_person_email: "",
+                isOtherCountry: false,
+            });
+            
+            setMsmeInfo({
+                registered_under_msme: "",
+                udyam_registration_number: "",
+                category: "",
+            });
+            
+            setBankInfo({
+                account_holder_name: "",
+                bank_name: "",
+                bank_address: "",
+                transaction_type: "",
+                country_type: "",
+                country_id: null,
+                country_text: "",
+                account_number: "",
+                ifsc_code: "",
+                swift_code: "",
+                beneficiary_name: "",
+            });
+            
+            setGoodsServices({
+                counterparty_id: null,
+                type_of_counterparty: "",
+                others: "",
+                items: [],
+                type: "",
+                description: "",
+            });
+            
+            setGstMeta({
+                gst_type_id: null,
+                reg_type: "",
+                gstr_filling_type: "",
+                gst_applicable: "",
+            });
+            
+            setgstFormData([]);
+            setCount(0);
+            setGstApplicable("");
+            
+            setFormData({
+                fy1: "",
+                fy2: "",
+                it1_id: null,
+                it2_id: null,
+                currencyType1: "",
+                currencyType2: "",
+                currencyName1: "",
+                currencyName2: "",
+                turnover1: "",
+                turnover2: "",
+                itrStatus1: "",
+                itrStatus2: "",
+                ackNo1: "",
+                ackNo2: "",
+                filedDate1: "",
+                filedDate2: "",
+            });
+            
+            setDocuments({
+                pan: {},
+                msme: {},
+                gst: {},
+                cheque: {},
+                tds: {},
+                tds_declaration: "",
+                gst_available: "",
+                tanExemption: {},
+            });
+            
+            setDeclarationInfo({
+                declaration_id: null,
+                primary_declarant_name: '',
+                primary_declarant_designation: '',
+                country_declarant_name: '',
+                country_declarant_designation: '',
+                country_name: '',
+                organisation_name: '',
+                place: '',
+                signed_date: '',
+                fileName: '',
+                signedFile: null,
+            });
+            
+            // Reset declaration checkboxes
+            setIsDeclarationChecked(false);
+            setIsCountryPartyChecked(false);
+        }
+        
+        setSelectedReferenceId(value);
+        setReferenceId(value); // drive all fetches with the chosen RFQ
+        
+        // Update URL to reflect the selected RFQ
+        if (value) {
+            navigate(`/request-vendor?refId=${encodeURIComponent(value)}`);
+            setCurrentPage((prev) => (prev === 0 ? 1 : prev));
+        } else {
+            navigate('/request-vendor');
+        }
+    };
+
+    useEffect(() => {
+        const fetchVendorRfqs = async () => {
+            try {
+                const response = await getVendorUserRfqs();
+                const rfqs = response?.data?.rfqs || [];
+                setRfqList(rfqs);
+            } catch (error) {
+                console.error("Failed to fetch pending RFQs:", error);
+            }
+        };
+        fetchVendorRfqs();
     }, []);
 
     // CIN input handler: uppercase, strip non-alphanumeric, limit to 21 chars
@@ -679,7 +847,7 @@ const VmsRequest = () => {
     useEffect(() => {
         const fetchCompanyInfo = async () => {
             try {
-                const response = await getCompanyInfo(referenceId);
+                const response = await getCompanyInfo(selectedReferenceId);
                 const data = response?.data?.counterparty;
                 if (!data) return;
 
@@ -722,8 +890,8 @@ const VmsRequest = () => {
             }
         };
 
-        if (referenceId) fetchCompanyInfo();
-    }, [referenceId]);
+        if (selectedReferenceId) fetchCompanyInfo();
+    }, [selectedReferenceId]);
 
 
     // submit company info add if its new else update
@@ -806,10 +974,10 @@ const VmsRequest = () => {
 
         // add if new else update
         try {
-            const existingResponse = await getCompanyInfo(referenceId);
+            const existingResponse = await getCompanyInfo(selectedReferenceId);
             if (existingResponse && existingResponse.status === 200 && existingResponse.data && Object.keys(existingResponse.data).length > 0) {
                 // Update existing
-                await updateCompanyInfo(referenceId, companyInfo);
+                await updateCompanyInfo(selectedReferenceId, companyInfo);
                 toast.success("Company information updated successfully!");
                 nextPage();
             }
@@ -817,7 +985,7 @@ const VmsRequest = () => {
         } catch (error) {
             // Add new
             try {
-                await addCompanyInfo(referenceId, companyInfo);
+                await addCompanyInfo(selectedReferenceId, companyInfo);
                 toast.success("Company information added successfully!");
                 nextPage();
             } catch (err) {
@@ -999,7 +1167,7 @@ const VmsRequest = () => {
     useEffect(() => {
         const fetchMsme = async () => {
             try {
-                const response = await getMsmeDetails(referenceId); // 👈 pass correct vendor_id
+                const response = await getMsmeDetails(selectedReferenceId); // 👈 pass correct vendor_id
                 if (response?.data?.msme) {
                     setMsmeInfo((prev) => ({
                         ...prev,
@@ -1015,7 +1183,7 @@ const VmsRequest = () => {
         };
 
         fetchMsme();
-    }, [referenceId]);
+    }, [selectedReferenceId]);
 
 
     const handleMsmeChange = (e) => {
@@ -1091,10 +1259,10 @@ const VmsRequest = () => {
                 category: msmeInfo.category,
             };
 
-            const existingResponse = await getMsmeDetails(referenceId);
+            const existingResponse = await getMsmeDetails(selectedReferenceId);
             if (existingResponse && existingResponse.status === 200 && existingResponse.data && Object.keys(existingResponse.data).length > 0) {
                 // Update existing
-                await updateMsmeDetails(referenceId, msmePayload);
+                await updateMsmeDetails(selectedReferenceId, msmePayload);
                 toast.success("MSME information updated successfully!");
                 nextPage();
             }
@@ -1109,7 +1277,7 @@ const VmsRequest = () => {
                     category: msmeInfo.category,
                 };
 
-                await addMsmeDetails(referenceId, msmePayload);
+                await addMsmeDetails(selectedReferenceId, msmePayload);
                 toast.success("MSME information added successfully!");
                 nextPage();
             } catch (err) {
@@ -1161,7 +1329,7 @@ const VmsRequest = () => {
     useEffect(() => {
         const fetchGoodsServices = async () => {
             try {
-                const response = await getGoodsAndServices(referenceId);
+                const response = await getGoodsAndServices(selectedReferenceId);
                 const data = response?.data;
 
                 if (!data) return;
@@ -1214,8 +1382,8 @@ const VmsRequest = () => {
             }
         };
 
-        if (referenceId) fetchGoodsServices();
-    }, [referenceId]);
+        if (selectedReferenceId) fetchGoodsServices();
+    }, [selectedReferenceId]);
 
 
     // get gst registrations and gst type
@@ -1273,7 +1441,7 @@ const VmsRequest = () => {
     useEffect(() => {
         const fetchGstRegistrations = async () => {
             try {
-                const response = await getGstRegistrations(referenceId);
+                const response = await getGstRegistrations(selectedReferenceId);
                 const data = response?.data;
 
                 if (data) {
@@ -1307,8 +1475,8 @@ const VmsRequest = () => {
             }
         };
 
-        if (referenceId) fetchGstRegistrations();
-    }, [referenceId]);
+        if (selectedReferenceId) fetchGstRegistrations();
+    }, [selectedReferenceId]);
 
 
     // get income tax details
@@ -1362,7 +1530,7 @@ const VmsRequest = () => {
     useEffect(() => {
         const fetchIncomeTaxDetails = async () => {
             try {
-                const response = await getIncomeTaxDetails(referenceId);
+                const response = await getIncomeTaxDetails(selectedReferenceId);
                 const data = response?.data;
                 if (data && Array.isArray(data)) {
                     const incomeTaxItems = {};
@@ -1429,8 +1597,8 @@ const VmsRequest = () => {
                 console.error("Error fetching Income Tax Details:", error);
             }
         };
-        if (referenceId) fetchIncomeTaxDetails();
-    }, [referenceId, formData.fy1, formData.fy2]);
+        if (selectedReferenceId) fetchIncomeTaxDetails();
+    }, [selectedReferenceId, formData.fy1, formData.fy2]);
 
 
 
@@ -1520,13 +1688,13 @@ const VmsRequest = () => {
             console.log("FINAL PAYLOAD:", payload);
 
             if (isUpdate) {
-                await updateGoodsAndServices(referenceId, payload);
+                await updateGoodsAndServices(selectedReferenceId, payload);
             } else {
-                await addGoodsAndServices(referenceId, payload);
+                await addGoodsAndServices(selectedReferenceId, payload);
             }
 
             // Refresh the data after successful save instead of page reload
-            const response = await getGoodsAndServices(referenceId);
+            const response = await getGoodsAndServices(selectedReferenceId);
             const data = response?.data;
 
             if (data) {
@@ -1596,7 +1764,7 @@ const VmsRequest = () => {
 
             // CASE: gst_applicable = false → only send { gst_applicable: false }
             if (!gstApplicableBool) {
-                await updateGstRegistrations(referenceId, { gst_applicable: false });
+                await updateGstRegistrations(selectedReferenceId, { gst_applicable: false });
                 return;
             }
 
@@ -1622,18 +1790,18 @@ const VmsRequest = () => {
 
             if (hasExisting) {
                 // PUT request
-                await updateGstRegistrations(referenceId, payload);
+                await updateGstRegistrations(selectedReferenceId, payload);
             } else {
                 // POST request → remove gst_id completely
                 payload.items = payload.items.map(i => ({
                     state: i.state,
                     gst_number: i.gst_number
                 }));
-                await addGstRegistrations(referenceId, payload);
+                await addGstRegistrations(selectedReferenceId, payload);
             }
 
             // Refresh the data after successful save
-            const response = await getGstRegistrations(referenceId);
+            const response = await getGstRegistrations(selectedReferenceId);
             const data = response?.data;
 
             if (data) {
@@ -1717,15 +1885,15 @@ const VmsRequest = () => {
 
             if (isUpdate) {
                 // PUT request (update)
-                await updateIncomeTaxDetails(referenceId, requestBody);
+                await updateIncomeTaxDetails(selectedReferenceId, requestBody);
             } else {
                 // POST request (create)
                 console.log("Creating Income Tax Details with payload:", requestBody);
-                await addIncomeTaxDetails(referenceId, requestBody);
+                await addIncomeTaxDetails(selectedReferenceId, requestBody);
             }
 
             // Refresh the data after successful save
-            const response = await getIncomeTaxDetails(referenceId);
+            const response = await getIncomeTaxDetails(selectedReferenceId);
             const data = response?.data;
 
             if (data && Array.isArray(data)) {
@@ -2040,7 +2208,7 @@ const VmsRequest = () => {
     useEffect(() => {
         const fetchBankDetails = async () => {
             try {
-                const response = await getBankDetails(referenceId);
+                const response = await getBankDetails(selectedReferenceId);
 
                 if (response?.data?.bank) {
                     setBankInfo((prev) => ({
@@ -2054,7 +2222,7 @@ const VmsRequest = () => {
         };
 
         fetchBankDetails();
-    }, [referenceId]);
+    }, [selectedReferenceId]);
 
     const handleBankDetailsChange = (e) => {
         const { name, value } = e.target;
@@ -2186,17 +2354,17 @@ const VmsRequest = () => {
 
 
 
-            const existingResponse = await getBankDetails(referenceId);
+            const existingResponse = await getBankDetails(selectedReferenceId);
             if (existingResponse && existingResponse.status === 200 && existingResponse.data && Object.keys(existingResponse.data).length > 0) {
                 // Update existing
-                await updateBankDetails(referenceId, bankPayload);
+                await updateBankDetails(selectedReferenceId, bankPayload);
                 toast.success("Bank details updated successfully!");
                 nextPage();
             }
         } catch (err) {
             // Add new
             try {
-                await addBankDetails(referenceId, bankPayload);
+                await addBankDetails(selectedReferenceId, bankPayload);
                 toast.success("Bank details added successfully!");
                 nextPage();
             } catch (error) {
@@ -2305,7 +2473,7 @@ const VmsRequest = () => {
     useEffect(() => {
         const fetchDocuments = async () => {
             try {
-                const response = await getDocumentDetails(referenceId);
+                const response = await getDocumentDetails(selectedReferenceId);
                 console.log("Fetched Documents:", response?.data);
                 if (response?.data) {
                     const docs = {};
@@ -2340,47 +2508,28 @@ const VmsRequest = () => {
             }
         };
         fetchDocuments();
-    }, [referenceId]);
-
+    }, [selectedReferenceId]);
 
     const handleSaveDocuments = async () => {
         let errors = [];
 
         // ---------------------------------------------
-        // 🔹 1. PAN — ALWAYS REQUIRED
+        // 🔹 BASIC VALIDATIONS (UNCHANGED)
         // ---------------------------------------------
-        if (!documents.pan) {
-            errors.push("PAN document is required.");
-        }
+        if (!documents.pan) errors.push("PAN document is required.");
 
-        // ---------------------------------------------
-        // 🔹 2. GST — Conditional
-        // ---------------------------------------------
         if (!documents.gst_available) {
             errors.push("Please select GSTIN Available (Yes/No).");
         }
 
-        if (documents.gst_available === "true") {
-            if (!documents.gst) {
-                errors.push("GSTIN Certificate is required.");
-            }
+        if (documents.gst_available === "true" && !documents.gst) {
+            errors.push("GSTIN Certificate is required.");
         }
 
-
-        if (msmeInfo.registered_under_msme === "true") {
-            if (!documents.msme) {
-                errors.push("MSME Certificate is required.");
-            }
+        if (msmeInfo.registered_under_msme === "true" && !documents.msme) {
+            errors.push("MSME Certificate is required.");
         }
 
-        // ---------------------------------------------
-        // 🔹 4. Cancelled Cheque — Optional
-        // (No validation required)
-        // ---------------------------------------------
-
-        // ---------------------------------------------
-        // 🔹 5. TAN Certificate / Exemption — REQUIRED
-        // ---------------------------------------------
         if (!tanStatus) {
             errors.push("Please select TAN status (Yes/No).");
         }
@@ -2393,16 +2542,10 @@ const VmsRequest = () => {
             errors.push("TAN Exemption Certificate is required.");
         }
 
-        // ---------------------------------------------
-        // 🔹 6. Registration Certificate — ALWAYS REQUIRED
-        // ---------------------------------------------
         if (!documents.incorporation) {
             errors.push("Registration Certificate is required.");
         }
 
-        // ---------------------------------------------
-        // 🔹 7. TDS Declaration — Conditional
-        // ---------------------------------------------
         if (!documents.tds_declaration) {
             errors.push("Please select TDS Declaration (Yes/No).");
         }
@@ -2412,121 +2555,128 @@ const VmsRequest = () => {
         }
 
         // ---------------------------------------------
-        // 🔹 8. File Type + File Size Validation (5 MB)
+        // 🔹 FILE VALIDATION
         // ---------------------------------------------
         const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
-        const maxSize = 5 * 1024 * 1024; // 5MB
+        const maxSize = 5 * 1024 * 1024;
 
-        const allFiles = [
-            documents.pan,
-            documents.gst,
-            documents.msme,
-            documents.cheque,
-            documents.tanCertificate,
-            documents.tanExemption,
-            documents.incorporation,
-            documents.tds
-        ];
-
-        allFiles.forEach((fileObj) => {
-            if (fileObj?.file) {
-                const file = fileObj.file;
-
-                if (!allowedTypes.includes(file.type)) {
-                    errors.push(`Invalid file format: ${file.name}. Allowed formats are JPG, JPEG, PNG, PDF.`);
+        Object.values(documents).forEach(doc => {
+            if (doc?.file) {
+                if (!allowedTypes.includes(doc.file.type)) {
+                    errors.push(`Invalid file format: ${doc.file.name}`);
                 }
-
-                if (file.size > maxSize) {
-                    errors.push(`File too large: ${file.name}. Maximum allowed size is 5 MB.`);
+                if (doc.file.size > maxSize) {
+                    errors.push(`File too large: ${doc.file.name}`);
                 }
             }
         });
 
-        // ---------------------------------------------
-        // ❗ Show Errors
-        // ---------------------------------------------
-        if (errors.length > 0) {
+        if (errors.length) {
             alert("Please correct the following:\n\n" + errors.join("\n"));
             return;
         }
 
         // ---------------------------------------------
-        // SUCCESS → GO TO NEXT STEP
+        // 🔹 BUILD OPERATIONS SAFELY
         // ---------------------------------------------
-        nextPage();
+        const updates = [];
+        const inserts = [];
+        const deletes = [];
+
+        Object.entries(documents).forEach(([docType, docData]) => {
+            if (!docData) return;
+
+            const { file, docId } = docData;
+
+            // UPDATE → existing doc with new file
+            if (file && docId) {
+                updates.push({ docId, docType, file });
+            }
+
+            // INSERT → new doc (NO docId)
+            if (file && !docId) {
+                inserts.push({ docType, file });
+            }
+
+            // DELETE → existing doc removed
+            if (!file && docId) {
+                deletes.push({ docId });
+            }
+        });
+
+        if (!updates.length && !inserts.length && !deletes.length) {
+            toast.error("No document changes to save.");
+            nextPage();
+            return;
+        }
+
+        // ---------------------------------------------
+        // 🔹 BUILD FORMDATA (CRITICAL SECTION)
+        // ---------------------------------------------
+        const formData = new FormData();
+
+        // UPDATES
+        updates.forEach(item => {
+            formData.append("doc_ids[]", item.docId);
+            formData.append("doc_types[]", item.docType);
+            formData.append("files[]", item.file);
+        });
+
+        // INSERTS (⚠️ NO doc_ids[])
+        inserts.forEach(item => {
+            formData.append("doc_types[]", item.docType);
+            formData.append("files[]", item.file);
+        });
+
+        // DELETES
+        deletes.forEach(item => {
+            formData.append("doc_ids[]", item.docId);
+        });
+
+        // ---------------------------------------------
+        // 🔹 DEBUG (OPTIONAL)
+        // ---------------------------------------------
+        console.log("FormData Payload:");
+        for (let pair of formData.entries()) {
+            console.log(pair);
+        }
+
+        // ---------------------------------------------
+        // 🔹 API CALL
+        // ---------------------------------------------
         try {
-            const formData = new FormData();
-            let hasAnyOperation = false;
+            const response = await addDocuments(selectedReferenceId, formData);
 
-            // Process all document types in the documents state
-            Object.entries(documents).forEach(([docType, docData]) => {
-                if (!docData) return;
-
-                const { file, docId } = docData;
-
-                if (file && docId) {
-                    // CASE 1: Update existing document (has both file and docId)
-                    formData.append("doc_ids[]", docId);
-                    formData.append("doc_types[]", docType);
-                    formData.append("files[]", file);
-                    hasAnyOperation = true;
-                } else if (file && !docId) {
-                    // CASE 2: Add new document (has file but no docId)
-                    formData.append("doc_types[]", docType);
-                    formData.append("files[]", file);
-                    hasAnyOperation = true;
-                } else if (!file && docId) {
-                    // CASE 3: Delete existing document (has docId but no file)
-                    formData.append("doc_ids[]", docId);
-                    hasAnyOperation = true;
-                }
-                // CASE 4: No operation (no file, no docId) - skip
-            });
-
-            // Check if there are any operations to perform
-            if (!hasAnyOperation) {
-                toast.error("No document changes to save. Please continue.");
-                nextPage();
-                return;
-            }
-
-            console.log("Request FormData entries:");
-            for (let pair of formData.entries()) {
-                console.log(pair);
-            }
-
-            // Always use the same endpoint (addDocuments) as per updated API
-            const response = await addDocuments(referenceId, formData);
-
-            if (response?.data?.message?.includes("success") || response.status === 200) {
+            if (response?.status === 200) {
                 toast.success("Documents saved successfully!");
 
-                // 🔄 re-fetch updated documents with correct referenceId
-                const refreshed = await getDocumentDetails(referenceId);
-                if (refreshed?.data) {
-                    const updatedDocuments = {};
-                    refreshed.data.forEach(doc => {
-                        updatedDocuments[doc?.doc_type] = {
-                            file: null,
-                            url: doc?.file_path,
-                            docId: doc?.doc_id // Store the document ID for future updates
-                        };
-                    });
-                    setDocuments(prev => ({
-                        ...prev,
-                        ...updatedDocuments
-                    }));
-                }
+                // Refresh documents
+                const refreshed = await getDocumentDetails(selectedReferenceId);
+                const updatedDocuments = {};
+
+                refreshed?.data?.forEach(doc => {
+                    updatedDocuments[doc.doc_type] = {
+                        file: null,
+                        url: doc.file_path,
+                        docId: doc.doc_id
+                    };
+                });
+
+                setDocuments(prev => ({
+                    ...prev,
+                    ...updatedDocuments
+                }));
 
                 nextPage();
             } else {
-                throw new Error(response?.data?.error || "Unknown error");
+                throw new Error("Upload failed");
             }
         } catch (err) {
-            console.error(err.response || err);
-            toast.error("Failed to upload documents. Please try again.");
+            console.error(err);
+            toast.error("Failed to upload documents.");
         }
     };
+
 
 
     // Step 6: Declarations
@@ -2565,10 +2715,15 @@ const VmsRequest = () => {
 
 
     useEffect(() => {
-        if (!referenceId) return;
+        if (!selectedReferenceId) return;
+        
+        // Reset checkboxes first
+        setIsDeclarationChecked(false);
+        setIsCountryPartyChecked(false);
+        
         const fetchDeclarations = async () => {
             try {
-                const response = await getDeclarations(referenceId);
+                const response = await getDeclarations(selectedReferenceId);
                 console.log("Fetched declarations:", response);
 
                 if (response?.data) {
@@ -2607,7 +2762,7 @@ const VmsRequest = () => {
         };
 
         fetchDeclarations();
-    }, [referenceId, rfqStatus]);
+    }, [selectedReferenceId, rfqStatus]);
 
 
 
@@ -2708,10 +2863,10 @@ const VmsRequest = () => {
 
             if (isEditing) {
                 formData.append("_method", "PUT"); // for update
-                await updateDeclarations(referenceId, declarationInfo.declaration_id, formData);
+                await updateDeclarations(selectedReferenceId, declarationInfo.declaration_id, formData);
                 toast.success("Declaration updated successfully!");
             } else {
-                await addDeclarations(referenceId, formData);
+                await addDeclarations(selectedReferenceId, formData);
                 toast.success("Declaration added successfully!");
             }
 
@@ -2729,7 +2884,7 @@ const VmsRequest = () => {
     // submit all steps
     const handleSubmitRfq = async () => {
         try {
-            const response = await submitRfq(referenceId);
+            const response = await submitRfq(selectedReferenceId);
             console.log("RFQ submission response:", response);
             if (response.status === 200) {
                 return true;
@@ -2754,7 +2909,7 @@ const VmsRequest = () => {
     useEffect(() => {
         const fetchPreviousComments = async () => {
             try {
-                const response = await getPreviousComments(referenceId);
+                const response = await getPreviousComments(selectedReferenceId);
                 const data = response?.data;
                 if (!data) return;
                 const groupedComments = data.reduce((acc, comment) => {
@@ -2780,10 +2935,10 @@ const VmsRequest = () => {
             }
         };
 
-        if (referenceId) {
+        if (selectedReferenceId) {
             fetchPreviousComments();
         }
-    }, [referenceId]);
+    }, [selectedReferenceId]);
 
 
     const [openConfirmModal, setOpenConfirmModal] = useState(false);
@@ -2849,7 +3004,7 @@ const VmsRequest = () => {
     useEffect(() => {
         const fetchRfqStatus = async () => {
             try {
-                const response = await getRfqStatus(referenceId);
+                const response = await getRfqStatus(selectedReferenceId);
                 const currentStatus = Number(response?.data?.status) || null;
                 setRfqStatus(currentStatus);
             } catch (error) {
@@ -2857,8 +3012,8 @@ const VmsRequest = () => {
             }
         };
 
-        if (referenceId) fetchRfqStatus();
-    }, [referenceId]);
+        if (selectedReferenceId) fetchRfqStatus();
+    }, [selectedReferenceId]);
 
 
     const renderValue = (label, value) => (
@@ -2953,6 +3108,25 @@ const VmsRequest = () => {
                 title="Customer / Vendor Registration"
                 subtitle="Vendor Management System"
             />
+
+            {/* RFQs Dropdown */}
+            <div className="mb-3">
+                <label className="form-label">Select Vendor</label>
+                <select
+                    className="form-select"
+                    value={selectedReferenceId}
+                    onChange={handleRfqChange}
+                >
+                    <option value="">-- Select Vendor RFQ --</option>
+                    {rfqList.map((r) => (
+                        <option key={r.id} value={r.reference_id}>
+                            {r.reference_id} - {r.status}
+                        </option>
+                    ))}
+                </select>
+
+            </div>
+
             {/* Stepper */}
 
             <div className={styles.container}>
@@ -4727,6 +4901,7 @@ const VmsRequest = () => {
                                                         setBankInfo((prev) => ({ ...prev, swift_code: e.target.value.toUpperCase() }))
                                                     }
                                                     className={styles.fieldInput}
+                                                    readOnly={isReadOnly}
                                                 />
                                             </div>
                                         )}
@@ -4804,7 +4979,7 @@ const VmsRequest = () => {
 
                                             <select
                                                 name="gst_available"
-                                                value={documents.gst_available || ""}
+                                                value={documents.gst_available || "false"}
                                                 onChange={(e) => {
                                                     const value = e.target.value;
 
@@ -5078,7 +5253,7 @@ const VmsRequest = () => {
 
                                             <select
                                                 name="tds_declaration"
-                                                value={documents.tds_declaration || ""}
+                                                value={documents.tds_declaration || "false"}
                                                 onChange={(e) => {
                                                     const value = e.target.value;
 
@@ -5087,7 +5262,7 @@ const VmsRequest = () => {
                                                         tds_declaration: value,
 
                                                         // Auto-reset uploaded file when user selects "No"
-                                                        tds: value === "true" ? prev.tds : null
+                                                        tds: value === "true" ? prev.tds : "null"
                                                     }));
                                                 }}
                                                 className={styles.fieldInput}
@@ -5205,7 +5380,6 @@ const VmsRequest = () => {
                                                     onChange={(e) => {
                                                         const checked = e.target.checked;
                                                         setIsDeclarationChecked(checked);
-
 
                                                     }}
                                                     disabled={isReadOnly}

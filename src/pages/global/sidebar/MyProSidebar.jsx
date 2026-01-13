@@ -207,8 +207,8 @@ const MyProSidebar = () => {
                         />
                         
                          <Item
-                            title="Status"
-                            to="/status"
+                            title="Vendor Info"
+                            to="/vendor-info" // present 'status'
                             icon={<BarChartOutlinedIcon  />}
                             selected={selected}
                             setSelected={setSelected}
@@ -238,13 +238,7 @@ const MyProSidebar = () => {
                             setSelected={setSelected}
                         />
 
-                        <Item
-                            title="My rfq Page"
-                            to="/rfqpage"
-                            icon={<PersonOutlineIcon />}
-                            selected={selected}
-                            setSelected={setSelected}
-                        />
+                       
 
                         
 

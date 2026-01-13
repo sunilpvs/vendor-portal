@@ -26,7 +26,7 @@ import ActivityLog from "./pages/activity/ActivityLog";
 import InitiateVendor from "./pages/vms/InitiateVendor";
 import VmsRequest from "./pages/vms/VmsRequest";
 import CostCenter from "./pages/costcenter/CostCenter";
-import StatusPage from "./pages/vms/StatusPage";
+import VendorInfo from "./pages/vms/VendorInfoPage";
 import EntityRfqPage from "./pages/vms/EntityRfqPage";
 import RfiList from "./pages/vms/MyRfi";
 
@@ -70,7 +70,8 @@ const AppRoutes = () => (
             <Route path="activity" element={<ActivityLog />} />
             <Route path={"initiate-vendor"} element={<InitiateVendor />} />
             <Route path={"request-vendor"} element={<VmsRequest />} />
-            <Route path={"status"} element={<StatusPage />} />
+            <Route path={"request-vendor/refId=:refId"} element={<VmsRequest />} />
+            <Route path={"vendor-info"} element={<VendorInfo />} />
             <Route path={"rfqpage"} element={<EntityRfqPage />} />
             <Route path={"myrfi"} element={<RfiList />} />
         </Route>
