@@ -104,7 +104,7 @@ const VmsRequest = () => {
 
     const handleRfqChange = (e) => {
         const value = e.target.value;
-        
+
         // Reset all form states when switching RFQs
         if (value !== selectedReferenceId) {
             setCompanyInfo({
@@ -132,13 +132,13 @@ const VmsRequest = () => {
                 accounts_person_email: "",
                 isOtherCountry: false,
             });
-            
+
             setMsmeInfo({
                 registered_under_msme: "",
                 udyam_registration_number: "",
                 category: "",
             });
-            
+
             setBankInfo({
                 account_holder_name: "",
                 bank_name: "",
@@ -152,7 +152,7 @@ const VmsRequest = () => {
                 swift_code: "",
                 beneficiary_name: "",
             });
-            
+
             setGoodsServices({
                 counterparty_id: null,
                 type_of_counterparty: "",
@@ -161,18 +161,18 @@ const VmsRequest = () => {
                 type: "",
                 description: "",
             });
-            
+
             setGstMeta({
                 gst_type_id: null,
                 reg_type: "",
                 gstr_filling_type: "",
                 gst_applicable: "",
             });
-            
+
             setgstFormData([]);
             setCount(0);
             setGstApplicable("");
-            
+
             setFormData({
                 fy1: "",
                 fy2: "",
@@ -191,7 +191,7 @@ const VmsRequest = () => {
                 filedDate1: "",
                 filedDate2: "",
             });
-            
+
             setDocuments({
                 pan: {},
                 msme: {},
@@ -202,7 +202,7 @@ const VmsRequest = () => {
                 gst_available: "",
                 tanExemption: {},
             });
-            
+
             setDeclarationInfo({
                 declaration_id: null,
                 primary_declarant_name: '',
@@ -216,15 +216,15 @@ const VmsRequest = () => {
                 fileName: '',
                 signedFile: null,
             });
-            
+
             // Reset declaration checkboxes
             setIsDeclarationChecked(false);
             setIsCountryPartyChecked(false);
         }
-        
+
         setSelectedReferenceId(value);
         setReferenceId(value); // drive all fetches with the chosen RFQ
-        
+
         // Update URL to reflect the selected RFQ
         if (value) {
             navigate(`/request-vendor?refId=${encodeURIComponent(value)}`);
@@ -2584,6 +2584,8 @@ const VmsRequest = () => {
         const deletes = [];
 
         Object.entries(documents).forEach(([docType, docData]) => {
+            // Skip non-document fields (dropdown values)
+            if (typeof docData === 'string') return;
             if (!docData) return;
 
             const { file, docId } = docData;
@@ -2594,18 +2596,35 @@ const VmsRequest = () => {
             }
 
             // INSERT → new doc (NO docId)
-            if (file && !docId) {
+            else if (file && !docId) {
                 inserts.push({ docType, file });
             }
 
-            // DELETE → existing doc removed
-            if (!file && docId) {
-                deletes.push({ docId });
-            }
+            // ❌ REMOVED THE AUTOMATIC DELETE LOGIC
+            // Documents with docId but no new file are kept as-is
         });
 
+        // ---------------------------------------------
+        // 🔹 HANDLE CONDITIONAL DELETES ONLY (GST & TDS)
+        // ---------------------------------------------
+
+        console.log(documents.gst_available, documents.gst?.docId);
+        console.log(documents.tds_declaration, documents.tds?.docId);
+
+        // Delete GST if user selected "No" but document exists
+        if (documents.gst_available === "false" && documents.gst?.docId) {
+            console.log("Scheduling GST document for deletion:", documents.gst.docId);
+            deletes.push({ docId: documents.gst.docId });
+        }
+
+        // Delete TDS if user selected "No" but document exists
+        if (documents.tds_declaration === "false" && documents.tds?.docId) {
+            console.log("Scheduling TDS document for deletion:", documents.tds.docId);
+            deletes.push({ docId: documents.tds.docId });
+        }
+
         if (!updates.length && !inserts.length && !deletes.length) {
-            toast.error("No document changes to save.");
+            toast.success("No changes made.");
             nextPage();
             return;
         }
@@ -2630,7 +2649,7 @@ const VmsRequest = () => {
 
         // DELETES
         deletes.forEach(item => {
-            formData.append("doc_ids[]", item.docId);
+            formData.append("delete_doc_ids[]", item.docId);
         });
 
         // ---------------------------------------------
@@ -2664,7 +2683,10 @@ const VmsRequest = () => {
 
                 setDocuments(prev => ({
                     ...prev,
-                    ...updatedDocuments
+                    ...updatedDocuments,
+                    // Preserve dropdown values after refresh
+                    gst_available: prev.gst_available,
+                    tds_declaration: prev.tds_declaration
                 }));
 
                 nextPage();
@@ -2676,8 +2698,6 @@ const VmsRequest = () => {
             toast.error("Failed to upload documents.");
         }
     };
-
-
 
     // Step 6: Declarations
 
@@ -2716,11 +2736,11 @@ const VmsRequest = () => {
 
     useEffect(() => {
         if (!selectedReferenceId) return;
-        
+
         // Reset checkboxes first
         setIsDeclarationChecked(false);
         setIsCountryPartyChecked(false);
-        
+
         const fetchDeclarations = async () => {
             try {
                 const response = await getDeclarations(selectedReferenceId);
@@ -4979,7 +4999,7 @@ const VmsRequest = () => {
 
                                             <select
                                                 name="gst_available"
-                                                value={documents.gst_available || "false"}
+                                                value={documents.gst_available}
                                                 onChange={(e) => {
                                                     const value = e.target.value;
 
@@ -4987,10 +5007,10 @@ const VmsRequest = () => {
                                                         ...prev,
                                                         gst_available: value,
 
-                                                        // Auto-reset GST document when dropdown changes
+                                                        // Keep docId for deletion tracking, but clear file/url
                                                         gst: value === "true"
-                                                            ? prev.gst  // keep existing only if reselected Yes
-                                                            : null       // clear when user selects "No"
+                                                            ? prev.gst  // keep existing when Yes
+                                                            : (prev.gst?.docId ? { docId: prev.gst.docId, file: null, url: null } : null)  // mark for deletion
                                                     }));
                                                 }}
                                                 className={styles.fieldInput}
@@ -5253,7 +5273,7 @@ const VmsRequest = () => {
 
                                             <select
                                                 name="tds_declaration"
-                                                value={documents.tds_declaration || "false"}
+                                                value={documents.tds_declaration}
                                                 onChange={(e) => {
                                                     const value = e.target.value;
 
@@ -5261,8 +5281,10 @@ const VmsRequest = () => {
                                                         ...prev,
                                                         tds_declaration: value,
 
-                                                        // Auto-reset uploaded file when user selects "No"
-                                                        tds: value === "true" ? prev.tds : "null"
+                                                        // Keep docId for deletion tracking, but clear file/url
+                                                        tds: value === "true"
+                                                            ? prev.tds  // keep existing when Yes
+                                                            : (prev.tds?.docId ? { docId: prev.tds.docId, file: null, url: null } : null)  // mark for deletion
                                                     }));
                                                 }}
                                                 className={styles.fieldInput}
