@@ -42,8 +42,8 @@ jobs:
                   key: ${{ secrets.CPANEL_SSH_KEY }}
                   script: |
                       DEPLOY_PATH="/home/${{ secrets.CPANEL_USER }}/${{ secrets.DEPLOY_DIR }}"
-                      if [ ! -d $DEPLOY_PATH ]; then
-                          mkdir -p $DEPLOY_PATH
+                      if [ ! -d "$DEPLOY_PATH" ]; then
+                          mkdir -p "$DEPLOY_PATH"
                           echo "Created deployment directory: $DEPLOY_PATH"
                       else
                           echo "Deployment directory exists: $DEPLOY_PATH"
