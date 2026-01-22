@@ -34,6 +34,11 @@ jobs:
             - name: Build React app
               run: CI=false npm run build
 
+
+            - name: Create Deployment marker file
+              run: |
+                    echo "$GITHUB_SHA" > build/.deploy-marker
+
             - name: Check and Prepare Deployment Directory
               uses: appleboy/ssh-action@v1.0.3
               with:
@@ -66,7 +71,8 @@ jobs:
                   key: ${{ secrets.CPANEL_SSH_KEY }}
                   script: |
                       DEPLOY_PATH="/home/${{ secrets.CPANEL_USER }}/${{ secrets.DEPLOY_DIR }}"
-                      if [ "$(ls -A "$DEPLOY_PATH")" ]; then
+                      MARKER_FILE="${DEPLOY_PATH}/build/.deploy-marker"
+                      if [ -f "$MARKER_FILE" ] && grep -q "${GITHUB_SHA}" "$MARKER_FILE"; then
                           echo "Deployment successful. Files are present in $DEPLOY_PATH"
                       else
                           echo "Deployment Failed. No files found in $DEPLOY_PATH"
