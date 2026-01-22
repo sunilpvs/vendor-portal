@@ -1,0 +1,92 @@
+#  Deploy the vendor portal to cpanel based on environment
+name: Deploy Vendor React app to cpanel
+
+on:
+    push:
+        branches:
+            - main
+            - test
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        if: |
+            !contains(github.event.head_commit.message, '[skip deploy]')
+
+        # Set the environment
+        environment: ${{ github.ref_name == 'main' && 'prod' || 'test' }}
+
+        env:
+            REACT_APP_API_BASE_URL: ${{ secrets.REACT_APP_API_BASE_URL }}
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 18
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build React app
+              run: CI=false npm run build
+
+            - name: Check and Prepare Deployment Directory
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.CPANEL_HOST }}
+                  user: ${{ secrets.CPANEL_USER }}
+                  key: ${{ secrets.CPANEL_SSH_KEY }}
+                  script: |
+                      DEPLOY_PATH="/home/${{ secrets.CPANEL_USER }}/${{ secrets.DEPLOY_DIR }}"
+                      if [ ! -d $DEPLOY_PATH ]; then
+                          mkdir -p $DEPLOY_PATH
+                          echo "Created deployment directory: $DEPLOY_PATH"
+                      else
+                          echo "Deployment directory exists: $DEPLOY_PATH"
+                      fi
+
+            - name: Upload files to cPanel
+              uses: appleboy/scp-action@v0.1.7
+              with:
+                  user: ${{ secrets.CPANEL_USER }}
+                  host: ${{ secrets.CPANEL_HOST }}
+                  key: ${{ secrets.CPANEL_SSH_KEY}}
+                  source: build/*
+                  target: "/home/${{ secrets.CPANEL_USER }}/${{ secrets.DEPLOY_DIR }}"
+
+            - name: Check Deployment
+              uses: appleboy/ssh-action@v0.1.7
+              with:
+                  user: ${{ secrets.CPANEL_USER }}
+                  host: ${{ secrets.CPANEL_HOST }}
+                  key: ${{ secrets.CPANEL_SSH_KEY }}
+                  script: |
+                      DEPLOY_PATH="/home/${{ secrets.CPANEL_USER }}/${{ secrets.DEPLOY_DIR }}"
+                      if [ "$(ls -A "$DEPLOY_PATH")" ]; then
+                          echo "Deployment successful. Files are present in $DEPLOY_PATH"
+                      else
+                          echo "Deployment Failed. No files found in $DEPLOY_PATH"
+                          exit 1
+                      fi
+
+            - name: Fix Permissions
+              uses: applyboy/ssh-action@v0.1.7
+              with:
+                  user: ${{ secrets.CPANEL_USER }}
+                  host: ${{ secrets.CPANEL_HOST }}
+                  key: ${{ secrets.CPANEL_SSH_KEY }}
+                  script: |
+                      DEPLOY_PATH="/home/${{ secrets.CPANEL_USER }}/${{ secrets.DEPLOY_DIR }}"
+                      if [ ! -d "$DEPLOY_PATH" ] && [ -z "$DEPLOY_PATH" ] && [ "$DEPLOY_PATH" != "/home//" ]; then
+                          chmod -R 755 "$DEPLOY_PATH"
+                          echo "Permissions Fixed"
+                          echo "Deployment Completed"
+                      else
+                          echo "Error: Invalid deployment path- $DEPLOY_PATH"
+                          echo "Deployment Failed"
+                          exit 1
+                      fi
