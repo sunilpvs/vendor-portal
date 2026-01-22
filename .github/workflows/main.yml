@@ -59,7 +59,7 @@ jobs:
               with:
                   user: ${{ secrets.CPANEL_USER }}
                   host: ${{ secrets.CPANEL_HOST }}
-                  key: ${{ secrets.CPANEL_SSH_KEY}}
+                  key: ${{ secrets.CPANEL_SSH_KEY }}
                   source: build/*
                   target: "/home/${{ secrets.CPANEL_USER }}/${{ secrets.DEPLOY_DIR }}"
 
@@ -80,14 +80,14 @@ jobs:
                       fi
 
             - name: Fix Permissions
-              uses: applyboy/ssh-action@v0.1.7
+              uses: appleboy/ssh-action@v0.1.7
               with:
                   user: ${{ secrets.CPANEL_USER }}
                   host: ${{ secrets.CPANEL_HOST }}
                   key: ${{ secrets.CPANEL_SSH_KEY }}
                   script: |
                       DEPLOY_PATH="/home/${{ secrets.CPANEL_USER }}/${{ secrets.DEPLOY_DIR }}"
-                      if [ ! -d "$DEPLOY_PATH" ] && [ -z "$DEPLOY_PATH" ] && [ "$DEPLOY_PATH" != "/home//" ]; then
+                      if [ -d "$DEPLOY_PATH" ] && [ ! -z "$DEPLOY_PATH" ] && [ "$DEPLOY_PATH" != "/home//" ]; then
                           chmod -R 755 "$DEPLOY_PATH"
                           echo "Permissions Fixed"
                           echo "Deployment Completed"
