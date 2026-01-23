@@ -32,7 +32,11 @@ jobs:
               run: npm ci
 
             - name: Build React app
-              run: CI=false npm run build
+              env: 
+                REACT_APP_API_BASE_URL: ${{ vars.REACT_APP_API_BASE_URL }}
+              run: |
+                    echo "Building React app with API bse URL: $REACT_APP_API_BASE_URL"
+                    CI=false npm run build
 
 
             - name: Create Deployment marker file
