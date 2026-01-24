@@ -29,6 +29,7 @@ import CostCenter from "./pages/costcenter/CostCenter";
 import VendorInfo from "./pages/vms/VendorInfoPage";
 import EntityRfqPage from "./pages/vms/EntityRfqPage";
 import RfiList from "./pages/vms/MyRfi";
+import NotFound404 from "./pages/error/404NotFound";
 
 const App = () => {
   const [theme, colorMode] = useMode();
@@ -77,7 +78,7 @@ const AppRoutes = () => (
         </Route>
 
         {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<NotFound404 />} />
     </Routes>
 );
 

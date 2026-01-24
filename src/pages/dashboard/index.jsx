@@ -14,11 +14,13 @@ const Dashboard = () => {
         boxShadow={3}
       >
         {/* Page Heading */}
-        <Header title="My RFQs" subtitle="Manage your Requests for Quotation" />
+        <Header title="Vendor Dashboard" subtitle="VMS" />
 
         {/* Example RFQ content placeholder */}
-        <Typography variant="body1" mt={2}>
-          Here your RFQs list will appear. You can Add, Edit, or View details.
+        <Typography variant="body3" fontSize={15} mt={2}>
+          Welcome to the Vendor Dashboard! Here you can manage your RFQs,
+          view statuses, and access important vendor resources. <br /> <br />
+          Please navigate using the sidebar to explore different sections.
         </Typography>
       </Box>
     </Box>

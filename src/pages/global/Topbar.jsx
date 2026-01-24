@@ -90,9 +90,9 @@ const Topbar = () => {
             <NotificationsOutlinedIcon />
           </IconButton>
 
-          <IconButton>
+          {/* <IconButton>
             <SettingsOutlinedIcon />
-          </IconButton>
+          </IconButton> */}
 
           {/* User icon button that opens submenu */}
           <IconButton

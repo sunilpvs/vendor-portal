@@ -34,6 +34,7 @@ jobs:
             - name: Build React app
               env: 
                 REACT_APP_API_BASE_URL: ${{ vars.REACT_APP_API_BASE_URL }}
+                REACT_APP_FAV_ICON: ${{ vars.REACT_APP_FAV_ICON }}
               run: |
                     echo "Building React app with API bse URL: $REACT_APP_API_BASE_URL"
                     CI=false npm run build
@@ -47,7 +48,7 @@ jobs:
               uses: appleboy/ssh-action@v1.0.3
               with:
                   host: ${{ secrets.CPANEL_HOST }}
-                  user: ${{ secrets.CPANEL_USER }}
+                  username: ${{ secrets.CPANEL_USER }}
                   key: ${{ secrets.CPANEL_SSH_KEY }}
                   script: |
                       DEPLOY_PATH="/home/${{ secrets.CPANEL_USER }}/${{ secrets.DEPLOY_DIR }}"
@@ -61,7 +62,7 @@ jobs:
             - name: Upload files to cPanel
               uses: appleboy/scp-action@v0.1.7
               with:
-                  user: ${{ secrets.CPANEL_USER }}
+                  username: ${{ secrets.CPANEL_USER }}
                   host: ${{ secrets.CPANEL_HOST }}
                   key: ${{ secrets.CPANEL_SSH_KEY }}
                   source: build/*
@@ -70,7 +71,7 @@ jobs:
             - name: Check Deployment
               uses: appleboy/ssh-action@v0.1.7
               with:
-                  user: ${{ secrets.CPANEL_USER }}
+                  username: ${{ secrets.CPANEL_USER }}
                   host: ${{ secrets.CPANEL_HOST }}
                   key: ${{ secrets.CPANEL_SSH_KEY }}
                   script: |
@@ -86,7 +87,7 @@ jobs:
             - name: Fix Permissions
               uses: appleboy/ssh-action@v0.1.7
               with:
-                  user: ${{ secrets.CPANEL_USER }}
+                  username: ${{ secrets.CPANEL_USER }}
                   host: ${{ secrets.CPANEL_HOST }}
                   key: ${{ secrets.CPANEL_SSH_KEY }}
                   script: |

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="VMS User avatar">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1F2937"/>
+    </linearGradient>
+  </defs>
+  <!-- Circular tile background -->
+  <circle cx="128" cy="128" r="120" fill="url(#bg)"/>
+  <!-- Accent ring for brand feel -->
+  <circle cx="128" cy="128" r="120" fill="none" stroke="#22C55E" stroke-width="8" opacity="0.85"/>
+  <!-- User silhouette: designed to be legible at small sizes -->
+  <circle cx="128" cy="96" r="40" fill="#E5E7EB"/>
+  <path d="M64 190c0-28 28-50 64-50s64 22 64 50v8c0 4-4 8-8 8H72c-4 0-8-4-8-8v-8z" fill="#CBD5E1"/>
+  <!-- Subtle highlight for depth -->
+  <circle cx="128" cy="96" r="40" fill="none" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="2"/>
+</svg>
