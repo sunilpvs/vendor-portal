@@ -29,6 +29,8 @@ import CostCenter from "./pages/costcenter/CostCenter";
 import VendorInfo from "./pages/vms/VendorInfoPage";
 import EntityRfqPage from "./pages/vms/EntityRfqPage";
 import RfiList from "./pages/vms/MyRfi";
+import ForgotPassword from "./components/auth/ForgotPassword";
+import ResetPassword from "./components/auth/ResetPassword";
 
 const App = () => {
   const [theme, colorMode] = useMode();
@@ -66,6 +68,7 @@ const AppRoutes = () => (
           
    
             <Route path="calendar" element={<Calendar />} />
+   
             <Route path="profile" element={<UserProfile />} />
             <Route path="activity" element={<ActivityLog />} />
             <Route path={"initiate-vendor"} element={<InitiateVendor />} />
@@ -74,6 +77,8 @@ const AppRoutes = () => (
             <Route path={"vendor-info"} element={<VendorInfo />} />
             <Route path={"rfqpage"} element={<EntityRfqPage />} />
             <Route path={"myrfi"} element={<RfiList />} />
+            <Route path={"forget-password"} element={<ForgotPassword />} />
+            <Route path={"reset-password"} element={<ResetPassword />} />
         </Route>
 
         {/* Catch-all */}

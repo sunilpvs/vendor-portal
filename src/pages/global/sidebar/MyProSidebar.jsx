@@ -238,6 +238,22 @@ const MyProSidebar = () => {
                             setSelected={setSelected}
                         />
 
+                           <Item
+                            title="Forget Passwword"
+                            to="/forget-password"
+                            icon={<PersonOutlineIcon />}
+                            selected={selected}
+                            setSelected={setSelected}
+                        />
+
+                           <Item
+                            title="Reset Password"
+                            to="/reset-password"
+                            icon={<PersonOutlineIcon />}
+                            selected={selected}
+                            setSelected={setSelected}
+                        />
+
                        
 
                         
