@@ -2614,6 +2614,27 @@ const VmsRequest = () => {
             deletes.push({ docId: documents.tds.docId });
         }
 
+        // Delete MSME if user selected "No" but document exists
+        if (msmeInfo.registered_under_msme === "false" && documents.msme?.docId) {
+            console.log("Scheduling MSME document for deletion:", documents.msme.docId);
+            deletes.push({ docId: documents.msme.docId });
+        }
+
+        // Delete TAN Certificate if user selected "No" but document exists
+        if (companyInfo.tan_status === "false" && documents.tanCertificate?.docId) {
+            console.log("Scheduling TAN Certificate document for deletion:", documents.tanCertificate.docId);
+            deletes.push({ docId: documents.tanCertificate.docId });
+        }
+
+        // Delete TAN Exemption if user selected "Yes" but document exists
+        if (companyInfo.tan_status === "true" && documents.tanExemption?.docId) {
+            console.log("Scheduling TAN Exemption document for deletion:", documents.tanExemption.docId);
+            deletes.push({ docId: documents.tanExemption.docId });
+        }
+
+
+
+
         if (!updates.length && !inserts.length && !deletes.length) {
             toast.success("No changes made.");
             nextPage();
@@ -3484,7 +3505,7 @@ const VmsRequest = () => {
                                                 Do you have a TAN Number? <span className={styles.requiredSymbol}>*</span>
                                             </label>
 
-                                            <select
+                                            {/* <select
                                                 name="tan_status"
                                                 value={companyInfo.tan_status || ""}
                                                 onChange={(e) => {
@@ -3502,7 +3523,49 @@ const VmsRequest = () => {
                                                 <option value="">-- Select --</option>
                                                 <option value="true">Yes</option>
                                                 <option value="false">No</option>
+                                            </select> */}
+
+                                            <select
+                                                name="tan_status"
+                                                value={companyInfo.tan_status || ""}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+
+                                                    setCompanyInfo((prev) => ({
+                                                        ...prev,
+                                                        tan_status: value,
+                                                        tan_number: ""
+                                                    }));
+
+                                                    setDocuments((prev) => ({
+                                                        ...prev,
+
+                                                        // TAN = YES → certificate required → exemption must go
+                                                        tanExemption:
+                                                            value === "true"
+                                                                ? (prev.tanExemption?.docId
+                                                                    ? { docId: prev.tanExemption.docId, file: null, url: null }
+                                                                    : null)
+                                                                : prev.tanExemption,
+
+                                                        // TAN = NO → exemption required → certificate must go
+                                                        tanCertificate:
+                                                            value === "false"
+                                                                ? (prev.tanCertificate?.docId
+                                                                    ? { docId: prev.tanCertificate.docId, file: null, url: null }
+                                                                    : null)
+                                                                : prev.tanCertificate
+                                                    }));
+                                                }}
+                                                className={styles.fieldInput}
+                                                required
+                                                disabled={isReadOnly}
+                                            >
+                                                <option value="">Select</option>
+                                                <option value="true">Yes</option>
+                                                <option value="false">No</option>
                                             </select>
+
                                         </div>
 
                                         {/* ✅ If YES → TAN Number input */}
@@ -3530,7 +3593,7 @@ const VmsRequest = () => {
                                         {companyInfo.tan_status === "false" && (
                                             <div className={styles.fieldRow}>
                                                 <p style={{ color: "red", fontWeight: "500", margin: 0, paddingLeft: "300px", }}>
-                                                    ( Please upload your <strong>TDS Exemption Certificate</strong> in Step 5.)
+                                                    ( Please upload your <strong>TAN Exemption Certificate</strong> in Step 5.)
                                                 </p>
                                             </div>
                                         )}
@@ -4000,11 +4063,20 @@ const VmsRequest = () => {
                                                 onChange={(e) => {
                                                     const value = e.target.value;
 
-                                                    // Set main dropdown value
                                                     setMsmeInfo((prev) => ({
                                                         ...prev,
                                                         registered_under_msme: value,
-                                                        udyam_registration_number: "" // 🔥 RESET like TAN Number logic
+                                                        udyam_registration_number: ""
+                                                    }));
+
+                                                    setDocuments((prev) => ({
+                                                        ...prev,
+                                                        msme:
+                                                            value === "true"
+                                                                ? prev.msme
+                                                                : (prev.msme?.docId
+                                                                    ? { docId: prev.msme.docId, file: null, url: null }
+                                                                    : null)
                                                     }));
                                                 }}
                                                 className={styles.fieldInput}
@@ -4015,6 +4087,7 @@ const VmsRequest = () => {
                                                 <option value="true">Yes</option>
                                                 <option value="false">No</option>
                                             </select>
+
                                         </div>
 
                                         {/* 🧾 Udyam Registration Number only if MSME = Yes */}
@@ -5061,6 +5134,7 @@ const VmsRequest = () => {
                                                         ...prev,
                                                         registered_under_msme: e.target.value,
                                                     }))
+
                                                 }
                                                 className={styles.fieldInput}
                                                 required
