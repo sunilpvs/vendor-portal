@@ -18,7 +18,9 @@ axiosInstance.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        if (window.location.pathname === "/login") {
+        // skip token referesh for public auth routes
+        const publicRoutes = ["/login", "/forgot-password", "/reset-password"];
+        if (publicRoutes.includes(window.location.pathname)) {
             return Promise.reject(error);
         }
 

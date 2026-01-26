@@ -47,5 +47,16 @@ export const checkAuth = async () => {
 };
 
 
+export const forgetPassword = async ({ email }) => {
+    const payload = { email };
+    return await axiosInstance.post('api/auth/forgot-pwd', payload);
+}
 
 
+export const resetPassword = async ({ payload }) => {
+    const token = new URLSearchParams(window.location.search).get('token');
+    if (!token) {
+        throw new Error("Reset token is missing");
+    }
+    return await axiosInstance.post(`api/auth/reset-pwd?token=${token}`, payload);
+}

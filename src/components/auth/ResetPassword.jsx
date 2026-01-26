@@ -1,10 +1,30 @@
-const ResetPassword = ({
-    password,
-    setPassword,
-    confirmPassword,
-    setConfirmPassword,
-    handleResetPassword
-}) => {
+import React, { useState } from "react";
+import { resetPassword } from "../../services/auth/auth";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
+
+const ResetPassword = () => {
+
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const navigate = useNavigate();
+
+    const handleResetPassword = async (e) => {    
+        e.preventDefault();
+        // Handle reset password logic
+        try {
+            const payload = { new_password: password };
+
+            await resetPassword({ payload });
+            toast.success("Password has been reset successfully. Please login.");
+            navigate('/login');
+        } catch (error) {
+            console.error("Failed to reset password:", error);
+            toast.error(error.response?.data?.error || "Failed to reset password.");
+        }
+    }
+
+
     return (
         <div className="container d-flex justify-content-center align-items-center min-vh-100">
             <div className="card p-4 shadow" style={{ width: "100%", maxWidth: "400px" }}>

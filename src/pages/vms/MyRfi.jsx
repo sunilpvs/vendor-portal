@@ -171,7 +171,7 @@ function MyRfi() {
                           className="btn btn-sm btn-primary"
                           onClick={() =>
                             navigate(
-                              `/request-vendor?refId=${rfi.reference_id}`
+                              `/request-vendor/refId=${rfi.reference_id}`
                             )
                           }
                         >
