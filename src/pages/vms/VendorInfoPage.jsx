@@ -70,11 +70,19 @@ const VendorInfoPage = () => {
                     <div className="col-md-6">
                       <strong>Status:</strong>
                       <p className="mb-0">
-                        <span className={`badge ${
-                          vendorInfo.status === 'Active' ? 'bg-success' : 
-                          vendorInfo.status === 'Inactive' ? 'bg-secondary' : 
-                          'bg-warning'
-                        }`}>
+                        <span
+                          className={`badge ${
+                            vendorInfo.status === 'Active' ? 'bg-success' : 
+                            vendorInfo.status === 'Inactive' ? 'bg-secondary' : 
+                            'bg-warning'
+                          }`}
+                          style={{
+                            fontSize: '0.9rem',
+                            padding: '0.25rem 0.6rem',
+                            fontWeight: 600,
+                            borderRadius: '0.5rem'
+                          }}
+                        >
                           {vendorInfo.status || 'N/A'}
                         </span>
                       </p>

@@ -30,7 +30,7 @@ const VmsRequest = () => {
     const [referenceId, setReferenceId] = useState(null);
     const [selectedReferenceId, setSelectedReferenceId] = useState("");
     const [rfqStatus, setRfqStatus] = useState(null);
-    const readOnlyStatuses = [8, 9, 11, 12, 13, 14];
+    const readOnlyStatuses = [8, 9, 11, 12, 13, 14, 15]; // statuses where form is read-only
     const isReadOnly = readOnlyStatuses.includes(rfqStatus);
     const [rfqList, setRfqList] = useState([]);
 
@@ -2904,7 +2904,7 @@ const VmsRequest = () => {
 
             await handleSubmitRfq(); // submit RFQ after declaration
             toast.success("RFQ Submitted successfully!");
-            navigate('/status'); // move to next step
+            navigate('/myrfi'); // move to next step
         } catch (err) {
             console.error(err);
             alert(err.response?.data?.error || "Failed to submit declaration");
