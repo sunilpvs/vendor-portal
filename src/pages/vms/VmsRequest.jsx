@@ -10,6 +10,8 @@ import { addBankDetails, updateBankDetails, getBankDetails } from "../../service
 import { addGstRegistrations, updateGstRegistrations, addGoodsAndServices, updateGoodsAndServices, addIncomeTaxDetails, updateIncomeTaxDetails, getGstRegistrations, getIncomeTaxDetails, getGoodsAndServices } from "../../services/vms/gstService";
 import { addDocuments, updateDocuments, getDocumentDetails } from "../../services/vms/documentService";
 
+import {CircularProgress} from "@mui/material";
+
 import { getPreviousComments } from "../../services/vms/commentsService";
 
 import { getCountryCombo } from "../../services/admin/countryService";
@@ -29,6 +31,7 @@ const VmsRequest = () => {
     const { refId } = useParams();
     const [referenceId, setReferenceId] = useState(null);
     const [selectedReferenceId, setSelectedReferenceId] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const [rfqStatus, setRfqStatus] = useState(null);
     const readOnlyStatuses = [8, 9, 11, 12, 13, 14, 15]; // statuses where form is read-only
     const isReadOnly = readOnlyStatuses.includes(rfqStatus);
@@ -2636,7 +2639,7 @@ const VmsRequest = () => {
 
 
         if (!updates.length && !inserts.length && !deletes.length) {
-            toast.success("No changes made.");
+            toast.success("Documents Saved Successfully.");
             nextPage();
             return;
         }
@@ -2978,9 +2981,16 @@ const VmsRequest = () => {
     const handleOpenModal = () => setOpenConfirmModal(true);
     const handleCloseModal = () => setOpenConfirmModal(false);
 
-    const handleFinalSubmit = () => {
+    const handleFinalSubmit = async () => {
+        setIsLoading(true);
         setOpenConfirmModal(false);
-        handleSaveDeclaration(); // or your final step submit function
+        try {
+            await handleSaveDeclaration(); // or your final step submit function
+        } catch (error) {
+            console.error("Error during final submit:", error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
 
@@ -5752,8 +5762,21 @@ const VmsRequest = () => {
                                                                 cursor: "pointer",
                                                                 fontSize: "14px",
                                                             }}
+
+                                                            disabled={isLoading}
                                                         >
-                                                            Save and Continue
+                                                            {isLoading ? (
+                                                                <>
+                                                                    <span
+                                                                        className="spinner-border spinner-border-sm me-2"
+                                                                        role="status"
+                                                                        aria-hidden="true"
+                                                                    ></span>
+                                                                    Processing...
+                                                                </>
+                                                            ) : (
+                                                                "Save and Continue"
+                                                            )}
                                                         </button>
                                                     ) : (
                                                         <button
@@ -6577,8 +6600,8 @@ const VmsRequest = () => {
 
                                         {/* ACTION BUTTONS */}
                                         <Box className={styles.reviewActions}>
-                                            <Button className={styles.reviewBtnConfirm} onClick={handleFinalSubmit}>
-                                                Confirm & Submit
+                                            <Button className={styles.reviewBtnConfirm} onClick={handleFinalSubmit} disabled={isLoading}>
+                                                {isLoading ? <CircularProgress size={24} color="inherit" /> : "Confirm & Submit"}
                                             </Button>
 
                                             <Button className={styles.reviewBtnCancel} onClick={handleCloseModal}>
