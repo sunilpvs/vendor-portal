@@ -3,10 +3,11 @@ import axiosInstance from "../../utils/axiosInstance.js";
 import axios from "axios";
 
 
-const loginUser = async ({username, password}) => {
+const loginUser = async ({username, password, entity_id}) => {
     const payload = {
         username: username,
-        password: password
+        password: password,
+        entity_id: entity_id
     }
     return await axiosInstance.post('auth/login.php?portal=vendor', payload);
 };
@@ -47,8 +48,8 @@ export const checkAuth = async () => {
 };
 
 
-export const forgetPassword = async ({ email }) => {
-    const payload = { email };
+export const forgetPassword = async ({ email, entity_id }) => {
+    const payload = { email, entity_id };
     return await axiosInstance.post('api/auth/forgot-pwd', payload);
 }
 

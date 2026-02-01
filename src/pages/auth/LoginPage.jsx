@@ -13,6 +13,7 @@ function LoginPage() {
 
     const[username, setUsername] = useState('');
     const[password, setPassword] = useState('');
+    const[entity, setEntity] = useState('');
     const { setUserData } = useContext(AppContext);
 
     const navigate = useNavigate();
@@ -20,13 +21,13 @@ function LoginPage() {
     const handleLogin = async (e) => {
         e.preventDefault();
         try{
-            const payload = {username, password};
+            const payload = {username, password, entity_id: entity};
             const response = await loginUser(payload);
             const userDetails = await getUserDetails();
 
-            if(response.status === 200){
+            if(response.status === 200){    
                 setUserData(userDetails.data.userData);
-                toast.success("Login Successfull");
+                toast.success("Login Successful");
                 setTimeout(() => {
                     navigate('/'); // or wherever check.php is triggered
                 }, 300);
@@ -49,8 +50,10 @@ function LoginPage() {
         <LoginForm
             username={username}
             password={password}
+            entity={entity}
             setUsername={setUsername}
             setPassword={setPassword}
+            setEntity={setEntity}
             handleLogin = {handleLogin}
 
         />

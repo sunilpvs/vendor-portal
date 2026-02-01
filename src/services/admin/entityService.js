@@ -12,7 +12,7 @@ export const getEntityById = (id) => {
 };
 
 // Get entity combo list (only if supported by backend)
-export const getEntityCombo = (fields = ['id', 'entity_name']) => {
+export const getEntityCombo = (fields = ['id','entity_name']) => {
     const fieldParams = fields.join(',');
     return axiosInstance.get(`api/admin/entity?type=combo&fields=${fieldParams}`);
 };

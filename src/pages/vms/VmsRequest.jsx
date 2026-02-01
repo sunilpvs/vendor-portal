@@ -4338,6 +4338,12 @@ const VmsRequest = () => {
                                                     // --- SAME RESET LOGIC AS GOODS/SERVICES SELECT ---
                                                     setGstApplicable(value);
 
+                                                    // Sync with documents section gst_available
+                                                    setDocuments((prev) => ({
+                                                        ...prev,
+                                                        gst_available: value,
+                                                    }));
+
                                                     // reset number selection
                                                     setCount(0);
 
@@ -5085,7 +5091,7 @@ const VmsRequest = () => {
                                                 }}
                                                 className={styles.fieldInput}
                                                 required
-                                                disabled={isReadOnly}
+                                                disabled
                                             >
                                                 <option value="">Select</option>
                                                 <option value="true">Yes</option>
@@ -5431,6 +5437,7 @@ const VmsRequest = () => {
                                                 className={styles.inlineInput}
                                                 placeholder="Enter Name"
                                                 disabled={isReadOnly}
+                                                readOnly={isDeclarationChecked}
                                             />{" "}
                                             of{" "}
                                             <input
@@ -5445,6 +5452,7 @@ const VmsRequest = () => {
                                                 className={styles.inlineInput}
                                                 placeholder="Enter Organization"
                                                 disabled={isReadOnly}
+                                                readOnly={isDeclarationChecked}
                                             />{" "}
                                             designated as{" "}
                                             <input
@@ -5459,6 +5467,7 @@ const VmsRequest = () => {
                                                 className={styles.inlineInput}
                                                 placeholder="Enter Designation"
                                                 disabled={isReadOnly}
+                                                readOnly={isDeclarationChecked}
                                             />{" "}
                                             declare that the information provided in this document is true and accurate in
                                             all respects and that we have performed such procedures and inquiries as
@@ -5501,6 +5510,7 @@ const VmsRequest = () => {
                                                 className={styles.inlineInput}
                                                 placeholder="Enter Name"
                                                 disabled={isReadOnly}
+                                                readOnly={isCountryPartyChecked}
                                             />{" "}
                                             representing the country{" "}
                                             <input
@@ -5515,6 +5525,7 @@ const VmsRequest = () => {
                                                 className={styles.inlineInput}
                                                 placeholder="Enter Country"
                                                 disabled={isReadOnly}
+                                                readOnly={isCountryPartyChecked}
                                             />{" "}
                                             designated as{" "}
                                             <input
@@ -5529,6 +5540,7 @@ const VmsRequest = () => {
                                                 className={styles.inlineInput}
                                                 placeholder="Enter Designation"
                                                 disabled={isReadOnly}
+                                                readOnly={isCountryPartyChecked}
                                             />
                                             , hereby declare that all information provided by our organization is accurate
                                             and complies with the regulations of our respective country.
