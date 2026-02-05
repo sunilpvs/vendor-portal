@@ -2922,6 +2922,10 @@ const VmsRequest = () => {
             const response = await submitRfq(selectedReferenceId);
             console.log("RFQ submission response:", response);
             if (response.status === 200) {
+                // Fetch the updated RFQ status after successful submission
+                const statusResponse = await getRfqStatus(selectedReferenceId);
+                const updatedStatus = Number(statusResponse?.data?.status) || null;
+                setRfqStatus(updatedStatus);
                 return true;
             } else {
                 return false;
