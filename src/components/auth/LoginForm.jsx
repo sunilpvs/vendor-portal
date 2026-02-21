@@ -47,11 +47,11 @@ const LoginForm = ({username, setUsername, password, setPassword, handleLogin, e
                         </select>
                     </div>
                     <div className="mb-3">
-                        <label htmlFor="email"  className="form-label">Username</label>
-                        <input type="text"
+                        <label htmlFor="email"  className="form-label">Email</label>
+                        <input type="email"
                                name="username"
                                id="username"
-                               placeholder="Enter Username"
+                               placeholder="Enter Email"
                                value={username}
                                onChange={(e) => setUsername(e.target.value)}
                                required
