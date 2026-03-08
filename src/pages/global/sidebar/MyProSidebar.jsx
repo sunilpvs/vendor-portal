@@ -1,5 +1,5 @@
 // docs https://github.com/azouaoui-med/react-pro-sidebar
-import {useContext, useState} from "react";
+import {useContext, useEffect, useState} from "react";
 import { Menu, Sidebar, MenuItem, SubMenu } from "react-pro-sidebar";
 import { useProSidebar } from "react-pro-sidebar";
 
@@ -31,6 +31,7 @@ import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined';
 import ContactPhoneOutlinedIcon from '@mui/icons-material/ContactPhoneOutlined'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {QuestionMark} from "@mui/icons-material";
+import { getUserRole } from "../../../services/auth/userDetails";
 
 const Item = ({ title, to, icon, selected, setSelected }) => {
     const theme = useTheme();
@@ -59,6 +60,30 @@ const MyProSidebar = () => {
     const isDark = theme.palette.mode === 'dark';
 
     const { userData } = useContext(AppContext);
+    const [userRoles, setUserRoles] = useState([]);
+
+    useEffect(() => {
+        const fetchUserRole = async () => {
+            try {
+                const response = await getUserRole();
+                const data = response?.data;
+                const roles = Array.isArray(data)
+                    ? data.map((item) => Number(item?.role_id)).filter((role) => !Number.isNaN(role))
+                    : data?.role_id !== undefined
+                        ? [Number(data.role_id)].filter((role) => !Number.isNaN(role))
+                        : [];
+                setUserRoles(roles);
+            } catch (error) {
+                console.error("Error fetching user role:", error);
+                setUserRoles([]);
+            }
+        };
+
+        fetchUserRole();
+    }, []);
+
+    const isVendorRole = userRoles.includes(8);
+    const isAdminRole = userRoles.some((role) => [1, 6, 7].includes(role));
 
     return (
 
@@ -205,30 +230,56 @@ const MyProSidebar = () => {
                             selected={selected}
                             setSelected={setSelected}
                         />
-                        
-                         <Item
-                            title="Vendor Info"
-                            to="/vendor-info" // present 'status'
-                            icon={<BarChartOutlinedIcon  />}
-                            selected={selected}
-                            setSelected={setSelected}
-                        />
 
-                       {/*<Item
-                            title="My RFIs"
-                            to="/request-vendor"
-                            icon={<HowToRegIcon  />}
-                            selected={selected}
-                            setSelected={setSelected}
-                        /> */}
+                        {isVendorRole && (
+                            <Item
+                                title="Request Vendor"
+                                to="/request-vendor"
+                                icon={<RequestQuoteOutlinedIcon />}
+                                selected={selected}
+                                setSelected={setSelected}
+                            />
+                        )}
 
-                         <Item
-                            title="My RFIs"
-                            to="/myrfi"
-                            icon={<HowToRegIcon />}
-                            selected={selected}
-                            setSelected={setSelected}
-                        />
+                        {isVendorRole && (
+                            <Item
+                                title="My RFIs"
+                                to="/myrfi"
+                                icon={<HowToRegIcon />}
+                                selected={selected}
+                                setSelected={setSelected}
+                            />
+                        )}
+
+                        {isVendorRole && (
+                            <Item
+                                title="Vendor Info"
+                                to="/vendor-info"
+                                icon={<BarChartOutlinedIcon />}
+                                selected={selected}
+                                setSelected={setSelected}
+                            />
+                        )}
+
+                        {isAdminRole && (
+                            <Item
+                                title="Dump Vendor Admin"
+                                to="/dump-vendor-admin"
+                                icon={<PeopleOutlinedIcon />}
+                                selected={selected}
+                                setSelected={setSelected}
+                            />
+                        )}
+
+                        {isAdminRole && (
+                            <Item
+                                title="All Vendor RFIs"
+                                to="/all-vendor-rfis"
+                                icon={<RequestQuoteOutlinedIcon />}
+                                selected={selected}
+                                setSelected={setSelected}
+                            />
+                        )}
 
                         <Item
                             title="My Profile"
