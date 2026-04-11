@@ -30,7 +30,7 @@ export const logoutUser = async () => {
 
 export const checkAuth = async () => {
     try {
-        const response = await axiosInstance.get("auth/check.php?portal=vendor");
+        const response = await axiosInstance.get("auth/check.php");
         return true;
     } catch (err) {
         if (err.response?.status === 401) {
