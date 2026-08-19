@@ -1,5 +1,5 @@
 // docs https://github.com/azouaoui-med/react-pro-sidebar
-import {useContext, useEffect, useState} from "react";
+import {useContext, useState} from "react";
 import { Menu, Sidebar, MenuItem, SubMenu } from "react-pro-sidebar";
 import { useProSidebar } from "react-pro-sidebar";
 
@@ -31,7 +31,6 @@ import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined';
 import ContactPhoneOutlinedIcon from '@mui/icons-material/ContactPhoneOutlined'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {QuestionMark} from "@mui/icons-material";
-import { getUserRole } from "../../../services/auth/userDetails";
 
 const Item = ({ title, to, icon, selected, setSelected }) => {
     const theme = useTheme();
@@ -59,28 +58,7 @@ const MyProSidebar = () => {
     const { collapseSidebar, toggleSidebar, collapsed, broken } = useProSidebar();
     const isDark = theme.palette.mode === 'dark';
 
-    const { userData } = useContext(AppContext);
-    const [userRoles, setUserRoles] = useState([]);
-
-    useEffect(() => {
-        const fetchUserRole = async () => {
-            try {
-                const response = await getUserRole();
-                const data = response?.data;
-                const roles = Array.isArray(data)
-                    ? data.map((item) => Number(item?.role_id)).filter((role) => !Number.isNaN(role))
-                    : data?.role_id !== undefined
-                        ? [Number(data.role_id)].filter((role) => !Number.isNaN(role))
-                        : [];
-                setUserRoles(roles);
-            } catch (error) {
-                console.error("Error fetching user role:", error);
-                setUserRoles([]);
-            }
-        };
-
-        fetchUserRole();
-    }, []);
+    const { userData, userRoles, rolesLoading } = useContext(AppContext);
 
     const isVendorRole = userRoles.includes(8);
     const isAdminRole = userRoles.some((role) => [1, 6, 7].includes(role));
@@ -231,7 +209,7 @@ const MyProSidebar = () => {
                             setSelected={setSelected}
                         />
 
-                        {isVendorRole && (
+                        {!rolesLoading && isVendorRole && (
                             <Item
                                 title="Request Vendor"
                                 to="/request-vendor"
@@ -241,7 +219,7 @@ const MyProSidebar = () => {
                             />
                         )}
 
-                        {isVendorRole && (
+                        {!rolesLoading && isVendorRole && (
                             <Item
                                 title="My RFIs"
                                 to="/myrfi"
@@ -251,7 +229,7 @@ const MyProSidebar = () => {
                             />
                         )}
 
-                        {isVendorRole && (
+                        {!rolesLoading && isVendorRole && (
                             <Item
                                 title="Vendor Info"
                                 to="/vendor-info"
@@ -261,7 +239,7 @@ const MyProSidebar = () => {
                             />
                         )}
 
-                        {isAdminRole && (
+                        {!rolesLoading && isAdminRole && (
                             <Item
                                 title="Dump Vendor Admin"
                                 to="/dump-vendor-admin"
@@ -271,7 +249,7 @@ const MyProSidebar = () => {
                             />
                         )}
 
-                        {isAdminRole && (
+                        {!rolesLoading && isAdminRole && (
                             <Item
                                 title="All Vendor RFIs"
                                 to="/all-vendor-rfis"
